@@ -10,3 +10,4 @@ flask
 flask-login
 flask-sqlalchemy
 werkzeug
+face-recognition
