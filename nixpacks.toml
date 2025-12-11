@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["glibc", "ffmpeg"]
+
+[phases.build]
+aptPkgs = ["libgl1", "libglib2.0-0"]
