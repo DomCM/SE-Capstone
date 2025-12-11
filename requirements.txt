@@ -1,7 +1,9 @@
+ultralytics
 opencv-python
 flask
 flask-login
 flask-sqlalchemy
+
 
 
 
