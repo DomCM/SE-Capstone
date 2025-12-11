@@ -1,0 +1,4 @@
+https://github.com/ultralytics/ultralytics
+
+luminous0219 for pre-trained smoked and fire YOLOv8 weights.
+https://github.com/luminous0219/fire-and-smoke-detection-yolov8/blob/main/weights/last.pt

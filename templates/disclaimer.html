@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Privacy Disclaimer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-2xl w-full bg-white rounded-xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gray-800 p-6">
+            <div class="flex items-center justify-center">
+                <img src="{{ url_for('static', filename='LOGO_DESIGN-removebg-preview.png') }}" class="h-12 mr-4" onerror="this.style.display='none'">
+                <h1 class="text-2xl font-bold text-white">System Access Agreement</h1>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Data Privacy Act of 2012 Compliance</h2>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 text-sm text-gray-600 h-64 overflow-y-auto">
+                <p class="mb-4">
+                    <strong>Please read carefully before proceeding:</strong>
+                </p>
+                <p class="mb-4">
+                    By accessing this Smart Home Security System, you acknowledge and agree that this system collects, processes, and stores personal data, including but not limited to video recordings and facial recognition data.
+                </p>
+                <p class="mb-4">
+                    <strong>Data Privacy Act of 2012 (Republic Act No. 10173):</strong><br>
+                    This system operates in compliance with the Data Privacy Act of 2012. We are committed to protecting your personal information and respecting your right to privacy. The data collected is used solely for security monitoring and incident reporting purposes.
+                </p>
+                <p class="mb-4">
+                    <strong>User Responsibilities:</strong><br>
+                    1. You agree not to distribute, share, or misuse any footage or data obtained from this system.<br>
+                    2. You acknowledge that unauthorized access or reproduction of this data is punishable by law.<br>
+                    3. You consent to the processing of data as described in our internal privacy policy.
+                </p>
+                <p>
+                    By clicking the button below, you signify your understanding and agreement to these terms.
+                </p>
+            </div>
+
+            <!-- Action Form -->
+            <form action="{{ url_for('accept_terms') }}" method="POST" class="flex flex-col items-center">
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl duration-200 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    By using our system, you agree to the terms above
+                </button>
+                <p style="display: none;" class="mt-4 text-xs text-gray-400">
+                    Your acceptance is required every time the system is restarted.
+                </p>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

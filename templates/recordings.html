@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recordings - Multi-Stream Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        /* Fixed height for list container */
+        .list-container {
+            height: calc(100vh - 200px); /* Adjust as needed */
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 text-white font-bold text-xl" style="display: flex;">
+                        <img src="static/LOGO_DESIGN-removebg-preview.png" style="margin-right: 15px; height: 32px"> Smart Home Security System
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="/settings" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Settings</a>
+                        <a href="/events" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Event Log</a>
+                        <a href="/recordings" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">Recordings</a>
+                        <a href="/logout" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-extrabold text-gray-900">Saved Recordings</h1>
+            <button id="clearAllBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out" onclick="clearAllRecordings()">
+                Clear All
+            </button>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-6">
+            
+            <!-- Left Column: Recording List -->
+            <div class="w-full md:w-1/3">
+                <div class="bg-white rounded-xl shadow-2xl p-4">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Available Files</h2>
+                    <div id="recordingList" class="list-container overflow-y-auto border border-gray-200 rounded-lg bg-gray-50 p-2 space-y-2">
+                        <!-- JS will populate this -->
+                        <p id="loadingMessage" class="text-gray-500 text-center py-10">Loading recordings...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Video Player -->
+            <div class="w-full md:w-2/3">
+                <div class="bg-white rounded-xl shadow-2xl p-4 sticky top-24">
+                    <h2 id="playerTitle" class="text-xl font-semibold mb-4 text-gray-700">Select a recording to play</h2>
+                    <div class="rounded-lg overflow-hidden bg-black">
+                        <video id="videoPlayer" controls class="w-full aspect-video">
+                            <!-- NEW: Updated type to video/webm -->
+                            <source id="videoSource" src="" type="video/webm">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <a id="downloadLink" href="#" download class="hidden mt-4 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
+                        Download this video
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const recordingList = document.getElementById('recordingList');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSource = document.getElementById('videoSource');
+        const playerTitle = document.getElementById('playerTitle');
+        const downloadLink = document.getElementById('downloadLink');
+
+        let allRecordings = []; // NEW: Store recordings globally for searching
+
+        function formatTimestamp(dateStr, timeStr) {
+            // dateStr: "20251114", timeStr: "204500"
+            try {
+                const year = dateStr.substring(0, 4);
+                const month = dateStr.substring(4, 6);
+                const day = dateStr.substring(6, 8);
+                
+                const hour = timeStr.substring(0, 2);
+                const minute = timeStr.substring(2, 4);
+                const second = timeStr.substring(4, 6);
+                
+                // Create a date object to format it nicely
+                const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                return date.toLocaleString(); // e.g., "11/14/2025, 8:45:00 PM"
+            } catch (e) {
+                return `${dateStr} ${timeStr}`; // Fallback
+            }
+        }
+
+        async function fetchRecordings() {
+            try {
+                const response = await fetch('/api/recordings');
+                if (!response.ok) throw new Error('Failed to fetch');
+                
+                const recordings = await response.json();
+                
+                if (!Array.isArray(recordings)) {
+                    loadingMessage.textContent = 'Error loading recordings.';
+                    return;
+                }
+                
+                if (recordings.length === 0) {
+                    loadingMessage.textContent = 'No recordings found.';
+                    return;
+                }
+
+                allRecordings = recordings;
+                recordingList.innerHTML = '';
+
+                recordings.forEach(rec => {
+                    const formattedTime = formatTimestamp(rec.date, rec.time);
+                    const el = document.createElement('div');
+                    el.id = `rec-${rec.filename}`;
+                    el.className = 'p-3 bg-white hover:bg-indigo-50 rounded-lg border border-gray-300 transition-all duration-150';
+                    el.innerHTML = `
+                        <div class="font-semibold text-indigo-700 cursor-pointer hover:text-indigo-900" onclick="event.preventDefault(); playVideo('${rec.filename}', '${rec.cam}', '${formattedTime}')">Camera ${rec.cam}</div>
+                        <div class="text-sm text-gray-600">${formattedTime}</div>
+                        <div class="text-xs text-gray-400 truncate">${rec.filename}</div>
+                        <button class="mt-2 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1 px-3 rounded transition duration-150 ease-in-out" onclick="deleteRecording('${rec.filename}')">
+                            Delete
+                        </button>
+                    `;
+                    recordingList.appendChild(el);
+                });
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const filenameToPlay = urlParams.get('filename');
+                const timeToSeek = urlParams.get('time');
+
+                if (filenameToPlay && timeToSeek) {
+                    const matchingRec = allRecordings.find(r => r.filename === filenameToPlay);
+                    if (matchingRec) {
+                        const formattedTime = formatTimestamp(matchingRec.date, matchingRec.time);
+                        playVideo(matchingRec.filename, matchingRec.cam, formattedTime, timeToSeek);
+
+                        const elToHighlight = document.getElementById(`rec-${matchingRec.filename}`);
+                        if (elToHighlight) {
+                            elToHighlight.classList.add('bg-indigo-200', 'border-indigo-500');
+                            elToHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch recordings:", error);
+                loadingMessage.textContent = 'Error loading recordings.';
+                loadingMessage.classList.add('text-red-500');
+            }
+        }
+
+        function playVideo(filename, cam, time, seekTime = null) {
+            const videoUrl = `/recordings/${filename}`;
+            
+            playerTitle.textContent = `Playing: Camera ${cam} (${time})`;
+            videoSource.setAttribute('src', videoUrl);
+            downloadLink.setAttribute('href', videoUrl);
+            downloadLink.setAttribute('download', filename);
+            downloadLink.classList.remove('hidden');
+            
+            videoPlayer.load();
+
+            if (seekTime) {
+                const seekListener = () => {
+                    videoPlayer.currentTime = seekTime;
+                    videoPlayer.play();
+                };
+                videoPlayer.addEventListener('loadeddata', seekListener, { once: true });
+            } else {
+                videoPlayer.play();
+            }
+        }
+
+        async function deleteRecording(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/delete_recording/${filename}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete recording');
+                
+                const result = await response.json();
+                alert(result.message || 'Recording deleted successfully');
+                
+                // Refresh the recordings list
+                const el = document.getElementById(`rec-${filename}`);
+                if (el) el.remove();
+                
+                // Reload all recordings
+                fetchRecordings();
+            } catch (error) {
+                console.error("Failed to delete recording:", error);
+                alert('Error deleting recording');
+            }
+        }
+
+        async function clearAllRecordings() {
+            if (!confirm('Are you sure you want to delete ALL recordings? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear_all_recordings', {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) throw new Error('Failed to clear recordings');
+                
+                const result = await response.json();
+                alert(result.message || 'All recordings cleared');
+                
+                // Refresh the recordings list
+                fetchRecordings();
+            } catch (error) {
+                console.error("Failed to clear recordings:", error);
+                alert('Error clearing recordings');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchRecordings);
+    </script>
+
+</body>
+</html>

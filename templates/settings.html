@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-gray-800 shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 text-white font-bold text-xl" style="display: flex;">
+                        <img src="static/LOGO_DESIGN-removebg-preview.png" style="margin-right: 15px; height: 32px"> Smart Home Security System
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="/settings" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">Settings</a>
+                        <a href="/events" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Event Log</a>
+                        <a href="/recordings" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Recordings</a>
+                        <a href="/logout" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container mx-auto max-w-3xl space-y-8 pb-10">
+        
+        <!-- Header & Messages -->
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">System Preferences</h1>
+            <p class="text-gray-500 mt-1">Configure detection thresholds and notification alerts.</p>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mt-4">
+                        {% for category, message in messages %}
+                        <div class="p-3 rounded mb-2 {{ 'bg-red-100 text-red-700 border border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border border-green-200' }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <form method="POST">
+            <!-- 1. Detection Logic -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-indigo-600 px-6 py-3">
+                    <h3 class="text-lg font-semibold text-white">Detection Logic</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="flex items-center justify-between border-b pb-4">
+                        <div>
+                            <span class="block font-medium text-gray-700">Fire & Smoke Detection</span>
+                            <span class="text-sm text-gray-500">Detects fire and smoke using YOLOv8.</span>
+                        </div>
+                        <input type="checkbox" name="yolo_enabled" class="h-6 w-6 text-indigo-600" {% if settings.yolo_enabled %}checked{% endif %}>
+                    </div>
+                    
+                    <div class="flex items-center justify-between border-b pb-4">
+                        <div>
+                            <span class="block font-medium text-gray-700">Face Recognition</span>
+                            <span class="text-sm text-gray-500">Identifies known individuals from your database.</span>
+                        </div>
+                        <input type="checkbox" name="face_rec_enabled" class="h-6 w-6 text-indigo-600" {% if settings.face_recognition_enabled %}checked{% endif %}>
+                    </div>
+                    
+                    <div class="border-b pb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Object & Fire/Smoke Detection Confidence (0.1 - 1.0)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" min="0.1" max="1.0" step="0.05" name="object_detection_confidence" value="{{ settings.object_detection_confidence or 0.5 }}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('object-val').innerText = this.value">
+                            <span id="object-val" class="text-lg font-bold text-indigo-600 min-w-12">{{ settings.object_detection_confidence or 0.5 }}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Lower = more detections but more false positives. Higher = fewer false positives but may miss objects.</p>
+                    </div>
+                    
+                    <div class="border-b pb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Facial Recognition Confidence (0.1 - 1.0)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" min="0.1" max="1.0" step="0.05" name="face_recognition_confidence" value="{{ settings.face_recognition_confidence or 0.6 }}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('face-val').innerText = this.value">
+                            <span id="face-val" class="text-lg font-bold text-indigo-600 min-w-12">{{ settings.face_recognition_confidence or 0.6 }}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Lower = more lenient matching, Higher = stricter matching for known faces.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Email Alerts (Redesigned) -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-indigo-600 px-6 py-3 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Email Alerts</h3>
+                    <label class="flex items-center bg-indigo-700 px-3 py-1 rounded cursor-pointer hover:bg-indigo-800">
+                        <input type="checkbox" name="email_enabled" class="mr-2" {% if settings.email_alerts_enabled %}checked{% endif %}>
+                        <span class="text-sm text-white font-medium">Enable</span>
+                    </label>
+                </div>
+                
+                <div class="p-6 space-y-6">
+                    <!-- SMTP Server Settings -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-gray-700 mb-1">SMTP Server Address</label>
+                            <input type="text" name="smtp_server" value="{{ settings.smtp_server }}" placeholder="e.g. smtp.gmail.com" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <p class="text-xs text-gray-400 mt-1">Default for Gmail: smtp.gmail.com</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Port</label>
+                            <input type="number" name="smtp_port" value="{{ settings.smtp_port }}" placeholder="587" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <p class="text-xs text-gray-400 mt-1">TLS: 587, SSL: 465</p>
+                        </div>
+                    </div>
+
+                    <!-- Authentication -->
+                    <div class="border-t pt-4">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Authentication Credentials</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Sender Email</label>
+                                <input type="email" name="sender_email" value="{{ settings.sender_email or '' }}" placeholder="bot@example.com" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">App Password</label>
+                                <input type="password" name="sender_password" value="{{ settings.sender_password or '' }}" placeholder="••••••••••••" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <p class="text-xs text-amber-600 mt-1">
+                                    <strong>Important:</strong> Do not use your login password. Use an <a href="https://myaccount.google.com/apppasswords" target="_blank" class="underline">App Password</a> (Gmail) or API Key.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recipient -->
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Recipient Email</label>
+                        <input type="email" name="recipient_email" value="{{ settings.recipient_email }}" placeholder="you@example.com" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Alerts and snapshots will be sent to this address.</p>
+                    </div>
+
+                    <!-- Email Throttling -->
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Alert Sending Delay (seconds)</label>
+                        <input type="number" name="email_throttle_seconds" value="{{ settings.email_throttle_seconds or 30 }}" min="5" max="300" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Minimum delay between consecutive alert emails. Prevents spam (recommended: 30-60 seconds).</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <button type="submit" class="w-full bg-gray-900 text-white font-bold py-4 rounded-lg hover:bg-black shadow-lg transition transform hover:-translate-y-0.5">
+                Save All Changes
+            </button>
+        </form>
+
+        <!-- Known Faces Section -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="bg-indigo-600 px-6 py-3">
+                <h3 class="text-lg font-semibold text-white">Manage Known Faces</h3>
+            </div>
+            <div class="p-6">
+                <!-- Add New Face -->
+                <form action="/add_face" method="POST" enctype="multipart/form-data" class="mb-8 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                    <h4 class="font-semibold text-indigo-900 mb-3">Add New Person</h4>
+                    <div class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Name</label>
+                            <input type="text" name="name" placeholder="e.g. John Doe" class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        </div>
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Face Image (JPG/PNG)</label>
+                            <input type="file" name="file" class="w-full text-sm bg-white p-1.5 border rounded cursor-pointer" accept=".jpg,.jpeg,.png" required>
+                        </div>
+                        <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 w-full md:w-auto">Upload</button>
+                    </div>
+                </form>
+
+                <!-- List Existing Faces -->
+                <h4 class="font-bold text-gray-700 mb-4 border-b pb-2">Currently Recognized People</h4>
+                {% if known_faces %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for name in known_faces %}
+                        <div class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-sm transition">
+                            <div class="flex items-center">
+                                <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-3">
+                                    {{ name[0] | upper }}
+                                </div>
+                                <span class="font-medium text-gray-800">{{ name }}</span>
+                            </div>
+                            <form action="{{ url_for('delete_face', name=name) }}" method="POST" onsubmit="return confirm('Delete facial data for {{ name }}?');">
+                                <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-semibold px-3 py-1 rounded hover:bg-red-50 transition">Delete</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8 text-gray-400">
+                        No known faces added yet. Upload a photo above to get started.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

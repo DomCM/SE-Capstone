@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Security System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-sm">
+        <h2 class="text-2xl font-bold mb-6 text-center">System Login</h2>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="bg-red-100 text-red-700 p-3 rounded mb-4">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                <input type="email" name="email" class="border rounded w-full py-2 px-3" required>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                <input type="password" name="password" class="border rounded w-full py-2 px-3" required>
+            </div>
+            <button type="submit" class="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded hover:bg-gray-900">Login</button>
+        </form>
+        
+        <div class="mt-4 text-center border-t pt-4">
+            <p class="text-sm text-gray-600">New user?</p>
+            <a href="/register" class="text-blue-600 font-bold hover:underline">Create an Account</a>
+        </div>
+    </div>
+</body>
+</html>
