@@ -1,7 +1,4 @@
-ultralytics
-
-Pillow
+opencv-python-headless
 flask
 flask-login
 flask-sqlalchemy
-werkzeug
