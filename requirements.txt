@@ -10,5 +10,3 @@ flask
 flask-login
 flask-sqlalchemy
 werkzeug
-
-
