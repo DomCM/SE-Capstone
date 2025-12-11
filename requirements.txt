@@ -1,8 +1,6 @@
-ultralytics
-opencv-python
-Pillow
+
 flask
 flask-login
 flask-sqlalchemy
-werkzeug
-face-recognition
+
+
