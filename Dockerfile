@@ -5,8 +5,9 @@ FROM python:3.13
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    cmake \
+    g++ \
     libglib2.0-0 \
-    # We still install libgl1 just in case a sub-dependency still looks for it at runtime
     libgl1 \
     # Clean up apt lists to reduce image size
     && rm -rf /var/lib/apt/lists/*
