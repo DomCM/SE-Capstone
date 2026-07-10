@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — Home Detection Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='commons.css') }}">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-400:  #4a6db5;
+            --navy-200:  #b8c6e8;
+            --navy-100:  #dce4f5;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f7f8fc;
+            --border:    #e2e8f5;
+            --text-dark: #0b1735;
+            --text-mid:  #3a4d70;
+            --text-muted:#7a8fba;
+            --danger:    #c0392b;
+            --danger-bg: #fef2f1;
+            --success:   #1a7a4a;
+            --success-bg:#edfaf3;
+            --warn:      #92600a;
+            --warn-bg:   #fef9ec;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: var(--white);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── LEFT PANEL ─────────────────────────────────────── */
+        .left-panel {
+            width: 42%;
+            background: var(--navy-900);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px 52px;
+            overflow: hidden;
+        }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            width: 500px; height: 500px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.05);
+            top: -160px; left: -160px;
+            pointer-events: none;
+        }
+
+        .left-panel::after {
+            content: '';
+            position: absolute;
+            width: 360px; height: 360px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.04);
+            bottom: -80px; right: -80px;
+            pointer-events: none;
+        }
+
+        .left-circle-mid {
+            position: absolute;
+            width: 260px; height: 260px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.04);
+            bottom: 120px; left: -60px;
+            pointer-events: none;
+        }
+
+        .left-panel-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+        }
+
+        .left-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .left-logo-box {
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 7px;
+        }
+
+        .left-logo-box img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(1); }
+
+        .left-brand-name {
+            font-size: 14px; font-weight: 700;
+            color: rgba(255,255,255,0.95);
+            letter-spacing: -0.01em;
+            line-height: 1.1;
+        }
+
+        .left-brand-sub {
+            font-size: 10px; font-weight: 500;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .left-hero { position: relative; z-index: 2; }
+
+        .left-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--navy-200);
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 999px;
+            margin-bottom: 28px;
+        }
+
+        .left-eyebrow-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: #60a5fa;
+        }
+
+        .left-headline {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1.08;
+            color: var(--white);
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+        }
+
+        .left-headline em { font-style: italic; color: var(--navy-200); }
+
+        .left-desc {
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.5);
+            max-width: 340px;
+            margin-bottom: 36px;
+        }
+
+        /* Steps list */
+        .steps-list { display: flex; flex-direction: column; gap: 20px; }
+
+        .step-item { display: flex; align-items: flex-start; gap: 14px; }
+
+        .step-num {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700;
+            color: var(--navy-200);
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .step-body { }
+        .step-title {
+            font-size: 13px; font-weight: 600;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 2px;
+        }
+        .step-desc {
+            font-size: 12px; font-weight: 400;
+            color: rgba(255,255,255,0.38);
+            line-height: 1.5;
+        }
+
+        .left-footer {
+            position: relative; z-index: 2;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .security-badge {
+            display: flex; align-items: center; gap: 7px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 999px;
+            padding: 7px 14px;
+            font-size: 11.5px; font-weight: 600;
+            color: rgba(255,255,255,0.45);
+            letter-spacing: 0.03em;
+        }
+
+        .security-badge svg { width: 13px; height: 13px; color: #60a5fa; }
+
+        /* ── RIGHT PANEL ─────────────────────────────────────── */
+        .right-panel {
+            width: 58%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 48px 56px;
+            background: var(--white);
+            overflow-y: auto;
+        }
+
+        .right-inner { width: 100%; max-width: 520px; padding-bottom: 40px; }
+
+        .right-brand-mobile { display: none; }
+
+        .right-greeting {
+            font-size: 11px; font-weight: 600;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--navy-400);
+            margin-bottom: 10px;
+        }
+
+        .right-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 28px; font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            margin-bottom: 6px;
+        }
+
+        .right-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        /* Section headings inside form */
+        .form-section-label {
+            font-size: 10px; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--navy-400);
+            margin-bottom: 14px;
+            margin-top: 24px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .form-section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Field grid */
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .field { margin-bottom: 14px; }
+
+        .field label {
+            display: block;
+            font-size: 11.5px; font-weight: 600;
+            color: var(--text-mid);
+            letter-spacing: 0.02em;
+            margin-bottom: 6px;
+        }
+
+        .field-wrap { position: relative; }
+
+        .field-icon {
+            position: absolute;
+            left: 13px; top: 50%; transform: translateY(-50%);
+            width: 15px; height: 15px;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .field input, .field select {
+            width: 100%;
+            background: var(--off-white);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px 10px 38px;
+            font-size: 13.5px;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            appearance: none;
+        }
+
+        .field input::placeholder { color: var(--text-muted); }
+
+        .field input:focus, .field select:focus {
+            border-color: var(--navy-600);
+            box-shadow: 0 0 0 3px var(--navy-100);
+            background: var(--white);
+        }
+
+        .field input.valid {
+            border-color: #1a7a4a;
+            background: #f6fef9;
+        }
+
+        .field input.invalid {
+            border-color: var(--danger);
+            background: var(--danger-bg);
+        }
+
+        /* Password strength */
+        .pw-strength-bar {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .pw-seg {
+            flex: 1;
+            height: 3px;
+            border-radius: 999px;
+            background: var(--border);
+            transition: background 0.25s;
+        }
+
+        .pw-seg.weak   { background: #e74c3c; }
+        .pw-seg.fair   { background: #f39c12; }
+        .pw-seg.good   { background: #2ecc71; }
+        .pw-seg.strong { background: #1a7a4a; }
+
+        .pw-label {
+            font-size: 11px; font-weight: 600;
+            margin-top: 6px;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        /* Requirements checklist */
+        .pw-reqs {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 12px;
+        }
+
+        .req-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .req-item.met { color: var(--success); }
+
+        .req-dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .req-item.met .req-dot {
+            border-color: var(--success);
+            background: var(--success);
+        }
+
+        .req-dot svg { width: 8px; height: 8px; color: white; opacity: 0; transition: opacity 0.2s; }
+        .req-item.met .req-dot svg { opacity: 1; }
+
+        /* Role select */
+        .select-wrap { position: relative; }
+
+        .select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 13px; top: 50%; transform: translateY(-50%);
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-muted);
+            pointer-events: none;
+        }
+
+        .select-wrap select { cursor: pointer; }
+
+        /* Submit */
+        .btn-submit {
+            width: 100%;
+            background: var(--navy-800);
+            color: var(--white);
+            border: none;
+            padding: 13px;
+            border-radius: 8px;
+            font-size: 14px; font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            letter-spacing: -0.01em;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            box-shadow: 0 4px 16px rgba(13,27,62,0.25);
+            margin-top: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        .btn-submit svg { width: 15px; height: 15px; }
+        .btn-submit:hover { background: var(--navy-700); box-shadow: 0 6px 22px rgba(13,27,62,0.35); transform: translateY(-1px); }
+        .btn-submit:active { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Flash */
+        .flash {
+            display: flex; align-items: center; gap: 9px;
+            padding: 11px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px; font-weight: 500;
+        }
+
+        .flash svg { width: 15px; height: 15px; flex-shrink: 0; }
+        .flash-danger { background: var(--danger-bg); border: 1px solid #f5a89e; color: var(--danger); }
+
+        .right-footer {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .right-footer a {
+            color: var(--navy-600);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .right-footer a:hover { color: var(--navy-800); text-decoration: underline; }
+
+        /* ── RESPONSIVE ─────────────────────────────────────── */
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .left-panel { display: none; }
+            .right-panel { width: 100%; padding: 32px 24px; align-items: flex-start; }
+            .right-brand-mobile {
+                display: flex; align-items: center; gap: 10px;
+                margin-bottom: 28px;
+            }
+            .right-brand-mobile .mob-logo {
+                width: 36px; height: 36px;
+                background: var(--navy-800); border-radius: 9px;
+                display: flex; align-items: center; justify-content: center; padding: 6px;
+            }
+            .right-brand-mobile .mob-logo img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(1); }
+            .right-brand-mobile .mob-name { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+            .field-row { grid-template-columns: 1fr; }
+            .pw-reqs { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── LEFT PANEL ────────────────────────────── -->
+    <div class="left-panel">
+        <div class="left-panel-grid"></div>
+        <div class="left-circle-mid"></div>
+
+        <div class="left-brand">
+            <div class="left-logo-box">
+                <img src="data:image/png;base64,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" alt="HDS Logo">
+            </div>
+            <div>
+                <div class="left-brand-name">Home Detection Security</div>
+                <div class="left-brand-sub">Monitoring System</div>
+            </div>
+        </div>
+
+        <div class="left-hero">
+            <div class="left-eyebrow">
+                <span class="left-eyebrow-dot"></span>
+                New Account Setup
+            </div>
+            <h1 class="left-headline">
+                Set up your<br><em>security hub.</em>
+            </h1>
+            <p class="left-desc">
+                Register to connect your CCTV cameras, manage alerts, and monitor your premises from anywhere.
+            </p>
+
+            <div class="steps-list">
+                <div class="step-item">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <div class="step-title">Create your account</div>
+                        <div class="step-desc">Fill in your personal details and set a strong password.</div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <div class="step-title">Link your location</div>
+                        <div class="step-desc">Add your building address so cameras are mapped correctly.</div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <div class="step-title">Connect your cameras</div>
+                        <div class="step-desc">Add CCTV feeds from your dashboard after sign-in.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="left-footer">
+            <div class="security-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                256-bit encryption
+            </div>
+            <div class="security-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                24 / 7 monitoring
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT PANEL ────────────────────────────── -->
+    <div class="right-panel">
+        <div class="right-inner">
+
+            <!-- Mobile brand -->
+            <div class="right-brand-mobile">
+                <div class="mob-logo">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAR0AAAEcCAYAAAD6NmDeAAA5ZUlEQVR4nO2dd7hcVdX/P3NzU0gIECIkhE4IhBqkhl4k9CYCgohKU1ERxVdeX18bViz4w47lRRCkE4gUJZCA9KYUIQ0QCIGQhEBISEi79/7++M529uxzZu7MnZlzzsysz/PMc+/sc+bMnplzvmfttdZeOzfmzAUYmSLnPY4G9gQGATOAG4G3gB7v0Rf6A9sDY4GtgHWBtYB1gr9D83/XqPL47wFLgHeBd4BF+b/vAIvzn2EG8Fz+0d3HzwH6ngCGAx8Cts2//33A36jtezIaQM5EJ1N0IDE4EV2I16KLs68XzbbA1khYtsr/PxZdoFniTWA6+qwvALPy/8+o4ZhbAscAq4C/AK/U2EejTpjopE8HcAQSiOeB24DVVC40WyGh8kVlDNkTlr6yEAnRDCRMs4BngBerOEZ/4APAZvnj3Edt1pVRAyY66TEYDZ9y6E68rMLXbQocn3/tgY3pWtNwN3A7cBPwaoWvWYPC934zsLIxXTNKYaKTPAcAGwJTgbkVvuYI4CjgWGBUY7rV9MwBJgG3AndW+JqNgf2Bl4EHGtMtI8REJxlGIbGZBjxVwf4bIYE5BjikYb1qbf6KROg24LUK9t8J2A64H5jduG4ZJjqNYyDyI3QBd9G7D2FocCbwKeSXMerHv4DfAX9C0bNydKLfrT8avi1vbNfaDxOd+jMe2ACZ65V8uccBpyOrxmg8k4A/5v/2xnpo+DUbeKyRnWonTHTqx3YoanQrsm7KsQdwBvBxZBEZybMMic9lwD972XcwGubWGsY3MNGpB/ugBLq/Uj7MPRIJzWcxZ3DWeAX4DXA5MK+XfSegxMdHGtynlsVEp+8chvwDD5XZZyBwCnA2sFcSnTJq5u/AH4AbgBVl9hsPrIn8PkYVmOhUz55AP8qHWNcGvpx/DEiiU0bdWQlcBFwCvF1mv73QcPrRBPrUEpjoVM4uSEymltlnBPBV4FwKc4KM5qYL+BkSoHIXy35obtnTSXSqmTHR6Z0dkT9mcpl9NgG+DpyVSI+MtLgU+AHl83gOQkmf0xPpURPSkXYHMsz6KEHvWUoLzrbAdcgRaYLT+nwa/dZXoXlucUxFgnMEMCyhfjUVJjpR+qGcmW6UyxGX1LcrynR9Djgpua4ZGeFUFDq/GWUyx3EHimYejV1nRdiXUcxBKNfmL6jcQsgBaIby48CRyXXLyCjHAU8CU4C9Y7YvQnlbW2KTc/+D+XTEpshcLjWM2hC4AqXHG0YpbgfOofSM94OBmWW2twXtbunk0FBqMaUF5xtoBrMJjtEbRwL/RhHMOO5GiYUfTKxHGaSdLZ2dkP/mHyW2H4Ksm5FJdchoKWYDH0PJhjHsi8qqPpFYjzJCO1o6a6Baus8SLzgjgVtQTRYTHKOvbALcizKb486j+1GZk5NQDey2od1EZw/k1LsJlQQN+TIabx+bZKeMluYEFGY/P2bbauB6YDRtNE2mXUSnE/gwijT8K2b7fsgc/lF+X8OoJwOAi1F95/Ex259DM91PS7JTadEOorMDmi91HdF6uOsC16Bx98YJ98toP8YAD6NiYu8Lti0HrkRpG1sm3K9EaXXR+QgaLt0fs20C" alt="HDS Logo">
+                </div>
+                <span class="mob-name">Home Detection Security</span>
+            </div>
+
+            <p class="right-greeting">Getting started</p>
+            <h2 class="right-title">Create your account</h2>
+            <p class="right-subtitle">Fill in the details below to set up your security dashboard.</p>
+
+            <!-- Flash messages (Jinja2 / Flask) -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash flash-danger">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" id="registerForm" novalidate>
+
+                <!-- PERSONAL INFO -->
+                <div class="form-section-label">Personal Information</div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="first_name">First Name</label>
+                        <div class="field-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <input type="text" id="first_name" name="first_name" placeholder="Juan" required autocomplete="given-name">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="last_name">Last Name</label>
+                        <div class="field-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <input type="text" id="last_name" name="last_name" placeholder="dela Cruz" required autocomplete="family-name">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="username">Username</label>
+                    <div class="field-wrap">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.52 19c.64-2.2 1.84-3 3.22-3h6.52c1.38 0 2.58.8 3.22 3"/><circle cx="12" cy="10" r="3"/><circle cx="12" cy="12" r="10"/></svg>
+                        <input type="text" id="username" name="username" placeholder="juandelacruz" required autocomplete="username" minlength="3">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="email">Email Address</label>
+                    <div class="field-wrap">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+                    </div>
+                </div>
+
+                <!-- LOCATION -->
+                <div class="form-section-label">Location Details</div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="building_number">Building / Unit No.</label>
+                        <div class="field-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            <input type="text" id="building_number" name="building_number" placeholder="Blk 4 Lot 12" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="floor">Floor / Level <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+                        <div class="field-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            <input type="text" id="floor" name="floor" placeholder="2nd Floor">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="street_address">Street / Subdivision</label>
+                    <div class="field-wrap">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 14 8 14s8-8.75 8-14a8 8 0 0 0-8-8z"/></svg>
+                        <input type="text" id="street_address" name="street_address" placeholder="123 Rizal St., Barangay San Jose" required>
+                    </div>
+                </div>
+
+                <!-- CAMERA SETUP -->
+                <div class="form-section-label">Camera Setup</div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="camera_count">No. of Cameras</label>
+                        <div class="field-wrap select-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                            <select id="camera_count" name="camera_count" required>
+                                <option value="" disabled selected>Select</option>
+                                <option value="1">1 Camera</option>
+                                <option value="2">2 Cameras</option>
+                                <option value="3">3 Cameras</option>
+                                <option value="4">4 Cameras</option>
+                                <option value="5">5 Cameras</option>
+                                <option value="6+">6+ Cameras</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="role">Account Role</label>
+                        <div class="field-wrap select-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <select id="role" name="role" required>
+                                <option value="" disabled selected>Select</option>
+                                <option value="homeowner">Homeowner</option>
+                                <option value="admin">Building Admin</option>
+                                <option value="security">Security Personnel</option>
+                                <option value="tenant">Tenant</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECURITY -->
+                <div class="form-section-label">Security</div>
+
+                <div class="field">
+                    <label for="password">Password</label>
+                    <div class="field-wrap">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" id="password" name="password" placeholder="••••••••••••" required autocomplete="new-password" minlength="12">
+                    </div>
+                    <!-- Strength bar -->
+                    <div class="pw-strength-bar" id="strengthBar">
+                        <div class="pw-seg" id="seg1"></div>
+                        <div class="pw-seg" id="seg2"></div>
+                        <div class="pw-seg" id="seg3"></div>
+                        <div class="pw-seg" id="seg4"></div>
+                    </div>
+                    <div class="pw-label" id="strengthLabel">Enter a password</div>
+                    <!-- Requirements -->
+                    <div class="pw-reqs" id="pwReqs">
+                        <div class="req-item" id="req-len">
+                            <div class="req-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg></div>
+                            <span>At least 12 characters</span>
+                        </div>
+                        <div class="req-item" id="req-upper">
+                            <div class="req-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg></div>
+                            <span>Uppercase letter</span>
+                        </div>
+                        <div class="req-item" id="req-lower">
+                            <div class="req-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg></div>
+                            <span>Lowercase letter</span>
+                        </div>
+                        <div class="req-item" id="req-num">
+                            <div class="req-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg></div>
+                            <span>Number</span>
+                        </div>
+                        <div class="req-item" id="req-special">
+                            <div class="req-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg></div>
+                            <span>Special character</span>
+                        </div>
+                        <div class="req-item" id="req-nocommon">
+                            <div class="req-dot"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg></div>
+                            <span>Not a common word</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="confirm_password">Confirm Password</label>
+                    <div class="field-wrap">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••••••" required autocomplete="new-password">
+                    </div>
+                    <div class="pw-label" id="matchLabel" style="margin-top:6px;"></div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                    Create Account
+                </button>
+            </form>
+
+            <div class="right-footer">
+                Already have an account? <a href="/login">Sign in</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pwInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirm_password');
+        const strengthLabel = document.getElementById('strengthLabel');
+        const matchLabel = document.getElementById('matchLabel');
+        const segs = [document.getElementById('seg1'), document.getElementById('seg2'), document.getElementById('seg3'), document.getElementById('seg4')];
+
+        const reqs = {
+            len:     { el: document.getElementById('req-len'),     test: v => v.length >= 12 },
+            upper:   { el: document.getElementById('req-upper'),   test: v => /[A-Z]/.test(v) },
+            lower:   { el: document.getElementById('req-lower'),   test: v => /[a-z]/.test(v) },
+            num:     { el: document.getElementById('req-num'),     test: v => /[0-9]/.test(v) },
+            special: { el: document.getElementById('req-special'), test: v => /[^A-Za-z0-9]/.test(v) },
+            nocommon:{ el: document.getElementById('req-nocommon'),test: v => !['password','12345678','qwerty','abc123','letmein','welcome','monkey','dragon','master','admin'].includes(v.toLowerCase()) }
+        };
+
+        const strengthLevels = [
+            { label: 'Too weak', color: '#e74c3c', class: 'weak', segs: 1 },
+            { label: 'Weak',     color: '#e74c3c', class: 'weak', segs: 1 },
+            { label: 'Fair',     color: '#f39c12', class: 'fair', segs: 2 },
+            { label: 'Good',     color: '#2ecc71', class: 'good', segs: 3 },
+            { label: 'Strong',   color: '#1a7a4a', class: 'strong', segs: 4 },
+        ];
+
+        function evaluatePassword(val) {
+            if (!val) {
+                segs.forEach(s => { s.className = 'pw-seg'; });
+                strengthLabel.textContent = 'Enter a password';
+                strengthLabel.style.color = 'var(--text-muted)';
+                return;
+            }
+
+            let score = 0;
+            Object.values(reqs).forEach(r => {
+                const met = r.test(val);
+                r.el.classList.toggle('met', met);
+                if (met) score++;
+            });
+
+            // Map 0–6 met reqs → strength index 0–4
+            const idx = score === 0 ? 0 : score <= 1 ? 1 : score <= 3 ? 2 : score <= 5 ? 3 : 4;
+            const level = strengthLevels[idx];
+
+            segs.forEach((s, i) => {
+                s.className = 'pw-seg' + (i < level.segs ? ' ' + level.class : '');
+            });
+
+            strengthLabel.textContent = level.label;
+            strengthLabel.style.color = level.color;
+        }
+
+        function evaluateMatch() {
+            const pw = pwInput.value;
+            const conf = confirmInput.value;
+            if (!conf) { matchLabel.textContent = ''; confirmInput.className = ''; return; }
+            if (pw === conf) {
+                matchLabel.textContent = 'Passwords match ✓';
+                matchLabel.style.color = 'var(--success)';
+                confirmInput.classList.add('valid');
+                confirmInput.classList.remove('invalid');
+            } else {
+                matchLabel.textContent = 'Passwords do not match';
+                matchLabel.style.color = 'var(--danger)';
+                confirmInput.classList.add('invalid');
+                confirmInput.classList.remove('valid');
+            }
+        }
+
+        pwInput.addEventListener('input', () => { evaluatePassword(pwInput.value); evaluateMatch(); });
+        confirmInput.addEventListener('input', evaluateMatch);
+
+        // Client-side gate before submit
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const pw = pwInput.value;
+            const allMet = Object.values(reqs).every(r => r.test(pw));
+            if (!allMet) {
+                e.preventDefault();
+                strengthLabel.textContent = 'Please meet all password requirements';
+                strengthLabel.style.color = 'var(--danger)';
+                pwInput.focus();
+                return;
+            }
+            if (pwInput.value !== confirmInput.value) {
+                e.preventDefault();
+                matchLabel.textContent = 'Passwords do not match';
+                matchLabel.style.color = 'var(--danger)';
+                confirmInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

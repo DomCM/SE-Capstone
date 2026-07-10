@@ -1,0 +1,12 @@
+This is the version modified to run via web-hosting service.
+Creation of python venv as well as installation of main.py's requirements should be automatic via dockerfile unless ran
+locally.
+Otherwise, you may skip the use of a python venv entirely and install the requirements as is within the OS, though conflict with
+other libraries from other apps may occur.
+- ADCM
+
+to create admin account, launch the app via CLI with following params: python main.py --create-admin --username admin --email admin@example.com --password "StrongPassword123!"
+
+
+filter event logs
+no need to simplify technical terms for admin because they can have training / user manual.

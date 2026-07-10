@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings — Home Detection Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            /* ── Shared palette (from admin_dashboard.html) ── */
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-400:  #4a6db5;
+            --navy-200:  #b8c6e8;
+            --navy-100:  #dce4f5;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f7f8fc;
+            --border:    #e2e8f5;
+            --text-dark: #0b1735;
+            --text-mid:  #3a4d70;
+            --text-muted:#7a8fba;
+            --danger:    #c0392b;
+            --danger-bg: #fef2f1;
+            --success:   #1f8a5f;
+            --success-bg:#eaf7f0;
+            --amber:     #b07d2a;
+            --amber-bg:  #fef7e6;
+            /* ── Tokens ── */
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-xs: 0 1px 2px rgba(11,23,53,0.04);
+            --shadow-sm: 0 1px 4px rgba(11,23,53,0.07), 0 1px 2px rgba(11,23,53,0.04);
+            --shadow-md: 0 8px 24px rgba(11,23,53,0.10), 0 2px 6px rgba(11,23,53,0.06);
+            --font-sans: 'Inter', sans-serif;
+            --font-serif:'Playfair Display', Georgia, serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--off-white);
+            color: var(--text-dark);
+            min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ══════════════════════════════════════
+           NAV
+        ══════════════════════════════════════ */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-xs);
+        }
+
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 28px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        .brand-logo-wrap {
+            width: 38px; height: 38px;
+            background: var(--navy-900);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .brand-logo-wrap svg { width: 19px; height: 19px; color: var(--white); }
+        .brand-text-block { line-height: 1.15; }
+        .brand-name {
+            font-family: var(--font-serif);
+            font-size: 15px; font-weight: 700;
+            color: var(--text-dark); letter-spacing: -0.01em;
+        }
+        .brand-name em { font-style: italic; color: var(--navy-600); }
+        .brand-sub {
+            font-size: 9.5px; font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px;
+        }
+
+        /* Live clock pill — center of nav */
+        .nav-clock {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--navy-900);
+            border-radius: 999px;
+            padding: 6px 16px;
+            flex-shrink: 0;
+        }
+        .nav-clock-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #ef4444;
+            animation: pulse-red 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
+        .nav-clock-time {
+            font-family: var(--font-mono);
+            font-size: 12px; font-weight: 500;
+            color: #fff;
+            letter-spacing: 0.04em;
+        }
+        .nav-clock-label {
+            font-size: 9.5px; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: #ef4444;
+        }
+        .nav-clock-sep {
+            width: 1px; height: 14px;
+            background: rgba(255,255,255,0.15);
+        }
+
+        /* Nav links */
+        .nav-links {
+            display: flex; align-items: center;
+            gap: 2px; list-style: none;
+        }
+        .nav-links a {
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 13px;
+            border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 500;
+            color: var(--text-mid);
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
+        .nav-links a.active {
+            background: var(--navy-900);
+            color: var(--white); font-weight: 600;
+            box-shadow: 0 4px 12px rgba(11,23,53,0.22);
+        }
+        .nav-links a.active svg { opacity: 1; }
+        .nav-links a.nav-cctv {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid #f5c6c2;
+            font-weight: 600;
+        }
+        .nav-links a.nav-cctv:hover {
+            background: var(--danger);
+            color: var(--white);
+            border-color: var(--danger);
+        }
+        .nav-links a.nav-cctv svg { opacity: 1; }
+        .nav-links a.nav-logout {
+            margin-left: 6px;
+            border: 1px solid var(--border);
+        }
+        .nav-links a.nav-logout:hover {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border-color: #f5a89e;
+        }
+        .nav-links a.nav-back { margin-left: 6px; }
+
+        @media (max-width: 700px) {
+            .nav-links li.hide-sm { display: none; }
+            .page { padding: 20px 16px 60px; }
+        }
+
+        /* ══════════════════════════════════════
+           PAGE
+        ══════════════════════════════════════ */
+        .page { max-width: 820px; margin: 0 auto; padding: 34px 28px 72px; }
+
+        .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+        .header-icon {
+            width: 50px; height: 50px;
+            background: var(--navy-900); border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 6px 16px rgba(11,23,53,0.25);
+        }
+        .header-icon svg { width: 22px; height: 22px; color: var(--white); }
+        .page-title {
+            font-family: var(--font-serif);
+            font-size: 26px; font-weight: 700;
+            color: var(--text-dark); letter-spacing: -0.02em; line-height: 1.1;
+        }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
+
+        /* ══════════════════════════════════════
+           FLASH
+        ══════════════════════════════════════ */
+        .flash {
+            display: flex; align-items: center; gap: 9px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 18px;
+            font-size: 13.5px; font-weight: 500;
+        }
+        .flash svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .flash-danger  { background: var(--danger-bg);  border: 1px solid #f5a89e; color: var(--danger); }
+        .flash-success { background: var(--success-bg); border: 1px solid #9bd4b8; color: var(--success); }
+
+        /* ══════════════════════════════════════
+           SECTION CARD
+        ══════════════════════════════════════ */
+        .section-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .section-header {
+            background: var(--navy-900);
+            padding: 15px 22px;
+            display: flex; align-items: center; gap: 12px;
+            position: relative; overflow: hidden;
+        }
+        .section-header::after {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+        }
+        .section-header-icon {
+            width: 32px; height: 32px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; position: relative; z-index: 1;
+        }
+        .section-header-icon svg { width: 15px; height: 15px; color: var(--navy-200); }
+        .section-title { font-size: 13.5px; font-weight: 600; color: #fff; position: relative; z-index: 1; }
+        .section-body { padding: 22px; }
+
+        /* ══════════════════════════════════════
+           FORM
+        ══════════════════════════════════════ */
+        .field-group { margin-bottom: 18px; }
+        .field-group:last-child { margin-bottom: 0; }
+        .field-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-mid); margin-bottom: 6px; letter-spacing: 0.01em; }
+        .field-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; }
+        input[type="text"], input[type="number"], input[type="email"], select, textarea {
+            width: 100%;
+            background: var(--off-white);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 9px 13px;
+            font-size: 13px; font-family: var(--font-sans);
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--navy-600);
+            box-shadow: 0 0 0 3px var(--navy-100);
+            background: var(--white);
+        }
+        input::placeholder, textarea::placeholder { color: var(--text-muted); }
+        textarea { resize: vertical; min-height: 80px; }
+
+        /* ══════════════════════════════════════
+           TOGGLE
+        ══════════════════════════════════════ */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .toggle-info { flex: 1; }
+        .toggle-label { font-size: 13.5px; font-weight: 500; color: var(--text-dark); }
+        .toggle-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; margin-left: 16px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+        .toggle-slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .toggle-switch input:checked + .toggle-slider { background: var(--navy-600); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+        .range-row { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+        .range-row input[type="range"] { flex: 1; accent-color: var(--navy-600); cursor: pointer; }
+        .range-val { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--navy-600); min-width: 32px; text-align: right; }
+
+
+
+        /* ══════════════════════════════════════
+           GRID & SAVE
+        ══════════════════════════════════════ */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        .btn-save {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--navy-800); color: #fff; border: none;
+            padding: 12px 28px; border-radius: var(--radius-sm);
+            font-size: 13.5px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            margin-top: 8px;
+            box-shadow: 0 4px 14px rgba(11,23,53,0.22);
+        }
+        .btn-save:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
+        .btn-save svg { width: 14px; height: 14px; }
+
+        /* ══════════════════════════════════════
+           DANGER ZONE
+        ══════════════════════════════════════ */
+        .danger-zone {
+            background: var(--white);
+            border: 1.5px solid #f5a89e;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .danger-zone-title {
+            font-size: 13px; font-weight: 700; color: var(--danger);
+            margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .danger-zone-title svg { width: 15px; height: 15px; }
+        .danger-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #f5d7d2; }
+        .danger-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .danger-info .danger-label { font-size: 13.5px; font-weight: 500; color: var(--text-dark); }
+        .danger-info .danger-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .btn-danger {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--danger-bg); color: var(--danger);
+            border: 1px solid #f5a89e;
+            padding: 8px 15px; border-radius: var(--radius-sm);
+            font-size: 12.5px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; transition: all 0.15s; flex-shrink: 0; margin-left: 16px;
+        }
+        .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-danger svg { width: 13px; height: 13px; }
+
+        /* ══════════════════════════════════════
+           STORAGE BAR
+        ══════════════════════════════════════ */
+        .storage-bar-wrap { margin-top: 8px; }
+        .storage-bar-track { background: var(--off-white); border: 1px solid var(--border); border-radius: 99px; height: 9px; overflow: hidden; }
+        .storage-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--navy-900), var(--navy-400)); transition: width 0.4s ease; }
+        .storage-labels { display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 6px; }
+
+        /* ══════════════════════════════════════
+           INFO ROW
+        ══════════════════════════════════════ */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+        @media (max-width: 560px) { .info-grid { grid-template-columns: 1fr; } }
+        .info-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+        .info-val { font-size: 12.5px; font-family: var(--font-mono); color: var(--text-dark); font-weight: 600; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--off-white); }
+        ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<!-- ══ NAV ═══════════════════════════════════════════════════ -->
+<nav>
+    <div class="nav-inner">
+        <a class="nav-brand" href="/admin">
+            <div class="brand-logo-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+            </div>
+            <div class="brand-text-block">
+                <div class="brand-name">Home Detection <em>Security</em></div>
+                <div class="brand-sub">Admin Panel</div>
+            </div>
+        </a>
+
+        <div class="nav-clock">
+            <span class="nav-clock-dot"></span>
+            <span class="nav-clock-label">Live</span>
+            <div class="nav-clock-sep"></div>
+            <span class="nav-clock-time" id="adminClock">--:--:--</span>
+        </div>
+
+        <ul class="nav-links">
+            <li>
+                <a href="/admin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    Overview
+                </a>
+            </li>
+            <li>
+                <a href="/admin/cctv" class="nav-cctv">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                    CCTV Monitor
+                </a>
+            </li>
+            <li class="hide-sm">
+                <a href="/admin/users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Users
+                </a>
+            </li>
+            <li class="hide-sm">
+                <a href="/admin/logs">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    Audit Logs
+                </a>
+            </li>
+            <li class="hide-sm">
+                <a href="/admin/system" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    System
+                </a>
+            </li>
+            <li>
+                <a href="/" class="nav-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Back to App
+                </a>
+            </li>
+            <li>
+                <a href="/logout" class="nav-logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Logout
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ══ PAGE ══════════════════════════════════════════════════ -->
+<main class="page">
+
+    <div class="page-header">
+        <div class="header-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+        </div>
+        <div>
+            <h1 class="page-title">System Settings</h1>
+            <p class="page-subtitle">Storage limits, maintenance, and server-level configuration</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash {{ 'flash-danger' if category == 'danger' else 'flash-success' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form action="/admin/system/save" method="POST">
+
+        <!-- Storage & Retention -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                </div>
+                <span class="section-title">Storage &amp; Retention</span>
+            </div>
+            <div class="section-body">
+                <!-- Storage bar -->
+                <div class="field-group">
+                    <label class="field-label">Disk Usage</label>
+                    <div class="storage-bar-wrap">
+                        <div class="storage-bar-track">
+                            <div class="storage-bar-fill" style="width:{{ storage_pct or 0 }}%"></div>
+                        </div>
+                        <div class="storage-labels">
+                            <span>{{ storage_used or '—' }} used</span>
+                            <span>{{ storage_free or '—' }} free / {{ storage_total or '—' }} total</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Max Recording Storage (GB)</label>
+                        <input type="number" name="max_storage_gb" value="{{ settings.max_storage_gb or 50 }}" min="1" max="1000">
+                        <p class="field-hint">Oldest recordings are deleted automatically when this limit is reached.</p>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Recording Retention (days)</label>
+                        <input type="number" name="retention_days" value="{{ settings.retention_days or 30 }}" min="1" max="365">
+                        <p class="field-hint">Recordings older than this are deleted automatically. Set to 0 to disable.</p>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Recording Save Path</label>
+                    <input type="text" name="recording_path" value="{{ settings.recording_path or './recordings' }}" placeholder="./recordings">
+                    <p class="field-hint">Absolute or relative path to the folder where recordings are stored.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Settings -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 5a3 3 0 1 1-3 3 3 3 0 0 1 3-3z"/></svg>
+                </div>
+                <span class="section-title">Detection Settings</span>
+            </div>
+            <div class="section-body">
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Fire &amp; Smoke Detection</div>
+                        <div class="toggle-desc">Enable YOLO detection for fire and smoke events.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="yolo_enabled" {% if settings.yolo_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Facial Recognition</div>
+                        <div class="toggle-desc">Enable face recognition for known person alerts.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                
+
+                <div class="field-group" style="margin-top: 18px;">
+                    <label class="field-label">Frame Processing Interval</label>
+                    <input type="number" name="frame_process_interval" value="{{ settings.frame_process_interval or 3 }}" min="1" max="30">
+                    <p class="field-hint">Process every N-th frame (e.g. 1 = every frame, 3 = every third frame). Higher values significantly boost server performance but slightly delay event detection.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Object/Fire Detection Confidence</label>
+                    <div class="range-row">
+                        <input type="range" min="0.1" max="1.0" step="0.05" name="object_detection_confidence"
+                            value="{{ settings.object_detection_confidence or 0.5 }}"
+                            oninput="document.getElementById('obj-conf-val').innerText = parseFloat(this.value).toFixed(2)">
+                        <span id="obj-conf-val" class="range-val">{{ settings.object_detection_confidence or 0.5 }}</span>
+                    </div>
+                    <p class="field-hint">Lower values are more sensitive; higher values reduce false positives.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Face Recognition Confidence</label>
+                    <div class="range-row">
+                        <input type="range" min="0.1" max="1.0" step="0.05" name="face_recognition_confidence"
+                            value="{{ settings.face_recognition_confidence or 0.6 }}"
+                            oninput="document.getElementById('face-conf-val').innerText = parseFloat(this.value).toFixed(2)">
+                        <span id="face-conf-val" class="range-val">{{ settings.face_recognition_confidence or 0.6 }}</span>
+                    </div>
+                    <p class="field-hint">Lower values are more permissive; higher values require stronger face matches.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Active Detection Classes</label>
+                    <input type="text" name="active_classes" value="{{ settings.active_classes or 'fire,smoke' }}" placeholder="fire,smoke">
+                    <p class="field-hint">Comma-separated classes to trigger alerts (e.g. fire,smoke,person).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Access Control -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <span class="section-title">Access Control</span>
+            </div>
+            <div class="section-body">
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Allow Public Registration</div>
+                        <div class="toggle-desc">When disabled, only admins can create new accounts.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="allow_registration" {% if settings.allow_registration %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Require Disclaimer Acceptance</div>
+                        <div class="toggle-desc">Users must agree to the Data Privacy terms on every server restart.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="require_disclaimer" {% if settings.require_disclaimer %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Session Timeout</div>
+                        <div class="toggle-desc">Automatically log out inactive users after a set period.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="session_timeout_enabled" {% if settings.session_timeout_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="field-group" style="margin-top:18px;">
+                    <label class="field-label">Session Timeout Duration (minutes)</label>
+                    <input type="number" name="session_timeout_minutes" value="{{ settings.session_timeout_minutes or 60 }}" min="5" max="1440" style="max-width:200px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Info -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </div>
+                <span class="section-title">Server Information</span>
+            </div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div>
+                        <div class="info-row">
+                            <span class="info-label">Python Version</span>
+                            <span class="info-val">{{ sys_info.python_version or '—' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Flask Version</span>
+                            <span class="info-val">{{ sys_info.flask_version or '—' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">OpenCV Version</span>
+                            <span class="info-val">{{ sys_info.cv2_version or '—' }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-row">
+                            <span class="info-label">Server Uptime</span>
+                            <span class="info-val">{{ sys_info.uptime or '—' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Host</span>
+                            <span class="info-val">{{ sys_info.host or '—' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Debug Mode</span>
+                            <span class="info-val">{{ 'On' if sys_info.debug else 'Off' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Changes
+        </button>
+    </form>
+
+    <!-- Danger Zone -->
+    <div class="danger-zone" style="margin-top:32px;">
+        <div class="danger-zone-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Danger Zone
+        </div>
+
+        <div class="danger-row">
+            <div class="danger-info">
+                <div class="danger-label">Clear All Recordings</div>
+                <div class="danger-desc">Permanently deletes every stored video file. This cannot be undone.</div>
+            </div>
+            <form action="/admin/system/clear_recordings" method="POST" onsubmit="return confirm('Delete ALL recordings? This is permanent.');">
+                <button type="submit" class="btn-danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    Clear Recordings
+                </button>
+            </form>
+        </div>
+
+        <div class="danger-row">
+            <div class="danger-info">
+                <div class="danger-label">Clear All Security Events</div>
+                <div class="danger-desc">Wipes the entire event log. Face recognition alerts will be lost.</div>
+            </div>
+            <form action="/admin/system/clear_events" method="POST" onsubmit="return confirm('Delete ALL events? This is permanent.');">
+                <button type="submit" class="btn-danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    Clear Events
+                </button>
+            </form>
+        </div>
+
+        <div class="danger-row">
+            <div class="danger-info">
+                <div class="danger-label">Reset All Known Faces</div>
+                <div class="danger-desc">Deletes all enrolled face images. The system will no longer recognize anyone.</div>
+            </div>
+            <form action="/admin/system/clear_faces" method="POST" onsubmit="return confirm('Delete ALL known faces? This is permanent.');">
+                <button type="submit" class="btn-danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    Clear Faces
+                </button>
+            </form>
+        </div>
+
+        <div class="danger-row">
+            <div class="danger-info">
+                <div class="danger-label">Factory Reset</div>
+                <div class="danger-desc">Resets all settings to defaults, clears all data. Users are not deleted.</div>
+            </div>
+            <form action="/admin/system/factory_reset" method="POST" onsubmit="return confirm('FACTORY RESET — all data will be erased. Are you absolutely sure?');">
+                <button type="submit" class="btn-danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.58"/></svg>
+                    Factory Reset
+                </button>
+            </form>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2,'0');
+        const m = String(now.getMinutes()).padStart(2,'0');
+        const s = String(now.getSeconds()).padStart(2,'0');
+        document.getElementById('adminClock').textContent = `${h}:${m}:${s}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>

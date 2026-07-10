@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recordings — Home Detection Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='commons.css') }}">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-400:  #4a6db5;
+            --navy-200:  #b8c6e8;
+            --navy-100:  #dce4f5;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f7f8fc;
+            --border:    #e2e8f5;
+            --text-dark: #0b1735;
+            --text-mid:  #3a4d70;
+            --text-muted:#7a8fba;
+            --danger:    #c0392b;
+            --danger-bg: #fef2f1;
+            --success:   #1f8a5f;
+            --success-bg:#eaf7f0;
+            --amber:     #b07d2a;
+            --amber-bg:  #fef7e6;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-xs: 0 1px 2px rgba(11,23,53,0.04);
+            --shadow-sm: 0 1px 4px rgba(11,23,53,0.07), 0 1px 2px rgba(11,23,53,0.04);
+            --shadow-md: 0 8px 24px rgba(11,23,53,0.10), 0 2px 6px rgba(11,23,53,0.06);
+            --font-sans: 'Inter', sans-serif;
+            --font-serif:'Playfair Display', Georgia, serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--off-white);
+            color: var(--text-dark);
+            min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ══ NAV ══════════════════════════════════════════════ */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-xs);
+        }
+
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 28px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
+
+        .brand-logo-wrap {
+            width: 38px; height: 38px;
+            background: var(--navy-900);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .brand-logo-wrap svg { width: 19px; height: 19px; color: var(--white); }
+
+        .brand-text-block { line-height: 1.15; }
+        .brand-name {
+            font-family: var(--font-serif);
+            font-size: 15px; font-weight: 700;
+            color: var(--text-dark); letter-spacing: -0.01em;
+        }
+        .brand-name em { font-style: italic; color: var(--navy-600); }
+        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+        /* Live clock pill — center of nav */
+        .nav-clock {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--navy-900);
+            border-radius: 999px;
+            padding: 6px 16px;
+            flex-shrink: 0;
+        }
+        .nav-clock-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #ef4444;
+            animation: pulse-red 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
+        .nav-clock-time {
+            font-family: var(--font-mono);
+            font-size: 12px; font-weight: 500;
+            color: #fff;
+            letter-spacing: 0.04em;
+        }
+        .nav-clock-label {
+            font-size: 9.5px; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: #ef4444;
+        }
+        .nav-clock-sep {
+            width: 1px; height: 14px;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
+
+        .nav-links a {
+            display: flex; align-items: center; gap: 7px;
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 500;
+            color: var(--text-mid);
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+
+        .nav-links a svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.7; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
+
+        .nav-links a.active {
+            background: var(--navy-900);
+            color: var(--white);
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(11,23,53,0.22);
+        }
+        .nav-links a.active svg { opacity: 1; }
+
+        .nav-logout { margin-left: 10px; border: 1px solid var(--border) !important; }
+        .nav-logout:hover { background: var(--danger-bg) !important; color: var(--danger) !important; border-color: #f5a89e !important; }
+
+        @media (max-width: 900px) {
+            .nav-links li.hide-sm { display: none; }
+        }
+
+        /* ══ PAGE ═════════════════════════════════════════════ */
+        .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; }
+
+        /* ══ PAGE HEADER ══════════════════════════════════════ */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
+        }
+
+        .page-header-left { display: flex; align-items: center; gap: 16px; }
+
+        .header-icon {
+            width: 50px; height: 50px;
+            background: var(--navy-900);
+            border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 6px 16px rgba(11,23,53,0.25);
+        }
+        .header-icon svg { width: 22px; height: 22px; color: var(--white); }
+
+        .page-title {
+            font-family: var(--font-serif);
+            font-size: 26px; font-weight: 700; color: var(--text-dark);
+            letter-spacing: -0.02em; line-height: 1.1;
+        }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
+
+        .btn-danger {
+            display: flex; align-items: center; gap: 7px;
+            background: var(--danger-bg); color: var(--danger);
+            border: 1px solid #f5a89e;
+            padding: 9px 18px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-danger svg { width: 14px; height: 14px; }
+
+        /* ══ LAYOUT ═══════════════════════════════════════════ */
+        .content-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 22px; }
+        @media (max-width: 768px) { .content-grid { grid-template-columns: 1fr; } }
+
+        /* ══ CARD ═════════════════════════════════════════════ */
+        .card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--navy-900);
+            padding: 16px 20px;
+            display: flex; align-items: center; gap: 12px;
+            position: relative; overflow: hidden;
+        }
+        .card-header::after {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+        }
+        .card-header-icon {
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; position: relative; z-index: 1;
+        }
+        .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
+        .card-header-text { font-size: 14px; font-weight: 600; color: #fff; position: relative; z-index: 1; }
+        .card-body { padding: 18px; }
+
+        /* ══ RECORDING LIST ═══════════════════════════════════ */
+        .recording-list { height: calc(100vh - 300px); overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
+        .recording-item {
+            padding: 13px 15px;
+            background: var(--off-white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .recording-item:hover { border-color: var(--navy-400); background: var(--navy-50); }
+        .recording-item.active { border-color: var(--navy-600); background: var(--navy-50); box-shadow: 0 0 0 2px var(--navy-100); }
+        .rec-cam { font-size: 13px; font-weight: 600; color: var(--navy-800); }
+        .rec-time { font-size: 11.5px; color: var(--text-mid); margin-top: 3px; }
+        .rec-file { font-size: 10.5px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rec-actions { display: flex; justify-content: flex-end; margin-top: 9px; }
+        .btn-delete-sm {
+            font-size: 11px; font-weight: 600; font-family: var(--font-sans);
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-muted); padding: 4px 11px; border-radius: var(--radius-sm);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .btn-delete-sm:hover { background: var(--danger-bg); border-color: #f5a89e; color: var(--danger); }
+
+        /* ══ VIDEO PLAYER ═════════════════════════════════════ */
+        .player-card { position: sticky; top: 96px; }
+        .player-title { font-size: 13.5px; font-weight: 600; color: var(--text-dark); }
+        .player-title.muted { color: var(--text-muted); font-weight: 400; }
+        .video-wrap { background: var(--navy-950); border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 16/9; margin-top: 13px; }
+        .video-wrap video { width: 100%; height: 100%; display: block; }
+        .btn-download {
+            display: none; align-items: center; gap: 7px;
+            margin-top: 15px;
+            background: var(--navy-800); color: #fff; border: none;
+            padding: 10px 20px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; text-decoration: none;
+            transition: background 0.15s, transform 0.1s;
+            box-shadow: 0 4px 14px rgba(11,23,53,0.22);
+        }
+        .btn-download:hover { background: var(--navy-700); transform: translateY(-1px); }
+        .btn-download svg { width: 14px; height: 14px; }
+        .btn-download.visible { display: inline-flex; }
+
+        /* ══ EMPTY ════════════════════════════════════════════ */
+        .empty-msg { text-align: center; padding: 44px 20px; color: var(--text-muted); font-size: 13.5px; }
+        .empty-msg svg { width: 38px; height: 38px; margin: 0 auto 14px; color: var(--navy-200); display: block; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--off-white); }
+        ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<!-- ══ NAV ══════════════════════════════════════════════════ -->
+<nav>
+    <div class="nav-inner">
+        <a class="nav-brand" href="/">
+            <div class="brand-logo-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="brand-text-block">
+                <div class="brand-name">Home Detection <em>Security</em></div>
+                <div class="brand-sub">Monitoring System</div>
+            </div>
+        </a>
+
+        <div class="nav-clock">
+            <span class="nav-clock-dot"></span>
+            <span class="nav-clock-label">Live</span>
+            <div class="nav-clock-sep"></div>
+            <span class="nav-clock-time" id="userClock">--:--:--</span>
+        </div>
+
+        <ul class="nav-links">
+            <li>
+                <a href="/">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <span class="link-label">Dashboard</span>
+                </a>
+            </li>
+            <li class="hide-sm">
+                <a href="/settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span class="link-label">Settings</span>
+                </a>
+            </li>
+            <li class="hide-sm">
+                <a href="/events">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span class="link-label">Event Log</span>
+                </a>
+            </li>
+            <li>
+                <a href="/recordings" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    <span class="link-label">Recordings</span>
+                </a>
+            </li>
+            <li>
+                <a href="/logout" class="nav-logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span class="link-label">Logout</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ══ PAGE ═════════════════════════════════════════════════ -->
+<main class="page">
+    <div class="page-header">
+        <div class="page-header-left">
+            <div class="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            </div>
+            <div>
+                <h1 class="page-title">Saved Recordings</h1>
+                <p class="page-subtitle">Browse, play, and manage your camera recordings</p>
+            </div>
+        </div>
+        <button class="btn-danger" onclick="clearAllRecordings()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Clear All
+        </button>
+    </div>
+
+    <div class="content-grid">
+        <!-- Left: List -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </div>
+                <span class="card-header-text">Available Files</span>
+            </div>
+            <div class="card-body">
+                <div id="recordingList" class="recording-list">
+                    <div class="empty-msg">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        Loading recordings...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Player -->
+        <div class="card player-card">
+            <div class="card-header">
+                <div class="card-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                </div>
+                <span class="card-header-text">Video Player</span>
+            </div>
+            <div class="card-body">
+                <p id="playerTitle" class="player-title muted">Select a recording from the list to play</p>
+                <div class="video-wrap">
+                    <video id="videoPlayer" controls>
+                        <source id="videoSource" src="" type="video/webm">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <a id="downloadLink" href="#" download class="btn-download">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download Recording
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Live clock (24-hour, matches dashboard)
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2,'0');
+        const m = String(now.getMinutes()).padStart(2,'0');
+        const s = String(now.getSeconds()).padStart(2,'0');
+        document.getElementById('userClock').textContent = `${h}:${m}:${s}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    const recordingList = document.getElementById('recordingList');
+    const videoPlayer   = document.getElementById('videoPlayer');
+    const videoSource   = document.getElementById('videoSource');
+    const playerTitle   = document.getElementById('playerTitle');
+    const downloadLink  = document.getElementById('downloadLink');
+    let allRecordings   = [];
+
+    function formatTimestamp(dateStr, timeStr) {
+        try {
+            const year = dateStr.substring(0, 4), month = dateStr.substring(4, 6), day = dateStr.substring(6, 8);
+            const hour = timeStr.substring(0, 2), minute = timeStr.substring(2, 4), second = timeStr.substring(4, 6);
+            return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`).toLocaleString();
+        } catch (e) { return `${dateStr} ${timeStr}`; }
+    }
+
+    async function fetchRecordings() {
+        try {
+            const response = await fetch('/api/recordings');
+            if (!response.ok) throw new Error('Failed to fetch');
+            const recordings = await response.json();
+
+            if (!Array.isArray(recordings) || recordings.length === 0) {
+                recordingList.innerHTML = `<div class="empty-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    No recordings found.
+                </div>`;
+                return;
+            }
+
+            allRecordings = recordings;
+            recordingList.innerHTML = '';
+
+            recordings.forEach(rec => {
+                const formattedTime = formatTimestamp(rec.date, rec.time);
+                const el = document.createElement('div');
+                el.id = `rec-${rec.filename}`;
+                el.className = 'recording-item';
+                el.innerHTML = `
+                    <div class="rec-cam">Camera ${rec.cam}</div>
+                    <div class="rec-time">${formattedTime}</div>
+                    <div class="rec-file">${rec.filename}</div>
+                    <div class="rec-actions">
+                        <button class="btn-delete-sm" onclick="event.stopPropagation(); deleteRecording('${rec.filename}')">Delete</button>
+                    </div>
+                `;
+                el.addEventListener('click', () => {
+                    document.querySelectorAll('.recording-item').forEach(i => i.classList.remove('active'));
+                    el.classList.add('active');
+                    playVideo(rec.filename, rec.cam, formattedTime);
+                });
+                recordingList.appendChild(el);
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const filenameToPlay = urlParams.get('filename');
+            const timeToSeek = urlParams.get('time');
+
+            if (filenameToPlay && timeToSeek) {
+                const matchingRec = allRecordings.find(r => r.filename === filenameToPlay);
+                if (matchingRec) {
+                    const ft = formatTimestamp(matchingRec.date, matchingRec.time);
+                    playVideo(matchingRec.filename, matchingRec.cam, ft, timeToSeek);
+                    const el = document.getElementById(`rec-${matchingRec.filename}`);
+                    if (el) { el.classList.add('active'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                }
+            }
+        } catch (error) {
+            recordingList.innerHTML = `<div class="empty-msg" style="color:var(--danger)">Error loading recordings.</div>`;
+        }
+    }
+
+    function playVideo(filename, cam, time, seekTime = null) {
+        const videoUrl = `/recordings/${filename}`;
+        playerTitle.textContent = `Camera ${cam} — ${time}`;
+        playerTitle.classList.remove('muted');
+        videoSource.setAttribute('src', videoUrl);
+        downloadLink.setAttribute('href', videoUrl);
+        downloadLink.setAttribute('download', filename);
+        downloadLink.classList.add('visible');
+        videoPlayer.load();
+        if (seekTime) {
+            videoPlayer.addEventListener('loadeddata', () => { videoPlayer.currentTime = seekTime; videoPlayer.play(); }, { once: true });
+        } else {
+            videoPlayer.play();
+        }
+    }
+
+    async function deleteRecording(filename) {
+        if (!confirm(`Delete ${filename}?`)) return;
+        try {
+            const response = await fetch(`/api/delete_recording/${filename}`, { method: 'POST' });
+            if (!response.ok) throw new Error('Failed');
+            fetchRecordings();
+        } catch (e) { alert('Error deleting recording'); }
+    }
+
+    async function clearAllRecordings() {
+        if (!confirm('Delete ALL recordings? This cannot be undone.')) return;
+        try {
+            const response = await fetch('/api/clear_all_recordings', { method: 'POST' });
+            if (!response.ok) throw new Error('Failed');
+            fetchRecordings();
+        } catch (e) { alert('Error clearing recordings'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchRecordings);
+</script>
+</body>
+</html>
