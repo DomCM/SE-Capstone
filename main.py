@@ -996,8 +996,7 @@ def admin_cctv():
 def admin_users():
     is_mobile_device = is_mobile(request)
     template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}admin_users.html', users=users, message=None)
-
+    return render_template(f'{template_path}admin_users.html', users=User.query.order_by(User.id).all(), message=None)
 
 @app.route('/admin/users/create', methods=['POST'])
 @admin_required
