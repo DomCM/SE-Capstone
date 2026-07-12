@@ -754,6 +754,26 @@ class VideoStreamManager:
             self.cap.release()
 
 #routes
+
+def is_mobile(request):
+    """
+    Checks the User-Agent header to determine if the request is coming from a mobile device.
+    """
+    if 'User-Agent' not in request.headers:
+        return False
+    
+    user_agent = request.headers['User-Agent'].lower()
+    
+    # Keywords commonly found in mobile device user agents
+    mobile_keywords = [
+        'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone', 'opera mini'
+    ]
+    
+    for keyword in mobile_keywords:
+        if keyword in user_agent:
+            return True
+    return False
+
 #gatekeep start
 @app.before_request
 def check_privacy_agreement():
@@ -771,7 +791,9 @@ def check_privacy_agreement():
 
 @app.route('/disclaimer')
 def disclaimer():
-    return render_template('disclaimer.html')
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}disclaimer.html')
 
 @app.route('/accept_terms', methods=['POST'])
 def accept_terms():
@@ -836,7 +858,9 @@ def register():
         login_user(new_user)
         return redirect(url_for('index'))
     
-    return render_template('register.html')
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -852,7 +876,10 @@ def login():
             return redirect(url_for(get_dashboard_target(user)))
         else:
             flash('Login failed. Check details.', 'danger')
-    return render_template('login.html')
+                
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}login.html')    
 
 @app.route('/logout')
 @login_required
@@ -871,9 +898,12 @@ def logout():
 def index():
     if is_admin_user(current_user):
         return redirect(url_for('admin_dashboard'))
-
+    
     user_cameras = Camera.query.filter_by(user_id=current_user.id).all()
-    return render_template('index.html', cameras=user_cameras)
+    
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}index.html', cameras=user_cameras)    
 
 
 @app.route('/admin')
@@ -923,8 +953,10 @@ def admin_dashboard():
             'type': dot_type,
         })
 
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
     return render_template(
-        'admin_dashboard.html',
+        f'{template_path}admin_dashboard.html',
         total_users=total_users,
         active_cameras=active_cameras,
         total_events=total_events,
@@ -954,13 +986,17 @@ def admin_cctv():
             'is_recording': False,
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
-    return render_template('admin_cctv.html', cameras=camera_items)
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}admin_cctv.html', cameras=camera_items)
 
 
 @app.route('/admin/users')
 @admin_required
 def admin_users():
-    return render_template('admin_users.html', users=User.query.order_by(User.id).all(), message=None)
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}admin_users.html', users=users, message=None)
 
 
 @app.route('/admin/users/create', methods=['POST'])
@@ -1045,7 +1081,9 @@ def admin_delete_user(user_id):
 @admin_required
 def admin_logs():
     logs = EventLog.query.order_by(EventLog.timestamp.desc()).all()
-    return render_template('admin_logs.html', logs=logs, total_logs=len(logs), page=1)
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}admin_logs.html', logs=logs, total_logs=len(logs), page=1)
 
 
 @app.route('/admin/clear_events', methods=['POST'])
@@ -1066,8 +1104,10 @@ def admin_system():
         db.session.add(settings)
         db.session.commit()
 
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
     return render_template(
-        'admin_system.html',
+        f'{template_path}admin_system.html',
         settings=settings,
         storage_pct=0,
         storage_used='0 MB',
@@ -1268,7 +1308,9 @@ def settings():
         
         return redirect(url_for('settings'))
         
-    return render_template('settings.html', settings=user_settings, known_faces=known_faces_list)
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}settings.html', settings=user_settings, known_faces=known_faces_list)
 
 @app.route('/add_face', methods=['POST'])
 @login_required
@@ -1340,12 +1382,16 @@ def toggle_recording(camera_id):
 @app.route('/recordings')
 @login_required
 def recordings_page():
-    return render_template('recordings.html')
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}recordings.html')
 
 @app.route('/events')
 @login_required
 def events_page():
-    return render_template('events.html')
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}events.html')
 
 @app.route('/api/recordings', methods=['GET'])
 @login_required
