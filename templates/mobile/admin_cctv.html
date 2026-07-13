@@ -72,12 +72,11 @@
         }
         .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px; background: var(--navy-900); border-radius: 10px;
+            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            padding: 5px; overflow: hidden;
+            padding: 2px; overflow: hidden; border: 1px solid var(--border);
         }
         .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-        .brand-logo-wrap svg { width: 19px; height: 19px; color: var(--white); }
         .brand-text-block { line-height: 1.15; }
         .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
         .brand-name em { font-style: italic; color: var(--navy-600); }
@@ -523,6 +522,106 @@
             .logout-modal { padding: 22px 18px; }
             .logout-modal-actions { flex-direction: column-reverse; }
         }
+
+        .add-camera-panel {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin: 14px auto 24px;
+            width: calc(100% - 48px);
+            max-width: 1280px;
+            box-shadow: var(--shadow-sm);
+        }
+        .add-camera-panel .card-header {
+            background: var(--navy-900);
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .add-camera-panel .card-header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+                               linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+        }
+        .add-camera-panel .card-header-icon {
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            position: relative; z-index: 1;
+        }
+        .add-camera-panel .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
+        .add-camera-panel .card-header-text { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.01em; position: relative; z-index: 1; }
+        .add-camera-panel .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; position: relative; z-index: 1; }
+        .add-camera-panel .add-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: flex-end;
+            padding: 18px 22px 22px;
+        }
+        .add-camera-panel .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-width: 180px;
+        }
+        .add-camera-panel .field label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-mid);
+            letter-spacing: 0.02em;
+        }
+        .add-camera-panel .field input {
+            background: var(--off-white);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 13px;
+            font-size: 13px;
+            font-family: var(--font-sans);
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            width: 100%;
+        }
+        .add-camera-panel .field input::placeholder { color: var(--text-muted); }
+        .add-camera-panel .field input:focus {
+            border-color: var(--navy-600);
+            box-shadow: 0 0 0 3px var(--navy-100);
+            background: var(--white);
+        }
+        .add-camera-panel .btn-add {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--navy-800);
+            color: #fff;
+            border: none;
+            padding: 10px 22px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            height: 41px;
+            white-space: nowrap;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            letter-spacing: -0.01em;
+            box-shadow: 0 4px 14px rgba(11,23,53,0.22);
+        }
+        .add-camera-panel .btn-add svg { width: 14px; height: 14px; }
+        .add-camera-panel .btn-add:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
     </style>
 </head>
 <body>
@@ -530,12 +629,9 @@
 <!-- ══ NAV ═══════════════════════════════════════════════════ -->
 <nav>
     <div class="nav-inner">
-        <!-- Brand -->
-        <a class="nav-brand" href="admin_dashboard.html">
+        <a class="nav-brand" href="/admin">
             <div class="brand-logo-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
             <div class="brand-text-block">
                 <div class="brand-name">Home Detection <em>Security</em></div>
@@ -543,7 +639,6 @@
             </div>
         </a>
 
-        <!-- Live clock -->
         <div class="nav-clock">
             <span class="nav-clock-dot"></span>
             <span class="nav-clock-label">Live</span>
@@ -551,72 +646,35 @@
             <span class="nav-clock-time" id="clock">--:--:--</span>
         </div>
 
-        <!-- Hamburger Menu Toggle Button -->
-        <button class="menu-toggle" id="menuToggleBtn" aria-label="Toggle navigation menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-        </button>
-
-        <!-- Nav Links -->
-        <ul class="nav-links" id="navLinksList">
-            <li>
-                <a href="admin_dashboard.html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                    </svg>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="admin_cctv.html" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                    CCTV Monitor
-                </a>
-            </li>
-            <li>
-                <a href="admin_users.html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    </svg>
-                    Users
-                </a>
-            </li>
-            <li>
-                <a href="admin_logs.html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    Admin Logs
-                </a>
-            </li>
-            <li>
-                <a href="admin_system.html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="3" width="20" height="14" rx="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                    </svg>
-                    Settings
-                </a>
-            </li>
-            <li>
-                <a href="login.html" class="nav-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                    Logout
-                </a>
-            </li>
+        <ul class="nav-links">
+            <li><a href="/admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Overview
+            </a></li>
+            <li><a href="/admin/cctv" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                CCTV Monitor
+            </a></li>
+            <li class="hide-sm"><a href="/admin/users">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Users
+            </a></li>
+            <li class="hide-sm"><a href="/admin/logs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Audit Logs
+            </a></li>
+            <li class="hide-sm"><a href="/admin/system">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                System
+            </a></li>
+            <li><a href="/logout" class="nav-logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Logout
+            </a></li>
         </ul>
     </div>
 </nav>
+
 
 <!-- ══ TOOLBAR ═══════════════════════════════════════════════ -->
 <div class="toolbar">
@@ -656,6 +714,32 @@
             Scanlines
         </button>
     </div>
+</div>
+
+<div class="add-camera-panel">
+    <div class="card-header">
+        <div class="card-header-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </div>
+        <div>
+            <div class="card-header-text">Connect a Network Camera</div>
+            <div class="card-header-sub">Enter an RTSP or HTTP stream URL to add a new camera.</div>
+        </div>
+    </div>
+    <form action="/add_camera" method="POST" class="add-form">
+        <div class="field">
+            <label for="cam-name">Camera Name</label>
+            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door" required>
+        </div>
+        <div class="field">
+            <label for="cam-url">RTSP / HTTP Stream URL</label>
+            <input id="cam-url" type="text" name="source" placeholder="rtsp://user:password@ip_address:port/stream" required>
+        </div>
+        <button type="submit" class="btn-add">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Camera
+        </button>
+    </form>
 </div>
 
 <!-- ══ CAMERA WALL ══════════════════════════════════════════ -->

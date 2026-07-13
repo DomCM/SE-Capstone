@@ -262,7 +262,8 @@
         .field-sublabel { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
         .field-sublabel a { color: var(--navy-600); }
 
-        input[type="text"], input[type="email"], input[type="password"], input[type="number"] {
+        input[type="text"], input[type="email"], input[type="password"], input[type="number"],
+        input[type="date"], input[type="time"], textarea {
             width: 100%;
             background: var(--off-white);
             border: 1.5px solid var(--border);
@@ -273,12 +274,14 @@
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
         }
-        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="number"]:focus,
+        input[type="date"]:focus, input[type="time"]:focus, textarea:focus {
             border-color: var(--navy-600);
             box-shadow: 0 0 0 3px var(--navy-100);
             background: var(--white);
         }
-        input::placeholder { color: var(--text-muted); }
+        input::placeholder, textarea::placeholder { color: var(--text-muted); }
+        textarea { resize: vertical; min-height: 90px; font-family: var(--font-sans); line-height: 1.5; }
 
         /* ══ TOGGLE ═══════════════════════════════════════════ */
         .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--border); }
@@ -529,7 +532,7 @@
     <div class="nav-inner">
         <a class="nav-brand" href="/">
             <div class="brand-logo-wrap">
-                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="Home Detection Security Logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
             <div class="brand-text-block">
                 <div class="brand-name">Home Detection <em>Security</em></div>
@@ -546,31 +549,31 @@
 
         <ul class="nav-links">
             <li>
-                <a href="index.html">
+                <a href="/">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     <span class="link-label">Dashboard</span>
                 </a>
             </li>
             <li>
-                <a href="events.html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span class="link-label">Event Log</span>
-                </a>
-            </li>
-            <li>
-                <a href="recordings.html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                    <span class="link-label">Recordings</span>
-                </a>
-            </li>
-              <li>
-                <a href="settings.html" class="active">
+                <a href="/settings" class="active">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span class="link-label">Settings</span>
                 </a>
             </li>
             <li>
-                <a href="login.html" class="nav-logout">
+                <a href="/events">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span class="link-label">Event Log</span>
+                </a>
+            </li>
+            <li>
+                <a href="/recordings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    <span class="link-label">Recordings</span>
+                </a>
+            </li>
+            <li>
+                <a href="/logout" class="nav-logout">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span class="link-label">Logout</span>
                 </a>
@@ -599,7 +602,7 @@
         {% endif %}
     {% endwith %}
 
-    <form method="POST">
+    <form method="POST" id="settingsForm">
         <!-- Detection Logic -->
         <div class="section-card">
             <div class="section-header">
@@ -708,9 +711,46 @@
                 </div>
             </div>
         </div>
-
-        <button type="submit" class="btn-save">Save All Changes</button>
     </form>
+
+    <!-- Request Recording -->
+    <div class="section-card">
+        <div class="section-header">
+            <span class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                Request Recording
+            </span>
+        </div>
+        <div class="section-body">
+            <p class="field-sublabel" style="margin-top:-4px; margin-bottom:18px;">Ask an administrator to pull a specific camera recording. Fill in as much detail as you can.</p>
+            <form method="POST" action="{{ url_for('request_recording') }}">
+                <div class="grid-2" style="margin-bottom: 18px;">
+                    <div class="field-group" style="margin-bottom:0">
+                        <label class="field-label">Date</label>
+                        <input type="date" name="request_date" required>
+                    </div>
+                    <div class="field-group" style="margin-bottom:0">
+                        <label class="field-label">Approximate Time</label>
+                        <input type="time" name="request_time" required>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Location</label>
+                    <input type="text" name="request_location" placeholder="e.g. Front Door, Back Yard, Garage" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Reason</label>
+                    <textarea name="request_reason" rows="4" placeholder="Briefly describe why you're requesting this recording..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn-save">Submit Request</button>
+            </form>
+        </div>
+    </div>
+
+    <button type="submit" form="settingsForm" class="btn-save">Save All Changes</button>
 
     <!-- Known Faces -->
     <div class="section-card">

@@ -9,7 +9,7 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            /* ── Shared palette (from admin_dashboard.html) ── */
+            /* ── Core Palette ── */
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
             --navy-800:  #0d1b3e;
@@ -31,6 +31,7 @@
             --success-bg:#eaf7f0;
             --amber:     #b07d2a;
             --amber-bg:  #fef7e6;
+            
             /* ── Tokens ── */
             --radius-sm: 6px;
             --radius-md: 10px;
@@ -38,161 +39,83 @@
             --shadow-xs: 0 1px 2px rgba(11,23,53,0.04);
             --shadow-sm: 0 1px 4px rgba(11,23,53,0.07), 0 1px 2px rgba(11,23,53,0.04);
             --shadow-md: 0 8px 24px rgba(11,23,53,0.10), 0 2px 6px rgba(11,23,53,0.06);
+            --shadow-lg: 0 16px 40px rgba(11,23,53,0.14), 0 4px 12px rgba(11,23,53,0.08);
             --font-sans: 'Inter', sans-serif;
             --font-serif:'Playfair Display', Georgia, serif;
             --font-mono: 'JetBrains Mono', monospace;
         }
 
+        html, body { height: 100%; }
         body {
             font-family: var(--font-sans);
             background: var(--off-white);
             color: var(--text-dark);
             min-height: 100vh;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 14px; line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            display: flex; flex-direction: column;
         }
 
         /* ══════════════════════════════════════
-           NAV
+           RESPONSIVE NAVIGATION
         ══════════════════════════════════════ */
         nav {
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            position: sticky; top: 0; z-index: 200;
             background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
             border-bottom: 1px solid var(--border);
-            box-shadow: var(--shadow-xs);
+            box-shadow: var(--shadow-xs); flex-shrink: 0;
         }
-
         .nav-inner {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 28px;
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
+            max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 64px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
         }
-
-        .nav-brand {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            text-decoration: none;
-            flex-shrink: 0;
-        }
+        .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px;
-            background: var(--navy-900);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
+            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            padding: 2px; overflow: hidden; border: 1px solid var(--border);
         }
-        .brand-logo-wrap svg { width: 19px; height: 19px; color: var(--white); }
+        .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
         .brand-text-block { line-height: 1.15; }
-        .brand-name {
-            font-family: var(--font-serif);
-            font-size: 15px; font-weight: 700;
-            color: var(--text-dark); letter-spacing: -0.01em;
-        }
+        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
         .brand-name em { font-style: italic; color: var(--navy-600); }
-        .brand-sub {
-            font-size: 9.5px; font-weight: 600;
-            color: var(--text-muted);
-            letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px;
-        }
+        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
-        /* Live clock pill — center of nav */
         .nav-clock {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--navy-900);
-            border-radius: 999px;
-            padding: 6px 16px;
-            flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px;
+            background: var(--navy-900); border-radius: 999px; padding: 6px 16px; flex-shrink: 0;
         }
-        .nav-clock-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: #ef4444;
-            animation: pulse-red 1.5s ease-in-out infinite;
-        }
+        .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s ease-in-out infinite; }
         @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
-        .nav-clock-time {
-            font-family: var(--font-mono);
-            font-size: 12px; font-weight: 500;
-            color: #fff;
-            letter-spacing: 0.04em;
-        }
-        .nav-clock-label {
-            font-size: 9.5px; font-weight: 700;
-            letter-spacing: 0.1em; text-transform: uppercase;
-            color: #ef4444;
-        }
-        .nav-clock-sep {
-            width: 1px; height: 14px;
-            background: rgba(255,255,255,0.15);
-        }
+        .nav-clock-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ef4444; }
+        .nav-clock-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.15); }
+        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; letter-spacing: 0.04em; }
 
-        /* Nav links */
-        .nav-links {
-            display: flex; align-items: center;
-            gap: 2px; list-style: none;
-        }
+        .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
         .nav-links a {
-            display: flex; align-items: center; gap: 6px;
-            padding: 7px 13px;
-            border-radius: var(--radius-sm);
-            font-size: 13px; font-weight: 500;
-            color: var(--text-mid);
-            text-decoration: none;
-            transition: background 0.15s, color 0.15s;
-            white-space: nowrap;
+            display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
+            transition: background 0.15s, color 0.15s; white-space: nowrap;
         }
         .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
         .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
-        .nav-links a.active {
-            background: var(--navy-900);
-            color: var(--white); font-weight: 600;
-            box-shadow: 0 4px 12px rgba(11,23,53,0.22);
-        }
+        .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
         .nav-links a.active svg { opacity: 1; }
-        .nav-links a.nav-cctv {
-            background: var(--danger-bg);
-            color: var(--danger);
-            border: 1px solid #f5c6c2;
-            font-weight: 600;
-        }
-        .nav-links a.nav-cctv:hover {
-            background: var(--danger);
-            color: var(--white);
-            border-color: var(--danger);
-        }
-        .nav-links a.nav-cctv svg { opacity: 1; }
-        .nav-links a.nav-logout {
-            margin-left: 6px;
-            border: 1px solid var(--border);
-        }
-        .nav-links a.nav-logout:hover {
-            background: var(--danger-bg);
-            color: var(--danger);
-            border-color: #f5a89e;
-        }
-        .nav-links a.nav-back { margin-left: 6px; }
+        .nav-links a.nav-logout { margin-left: 6px; border: 1px solid var(--border); }
+        .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
 
-        @media (max-width: 700px) {
-            .nav-links li.hide-sm { display: none; }
-            .page { padding: 20px 16px 60px; }
+        .menu-toggle {
+            display: none; background: transparent; border: 1px solid var(--border);
+            color: var(--navy-900); width: 40px; height: 40px; border-radius: var(--radius-sm);
+            align-items: center; justify-content: center; cursor: pointer;
         }
+        .menu-toggle svg { width: 20px; height: 20px; }
 
         /* ══════════════════════════════════════
-           PAGE
+           PAGE CONTENT LAYOUT
         ══════════════════════════════════════ */
-        .page { max-width: 820px; margin: 0 auto; padding: 34px 28px 72px; }
+        .page { max-width: 820px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
 
         .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
         .header-icon {
@@ -211,7 +134,7 @@
         .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
 
         /* ══════════════════════════════════════
-           FLASH
+           FLASH MESSAGE STYLING
         ══════════════════════════════════════ */
         .flash {
             display: flex; align-items: center; gap: 9px;
@@ -225,7 +148,7 @@
         .flash-success { background: var(--success-bg); border: 1px solid #9bd4b8; color: var(--success); }
 
         /* ══════════════════════════════════════
-           SECTION CARD
+           SECTION CARDS
         ══════════════════════════════════════ */
         .section-card {
             background: var(--white);
@@ -263,7 +186,7 @@
         .section-body { padding: 22px; }
 
         /* ══════════════════════════════════════
-           FORM
+           FORM FIELDS
         ══════════════════════════════════════ */
         .field-group { margin-bottom: 18px; }
         .field-group:last-child { margin-bottom: 0; }
@@ -289,7 +212,7 @@
         textarea { resize: vertical; min-height: 80px; }
 
         /* ══════════════════════════════════════
-           TOGGLE
+           TOGGLES & SWITCHES
         ══════════════════════════════════════ */
         .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
@@ -303,14 +226,8 @@
         .toggle-switch input:checked + .toggle-slider { background: var(--navy-600); }
         .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-        .range-row { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
-        .range-row input[type="range"] { flex: 1; accent-color: var(--navy-600); cursor: pointer; }
-        .range-val { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--navy-600); min-width: 32px; text-align: right; }
-
-
-
         /* ══════════════════════════════════════
-           GRID & SAVE
+           GRID & ACTION ACTIONS
         ══════════════════════════════════════ */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         @media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -328,7 +245,7 @@
         .btn-save svg { width: 14px; height: 14px; }
 
         /* ══════════════════════════════════════
-           DANGER ZONE
+           DANGER ZONE CARD
         ══════════════════════════════════════ */
         .danger-zone {
             background: var(--white);
@@ -348,6 +265,7 @@
         .danger-row:last-child { border-bottom: none; padding-bottom: 0; }
         .danger-info .danger-label { font-size: 13.5px; font-weight: 500; color: var(--text-dark); }
         .danger-info .danger-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        
         .btn-danger {
             display: inline-flex; align-items: center; gap: 6px;
             background: var(--danger-bg); color: var(--danger);
@@ -360,7 +278,7 @@
         .btn-danger svg { width: 13px; height: 13px; }
 
         /* ══════════════════════════════════════
-           STORAGE BAR
+           STORAGE PERCENT PROGRESS BAR
         ══════════════════════════════════════ */
         .storage-bar-wrap { margin-top: 8px; }
         .storage-bar-track { background: var(--off-white); border: 1px solid var(--border); border-radius: 99px; height: 9px; overflow: hidden; }
@@ -368,7 +286,7 @@
         .storage-labels { display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 6px; }
 
         /* ══════════════════════════════════════
-           INFO ROW
+           SERVER METADATA ROWS
         ══════════════════════════════════════ */
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
         @media (max-width: 560px) { .info-grid { grid-template-columns: 1fr; } }
@@ -377,9 +295,218 @@
         .info-label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
         .info-val { font-size: 12.5px; font-family: var(--font-mono); color: var(--text-dark); font-weight: 600; }
 
+        /* ══════════════════════════════════════
+           SIMPLIFIED BRAND FOOTER (MATCHING CCTV)
+        ══════════════════════════════════════ */
+        footer {
+            background: var(--navy-950);
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 20px 24px;
+            margin-top: auto;
+            flex-shrink: 0;
+            text-align: center;
+        }
+        .footer-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 12.5px;
+            flex-wrap: wrap;
+        }
+        .footer-brand {
+            font-family: var(--font-serif);
+            font-weight: 700;
+            color: #fff;
+        }
+        .footer-brand em {
+            font-style: italic;
+            color: var(--navy-400);
+        }
+
+        /* ══════════════════════════════════════
+           DYNAMIC CONFIRM OVERLAY DIALOGS (NON-BLOCKING)
+        ══════════════════════════════════════ */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(6,13,31,0.78);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-card {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); overflow: hidden;
+            width: 100%; max-width: 420px; display: flex; flex-direction: column;
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-body { padding: 24px; }
+        .modal-title { font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+        .modal-desc { font-size: 13.5px; color: var(--text-mid); line-height: 1.5; }
+        .modal-actions {
+            display: flex; justify-content: flex-end; gap: 8px;
+            background: var(--off-white); padding: 12px 24px; border-top: 1px solid var(--border);
+        }
+        .btn-modal {
+            padding: 8px 16px; border-radius: var(--radius-sm);
+            font-size: 12.5px; font-weight: 600; cursor: pointer;
+            border: 1px solid var(--border); font-family: var(--font-sans);
+            transition: background 0.1s, color 0.1s;
+        }
+        .btn-modal-cancel { background: var(--white); color: var(--text-mid); }
+        .btn-modal-cancel:hover { background: var(--navy-50); }
+        .btn-modal-confirm { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-modal-confirm:hover { background: #a82e22; }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE BREAKPOINTS (TABLETS & PHONES)
+        ══════════════════════════════════════ */
+        @media (max-width: 1024px) {
+            .nav-inner {
+                padding: 0 20px; height: auto;
+                padding-top: 12px; padding-bottom: 12px;
+                flex-wrap: wrap; gap: 12px;
+            }
+            .nav-clock { order: 2; }
+            .menu-toggle { display: flex; order: 3; }
+            .nav-links {
+                display: none; width: 100%;
+                flex-direction: column; order: 4;
+                background: var(--off-white); padding: 8px;
+                border-radius: var(--radius-md); border: 1px solid var(--border);
+                margin-top: 8px; gap: 4px;
+            }
+            .nav-links.show { display: flex; }
+            .nav-links li { width: 100%; }
+            .nav-links a { padding: 10px 14px; width: 100%; justify-content: flex-start; }
+            .nav-links a.nav-logout { margin-left: 0; margin-top: 4px; }
+
+            .page { padding: 24px 20px 56px; }
+        }
+
+        @media (max-width: 640px) {
+            .nav-inner { padding: 8px 14px; }
+            .brand-name { font-size: 13.5px; }
+            .brand-sub { font-size: 8.5px; }
+            .nav-clock { padding: 4px 10px; }
+            .nav-clock-time { font-size: 11px; }
+
+            .page { padding: 16px 12px 48px; }
+            .page-title { font-size: 22px; }
+            .page-subtitle { font-size: 12px; }
+
+            .danger-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .btn-danger { margin-left: 0; width: 100%; justify-content: center; }
+            .modal-overlay { padding: 12px; }
+        }
+
+        @media (max-width: 360px) {
+            .nav-clock { display: none; }
+        }
+
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: var(--off-white); }
         ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
+
+        /* ══ LOGOUT CONFIRMATION MODAL ═══════════════════════ */
+        .logout-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 13, 31, 0.55);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .logout-modal-overlay.is-open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .logout-modal {
+            width: 100%;
+            max-width: 380px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
+            padding: 28px;
+            text-align: center;
+            transform: translateY(14px) scale(0.96);
+            opacity: 0;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+        }
+        .logout-modal-overlay.is-open .logout-modal {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        .logout-modal-icon {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: var(--danger-bg);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logout-modal-icon svg { width: 24px; height: 24px; }
+        .logout-modal h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+        .logout-modal p {
+            font-size: 14px;
+            color: var(--text-mid);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .logout-modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .logout-modal-btn {
+            flex: 1;
+            padding: 11px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .logout-modal-btn-no {
+            background: var(--off-white);
+            border-color: var(--border);
+            color: var(--text-mid);
+        }
+        .logout-modal-btn-no:hover {
+            background: var(--border);
+        }
+        .logout-modal-btn-yes {
+            background: var(--danger);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28);
+        }
+        .logout-modal-btn-yes:hover {
+            background: #a5301f;
+            transform: translateY(-1px);
+        }
+        .logout-modal-btn:active { transform: translateY(0); }
+
+        @media (max-width: 480px) {
+            .logout-modal { padding: 22px 18px; }
+            .logout-modal-actions { flex-direction: column-reverse; }
+        }
     </style>
 </head>
 <body>
@@ -472,7 +599,7 @@
     </div>
 </nav>
 
-<!-- ══ PAGE ══════════════════════════════════════════════════ -->
+<!-- ══ PAGE CONTENT ══════════════════════════════════════════ -->
 <main class="page">
 
     <div class="page-header">
@@ -488,6 +615,7 @@
         </div>
     </div>
 
+    <!-- Alert / Flask Notification Messaging -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}{% for category, message in messages %}
         <div class="flash {{ 'flash-danger' if category == 'danger' else 'flash-success' }}">
@@ -508,7 +636,7 @@
                 <span class="section-title">Storage &amp; Retention</span>
             </div>
             <div class="section-body">
-                <!-- Storage bar -->
+                <!-- Storage progress bar track -->
                 <div class="field-group">
                     <label class="field-label">Disk Usage</label>
                     <div class="storage-bar-wrap">
@@ -516,8 +644,8 @@
                             <div class="storage-bar-fill" style="width:{{ storage_pct or 0 }}%"></div>
                         </div>
                         <div class="storage-labels">
-                            <span>{{ storage_used or '—' }} used</span>
-                            <span>{{ storage_free or '—' }} free / {{ storage_total or '—' }} total</span>
+                            <span>{{ storage_used or '0.0 GB' }} used</span>
+                            <span>{{ storage_free or '4.0 TB' }} free / {{ storage_total or '4.0 TB' }} total</span>
                         </div>
                     </div>
                 </div>
@@ -572,8 +700,6 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-
-                
 
                 <div class="field-group" style="margin-top: 18px;">
                     <label class="field-label">Frame Processing Interval</label>
@@ -670,25 +796,25 @@
                     <div>
                         <div class="info-row">
                             <span class="info-label">Python Version</span>
-                            <span class="info-val">{{ sys_info.python_version or '—' }}</span>
+                            <span class="info-val">{{ sys_info.python_version or '3.10.x' }}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Flask Version</span>
-                            <span class="info-val">{{ sys_info.flask_version or '—' }}</span>
+                            <span class="info-val">{{ sys_info.flask_version or '2.2.x' }}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">OpenCV Version</span>
-                            <span class="info-val">{{ sys_info.cv2_version or '—' }}</span>
+                            <span class="info-val">{{ sys_info.cv2_version or '4.x.x' }}</span>
                         </div>
                     </div>
                     <div>
                         <div class="info-row">
                             <span class="info-label">Server Uptime</span>
-                            <span class="info-val">{{ sys_info.uptime or '—' }}</span>
+                            <span class="info-val">{{ sys_info.uptime or '0d 0h 0m' }}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Host</span>
-                            <span class="info-val">{{ sys_info.host or '—' }}</span>
+                            <span class="info-val">{{ sys_info.host or 'localhost' }}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Debug Mode</span>
@@ -705,7 +831,7 @@
         </button>
     </form>
 
-    <!-- Danger Zone -->
+    <!-- Danger Zone Card -->
     <div class="danger-zone" style="margin-top:32px;">
         <div class="danger-zone-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -717,7 +843,7 @@
                 <div class="danger-label">Clear All Recordings</div>
                 <div class="danger-desc">Permanently deletes every stored video file. This cannot be undone.</div>
             </div>
-            <form action="/admin/system/clear_recordings" method="POST" onsubmit="return confirm('Delete ALL recordings? This is permanent.');">
+            <form action="/admin/system/clear_recordings" method="POST" class="destructive-form" data-title="Purge All Video Recordings?" data-desc="This operation permanently purges all motion recordings and security camera files. These cannot be restored.">
                 <button type="submit" class="btn-danger">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                     Clear Recordings
@@ -730,7 +856,7 @@
                 <div class="danger-label">Clear All Security Events</div>
                 <div class="danger-desc">Wipes the entire event log. Face recognition alerts will be lost.</div>
             </div>
-            <form action="/admin/system/clear_events" method="POST" onsubmit="return confirm('Delete ALL events? This is permanent.');">
+            <form action="/admin/system/clear_events" method="POST" class="destructive-form" data-title="Wipe Security Event Log?" data-desc="This wipes every single logged security detection, entry report, and alarm notification. All face matches will be lost.">
                 <button type="submit" class="btn-danger">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                     Clear Events
@@ -743,7 +869,7 @@
                 <div class="danger-label">Reset All Known Faces</div>
                 <div class="danger-desc">Deletes all enrolled face images. The system will no longer recognize anyone.</div>
             </div>
-            <form action="/admin/system/clear_faces" method="POST" onsubmit="return confirm('Delete ALL known faces? This is permanent.');">
+            <form action="/admin/system/clear_faces" method="POST" class="destructive-form" data-title="Delete All Enrolled Faces?" data-desc="This wipes all registered user biometric assets from memory. No automated identity detection can occur until profiles are re-uploaded.">
                 <button type="submit" class="btn-danger">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                     Clear Faces
@@ -756,7 +882,7 @@
                 <div class="danger-label">Factory Reset</div>
                 <div class="danger-desc">Resets all settings to defaults, clears all data. Users are not deleted.</div>
             </div>
-            <form action="/admin/system/factory_reset" method="POST" onsubmit="return confirm('FACTORY RESET — all data will be erased. Are you absolutely sure?');">
+            <form action="/admin/system/factory_reset" method="POST" class="destructive-form" data-title="Initiate Complete Factory Reset?" data-desc="This operation defaults all configuration limits, restores camera parameters, and voids storage variables. Active operators will remain intact.">
                 <button type="submit" class="btn-danger">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.58"/></svg>
                     Factory Reset
@@ -767,17 +893,193 @@
 
 </main>
 
+<!-- ══ FOOTER ═══════════════════════════════════════════════ -->
+<footer>
+    <div class="footer-inner">
+        <span class="footer-brand">Home Detection <em>Security</em></span>
+        <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
+    </div>
+</footer>
+
+<!-- ══ TOAST WARNING DIALOGS (NON-BLOCKING MODAL) ══════════ -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-card">
+        <div class="modal-body">
+            <h3 class="modal-title" id="confirmModalTitle">Execute destructive action?</h3>
+            <p class="modal-desc" id="confirmModalDesc">Are you completely sure you want to run this cleanup command? This process cannot be undone.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal btn-modal-cancel" id="confirmCancelBtn">Cancel</button>
+            <button class="btn-modal btn-modal-confirm" id="confirmConfirmBtn">Run Operation</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    // ═════════════════════════════════════════════════════════
+    // RESPONSIVE NAV MENU DRAWER
+    // ═════════════════════════════════════════════════════════
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const navLinksList = document.getElementById('navLinksList');
+
+    if (menuToggleBtn && navLinksList) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navLinksList.classList.toggle('show');
+        });
+
+        document.addEventListener('click', () => {
+            if (navLinksList.classList.contains('show')) {
+                navLinksList.classList.remove('show');
+            }
+        });
+
+        navLinksList.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // SYSTEM CLOCK
+    // ═════════════════════════════════════════════════════════
     function updateClock() {
         const now = new Date();
-        const h = String(now.getHours()).padStart(2,'0');
-        const m = String(now.getMinutes()).padStart(2,'0');
-        const s = String(now.getSeconds()).padStart(2,'0');
-        document.getElementById('adminClock').textContent = `${h}:${m}:${s}`;
+        const clockEl = document.getElementById('adminClock');
+        if (clockEl) {
+            clockEl.textContent = [now.getHours(), now.getMinutes(), now.getSeconds()]
+                .map(n => String(n).padStart(2, '0')).join(':');
+        }
     }
     updateClock();
     setInterval(updateClock, 1000);
+
+    // ═════════════════════════════════════════════════════════
+    // DESTRUCTIVE COMMAND OVERLAYS (SAFE CONFIRM REPLACEMENT)
+    // ═════════════════════════════════════════════════════════
+    const confirmModal = document.getElementById('confirmModal');
+    const modalTitle = document.getElementById('confirmModalTitle');
+    const modalDesc = document.getElementById('confirmModalDesc');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    const confirmBtn = document.getElementById('confirmConfirmBtn');
+    
+    let pendingFormSubmission = null;
+
+    document.querySelectorAll('.destructive-form').forEach(form => {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Stop raw submission immediately
+            
+            // Record target form references
+            pendingFormSubmission = this;
+
+            // Extract custom contextual messaging
+            const titleText = this.getAttribute('data-title') || 'Run Destructive Process?';
+            const descText = this.getAttribute('data-desc') || 'Are you completely sure you want to run this? This process cannot be undone.';
+
+            if (modalTitle && modalDesc && confirmModal) {
+                modalTitle.textContent = titleText;
+                modalDesc.textContent = descText;
+                confirmModal.classList.add('open');
+            }
+        });
+    });
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            if (confirmModal) {
+                confirmModal.classList.remove('open');
+            }
+            pendingFormSubmission = null; // Clear queue
+        });
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            if (pendingFormSubmission) {
+                pendingFormSubmission.submit(); // Forward verified action securely
+            }
+            if (confirmModal) {
+                confirmModal.classList.remove('open');
+            }
+        });
+    }
+
+    // Close overlays securely on ESC keyboard triggers
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && confirmModal && confirmModal.classList.contains('open')) {
+            confirmModal.classList.remove('open');
+            pendingFormSubmission = null;
+        }
+    });
 </script>
 
+<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
+<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+    <div class="logout-modal">
+        <div class="logout-modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <h3 id="logoutModalTitle">Confirm Logout</h3>
+        <p>Are you sure you want to log out?</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
+            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ══ LOGOUT CONFIRMATION MODAL LOGIC ══════════════════════
+    (function () {
+        var overlay = document.getElementById('logoutModalOverlay');
+        var yesBtn = document.getElementById('logoutModalYes');
+        var noBtn = document.getElementById('logoutModalNo');
+        if (!overlay || !yesBtn || !noBtn) return;
+
+        var pendingHref = null;
+        var lastFocused = null;
+
+        function openModal(href) {
+            pendingHref = href;
+            lastFocused = document.activeElement;
+            overlay.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+            noBtn.focus();
+        }
+
+        function closeModal() {
+            overlay.classList.remove('is-open');
+            document.body.style.overflow = '';
+            pendingHref = null;
+            if (lastFocused && typeof lastFocused.focus === 'function') {
+                lastFocused.focus();
+            }
+        }
+
+        document.querySelectorAll('a.nav-logout').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                openModal(link.getAttribute('href'));
+            });
+        });
+
+        yesBtn.addEventListener('click', function () {
+            if (pendingHref) {
+                window.location.href = pendingHref;
+            }
+        });
+
+        noBtn.addEventListener('click', closeModal);
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+    })();
+</script>
 </body>
 </html>

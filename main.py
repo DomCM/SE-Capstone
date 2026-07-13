@@ -12,6 +12,14 @@ import face_recognition
 import logging
 import click
 
+# ══════════════════════════════════════════════════════════════
+# OPENVINO OPTIMIZATION SETTINGS
+# ══════════════════════════════════════════════════════════════
+# Limit OpenVINO to 3 CPU threads so it does not starve Flask and your camera reader threads
+os.environ['OV_CPU_THREADS_NUM'] = '3'
+# Enable model caching to decrease compilation delay on subsequent app launches
+os.environ['OPENVINO_CACHE_DIR'] = 'ov_cache'
+
 logging.getLogger('opencv-python').setLevel(logging.ERROR)
 os.environ['FFREPORT'] = 'file=/dev/null'
 
@@ -40,8 +48,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-MODEL_PATH = 'last.pt' # main
-MODEL_PATH_OBJECT = 'yolov8n.pt'  # secondary
+# Updated directories pointing to the exported OpenVINO folders
+MODEL_PATH = 'last_openvino_model' # main
+MODEL_PATH_OBJECT = 'yolov8n_openvino_model'  # secondary
 BASE_RECORDINGS_DIR = "users_data"
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -92,7 +101,6 @@ def should_run_face_recognition(frame_count, process_interval, has_active_tracke
         return True
     return frame_count % process_interval == 0 or not has_active_tracker
 
-# for
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -131,8 +139,8 @@ class Settings(db.Model):
     # ACCESS CONTROL SETTINGS
     allow_registration = db.Column(db.Boolean, default=True)
     require_disclaimer = db.Column(db.Boolean, default=False)
-    session_timeout_enabled = db.Column(db.Boolean, default=False) # might remove in future
-    session_timeout_minutes = db.Column(db.Integer, default=60) # might remove in future
+    session_timeout_enabled = db.Column(db.Boolean, default=False)
+    session_timeout_minutes = db.Column(db.Integer, default=60)
     
     #email
     email_alerts_enabled = db.Column(db.Boolean, default=False)
@@ -188,7 +196,6 @@ class EventLog(db.Model):
     def ip_address(self):
         return None
 
-#main
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -278,7 +285,6 @@ def get_user_face_data(user_id):
     known_names = []
     
     if os.path.exists(user_faces_dir):
-        # print(f"Loading faces for User {user_id}...") 
         for name in os.listdir(user_faces_dir):
             person_dir = os.path.join(user_faces_dir, name)
             if os.path.isdir(person_dir):
@@ -298,41 +304,29 @@ def get_user_face_data(user_id):
 def detect_faces_in_chunk(full_frame, bbox, scale_factor, upsample_amount, known_encodings, known_names, face_confidence=0.6):
     """
     Optimized worker function. Processes facial recognition only within a specific bounding box (ROI).
-    
-    Args:
-        full_frame: The original frame (used for coordinate translation).
-        bbox: A tuple (x1, y1, x2, y2) defining the ROI.
     """
     if full_frame is None or bbox is None:
         return []
 
     x1, y1, x2, y2 = map(int, bbox)
-    
-    # 1. Crop the ROI from the full frame
-    # OpenCV cropping format: [y_start:y_end, x_start:x_end]
     cropped_image = full_frame[y1:y2, x1:x2]
     
     if cropped_image.size == 0:
         return []
         
-    # 2. Resize the crop to match the expected scale factor
     if scale_factor != 1.0:
         cropped_image = cv2.resize(cropped_image, (0, 0), fx=scale_factor, fy=scale_factor)
         
-    # Convert to RGB
     rgb_cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB)
     
-    # Detect faces within the small crop
     chunk_face_locations = face_recognition.face_locations(rgb_cropped_image, model="hog", number_of_times_to_upsample=upsample_amount)
     chunk_face_encodings = face_recognition.face_encodings(rgb_cropped_image, chunk_face_locations, num_jitters=0)
     
     results = []
-    scale_up = 1.0 / scale_factor # Scale factor is used to adjust back to full resolution size
+    scale_up = 1.0 / scale_factor
     tolerance = 1.0 - face_confidence
     
     for (top, right, bottom, left), face_encoding in zip(chunk_face_locations, chunk_face_encodings):
-        
-        # 3. Translate coordinates back to the original frame space
         t_scaled = int((top * scale_up) + y1)
         r_scaled = int((right * scale_up) + x1)
         b_scaled = int((bottom * scale_up) + y1)
@@ -347,7 +341,6 @@ def detect_faces_in_chunk(full_frame, bbox, scale_factor, upsample_amount, known
                 if best_distance <= tolerance:
                     name = known_names[best_match_index]
         
-        # Return the global coordinates and name
         results.append((t_scaled, r_scaled, b_scaled, l_scaled, name))
     return results
 
@@ -375,7 +368,7 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
     except Exception as e:
         print(f"Email failed: {e}")
 
-#video
+
 class VideoStreamManager:
     def __init__(self, user_id, camera_id, source, settings):
         self.user_id = user_id
@@ -399,16 +392,14 @@ class VideoStreamManager:
         self.recording_writer = None
         self.is_recording = False
         
-        # Multitracking collection structure
         self.trackers = []          
         self.tracker_active = False
         self.tracker_lost = False
         
         self.known_encodings, self.known_names = get_user_face_data(user_id)
-        self.debug_tracker = True  # Set to True to see tracker debug logs
+        self.debug_tracker = True
 
     def _cache_settings(self, settings_obj):
-        """Cache settings values from the SQLAlchemy object to avoid detached instance errors."""
         if settings_obj:
             return {
                 'yolo_enabled': settings_obj.yolo_enabled,
@@ -430,7 +421,6 @@ class VideoStreamManager:
         return {}
 
     def update_settings(self, settings_obj):
-        """Update the settings cache with new values."""
         self.settings_cache = self._cache_settings(settings_obj)
 
     def _reset_tracker(self):
@@ -441,7 +431,6 @@ class VideoStreamManager:
         self.tracker_lost = True
 
     def _initialize_trackers(self, frame, bboxes):
-        """Initialize independent trackers for multiple detected humans."""
         self.trackers = []
         if frame is None or not bboxes:
             self.tracker_active = False
@@ -479,7 +468,6 @@ class VideoStreamManager:
             self.tracker_lost = True
 
     def _update_trackers(self, frame):
-        """Update all active trackers and prune any that failed/lost track."""
         if not self.trackers or frame is None:
             self.tracker_active = False
             self.tracker_lost = True
@@ -514,7 +502,6 @@ class VideoStreamManager:
         return updated_bboxes
 
     def _open_stream(self):
-        """Lazily open the video stream with error handling."""
         try:
             self.cap = cv2.VideoCapture(self.video_source)
             
@@ -533,7 +520,6 @@ class VideoStreamManager:
             return False
 
     def _read_frames_worker(self):
-        """Background thread that continuously reads frames from the camera."""
         while not self.reader_thread_stop and self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret:
@@ -578,19 +564,15 @@ class VideoStreamManager:
             tracked_boxes = self._update_trackers(frame)
             
             if tracked_boxes:
-                # KCF successfully tracked the bounding boxes
                 for x1, y1, x2, y2 in tracked_boxes:
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
                 
-                # Check if we hit our Frame Processing Interval limit
                 if self.frame_count % process_interval == 0 and self.settings_cache.get('face_recognition_enabled', True):
-                    # We hit the interval: Run face recognition inside each tracked box
                     scale_factor = 1.0 / scale_down
                     face_conf = self.settings_cache.get('face_recognition_confidence', 0.6)
                     
                     try:
                         self.face_detections = []
-                        # Rerun face recognition on all tracked ROI areas to confirm/update who is being tracked
                         for tracked_box in tracked_boxes:
                             results = detect_faces_in_chunk(frame, tracked_box, scale_factor, 1, self.known_encodings, self.known_names, face_conf)
                             for t, r, b, l, name in results:
@@ -598,7 +580,6 @@ class VideoStreamManager:
                     except Exception as e:
                         print(f"Periodic Face Rec Error: {e}")
                 
-                # Draw the cached or newly updated face labels
                 for (top, right, bottom, left), name in self.face_detections:
                     color = (0, 165, 255) if name == "Unknown" else (255, 255, 0)
                     cv2.rectangle(annotated_frame, (left, top), (right, bottom), color, 2)
@@ -607,7 +588,6 @@ class VideoStreamManager:
                 cv2.putText(annotated_frame, f"Tracking Active ({len(tracked_boxes)} Persons — YOLO Suspended)", (20, 40), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
             else:
-                # KCF trackers all lost track on this frame! Trigger fallback instantly
                 self._reset_tracker()
 
         # ══════════════════════════════════════════════════════════════
@@ -619,10 +599,11 @@ class VideoStreamManager:
             self.yolo_detections = []
             human_boxes = []
             
-            # --- Primary YOLO Model (for fire/smoke or general) ---
+            # --- Primary YOLO Model (OpenVINO optimized via strict CPU mapping) ---
             if self.settings_cache.get('yolo_enabled', True) and yolo_model:
                 obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
-                results = yolo_model.predict(frame, conf=obj_conf, verbose=False)
+                # Specify device="cpu" to ensure the OpenVINO CPU runtime acts as the backend
+                results = yolo_model.predict(frame, conf=obj_conf, verbose=False, device="cpu")
                 for r in results:
                     for box in r.boxes:
                         cls_id = int(box.cls[0].item())
@@ -642,7 +623,8 @@ class VideoStreamManager:
             # --- Secondary YOLO Model ---
             if self.settings_cache.get('yolo_object_enabled', True) and yolo_model_object:
                 obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
-                results = yolo_model_object.predict(frame, conf=obj_conf, verbose=False)
+                # Specify device="cpu" for OpenVINO execution
+                results = yolo_model_object.predict(frame, conf=obj_conf, verbose=False, device="cpu")
                 for r in results:
                     for box in r.boxes:
                         name = r.names.get(int(box.cls[0].item()))
@@ -652,36 +634,29 @@ class VideoStreamManager:
                         if is_human_detection_name(name):
                             human_boxes.append((x1, y1, x2, y2, confidence))
 
-            # Draw YOLO detections
             for (x1, y1, x2, y2, name, is_crit) in self.yolo_detections:
                 color = (0, 0, 255) if is_crit else (0, 255, 0)
                 cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(annotated_frame, name, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-            # If YOLO detects people, perform a parallel startup face verification pass and lock on trackers
             if human_boxes and self.settings_cache.get('face_recognition_enabled', True):
-    
                 scale_factor = 1.0 / scale_down
                 face_conf = self.settings_cache.get('face_recognition_confidence', 0.6)
                 
                 print(f"[FR] Starting parallel recognition for {len(human_boxes)} ROIs...")
                 
-                # Prepare a list of tuples containing parameters for each ROI pass
                 roi_tasks = []
                 for bbox in human_boxes:
-                    # Exclude the 5th element (confidence) so ROI mapping remains robust
                     roi_tasks.append((frame, bbox[:4], scale_factor, 1, self.known_encodings, self.known_names, face_conf))
                     
                 print(f"--- Debugging Parallel FR Call ---")
                 print(f"Number of ROI tasks prepared: {len(roi_tasks)}")
 
                 try:
-                    # Map the worker function over all defined ROI tuples using starmap (to support multiple mapped arguments)
                     all_results = detection_pool.starmap(detect_faces_in_chunk, roi_tasks)
                     
                     self.face_detections = []
                     for results_list in all_results:
-                        # Append results detected inside each human box task
                         for t, r, b, l, name in results_list:
                             self.face_detections.append(((t, r, b, l), name))
                             
@@ -693,17 +668,14 @@ class VideoStreamManager:
                 except Exception as e:
                     print(f"Parallel Face Recognition Error: {e}")
 
-                # Draw startup face bounds
                 for (top, right, bottom, left), name in self.face_detections:
                     color = (0, 165, 255) if name == "Unknown" else (255, 255, 0)
                     cv2.rectangle(annotated_frame, (left, top), (right, bottom), color, 2)
                     cv2.putText(annotated_frame, name, (left, bottom+20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-                # Instantly initialize the trackers on ALL detected human boxes!
                 bboxes_to_track = [box[:4] for box in human_boxes]
                 self._initialize_trackers(frame, bboxes_to_track)
 
-            # Handle Alerts (Fire, smoke, etc.)
             if critical_detected and not self.fire_alert_active:
                 msg = f"Detected: {', '.join(set(detected_crit_names))}"
                 self.log_db_event("CRITICAL ALERT", msg)
@@ -716,7 +688,6 @@ class VideoStreamManager:
             
             self.fire_alert_active = critical_detected
 
-        # Record stream frames
         if self.is_recording:
             if not self.recording_writer:
                 self.start_recording(annotated_frame)
@@ -753,18 +724,12 @@ class VideoStreamManager:
         if self.cap:
             self.cap.release()
 
-#routes
 
 def is_mobile(request):
-    """
-    Checks the User-Agent header to determine if the request is coming from a mobile device.
-    """
     if 'User-Agent' not in request.headers:
         return False
     
     user_agent = request.headers['User-Agent'].lower()
-    
-    # Keywords commonly found in mobile device user agents
     mobile_keywords = [
         'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone', 'opera mini'
     ]
@@ -774,18 +739,12 @@ def is_mobile(request):
             return True
     return False
 
-#gatekeep start
+
 @app.before_request
 def check_privacy_agreement():
-    """
-    This function runs before EVERY request. 
-    It checks if the user has accepted the disclaimer in the current session.
-    """
     allowed_endpoints = ['disclaimer', 'accept_terms', 'static']
-    
     if request.endpoint in allowed_endpoints:
         return
-
     if not session.get('privacy_agreed'):
         return redirect(url_for('disclaimer'))
 
@@ -799,7 +758,7 @@ def disclaimer():
 def accept_terms():
     session['privacy_agreed'] = True
     return redirect(url_for('login'))
-#gatekeep end
+
 
 def admin_required(view_func):
     @wraps(view_func)
@@ -814,7 +773,6 @@ def admin_required(view_func):
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Fetch settings first (as per previous fix)
     with app.app_context():
         settings = Settings.query.first()
         
@@ -823,27 +781,22 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # 1. VALIDATION CHECK (CRITICAL FIX)
         if not username or not email or not password:
             flash('All fields are required.', 'danger')
             return redirect(url_for('register'))
 
-        # Check for username collision
         if User.query.filter_by(username=username).first():
             flash('This username is already taken.', 'danger')
             return redirect(url_for('register'))
         
-        # Check for email collision
         if User.query.filter_by(email=email).first():
             flash('Email already exists.', 'danger')
             return redirect(url_for('register'))
 
-        # 2. ADMIN GATECHECK (Previous fix)
         if settings and not settings.allow_registration:
             flash("Public registration is disabled by the administrator.", "danger")
             return redirect(url_for('register'))
         
-        # If all checks pass, proceed with creation
         new_user = User(username=username, email=email, password=generate_password_hash(password), role='user')
         db.session.add(new_user)
         db.session.commit()
@@ -939,7 +892,7 @@ def admin_dashboard():
         event_type = (event.event_type or '').lower()
         if 'critical' in event_type or 'alert' in event_type or 'unknown' in event_type or 'error' in event_type:
             dot_type = 'danger'
-        elif 'login' in event_type or 'recognized' in event_type or 'recognized' in event_type or 'person' in event_type:
+        elif 'login' in event_type or 'recognized' in event_type or 'person' in event_type:
             dot_type = 'success'
         elif 'logout' in event_type or 'settings' in event_type or 'recording' in event_type or 'camera' in event_type:
             dot_type = 'amber'
@@ -1017,7 +970,6 @@ def admin_create_user():
     db.session.add(new_user)
     db.session.commit()
 
-    Settings(user_id=new_user.id, recipient_email=email)
     db.session.add(Settings(user_id=new_user.id, recipient_email=email))
     db.session.commit()
 
@@ -1288,6 +1240,11 @@ def gen_frames(user_id, camera):
 @login_required
 def settings():
     user_settings = Settings.query.filter_by(user_id=current_user.id).first()
+    # Ensure settings entry always exists for current user
+    if not user_settings:
+        user_settings = Settings(user_id=current_user.id)
+        db.session.add(user_settings)
+        db.session.commit()
     
     user_faces_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "known_faces")
     known_faces_list = []
@@ -1295,10 +1252,22 @@ def settings():
         known_faces_list = [name for name in os.listdir(user_faces_dir) if os.path.isdir(os.path.join(user_faces_dir, name))]
 
     if request.method == 'POST':
-        user_settings.email_alerts_enabled = 'email_enabled' in request.form
-        user_settings.recipient_email = request.form.get('recipient_email')
+        # Process settings attributes sent by settings.html
+        user_settings.yolo_enabled = 'yolo_enabled' in request.form
+        user_settings.face_recognition_enabled = 'face_rec_enabled' in request.form
+        
+        try:
+            user_settings.object_detection_confidence = float(request.form.get('object_detection_confidence', 0.5))
+        except (ValueError, TypeError):
+            user_settings.object_detection_confidence = 0.5
+            
+        try:
+            user_settings.face_recognition_confidence = float(request.form.get('face_recognition_confidence', 0.6))
+        except (ValueError, TypeError):
+            user_settings.face_recognition_confidence = 0.6
+
         db.session.commit()
-        flash("Settings Updated", "success")
+        flash("Settings Updated Successfully", "success")
         
         with stream_lock:
             if current_user.id in active_user_streams:
@@ -1507,6 +1476,13 @@ def api_clear_all_events():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/request_recording', methods=['POST'])
+@login_required
+def request_recording():
+    # Handle your manual recording logic here
+    flash("Recording request processed", "success")
+    return redirect(url_for('settings'))
+
 # --- INITIALIZATION ---
 def init_app():
     global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES
@@ -1514,6 +1490,7 @@ def init_app():
     with app.app_context():
         ensure_database_schema()
 
+    # Loads from OpenVINO folders (auto-detected if exported)
     yolo_model = YOLO(MODEL_PATH)
     if yolo_model.names:
         ALL_YOLO_CLASS_NAMES = list(yolo_model.names.values())
@@ -1521,7 +1498,7 @@ def init_app():
     yolo_model_object = YOLO(MODEL_PATH_OBJECT)
 
     detection_pool = Pool(processes=cpu_count())
-    print("App Initialized.")
+    print("App Initialized with OpenVINO runtime structures.")
 
 
 def main():

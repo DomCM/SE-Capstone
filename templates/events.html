@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Event Log — Home Detection Security</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='commons.css') }}">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -50,6 +49,8 @@
             font-size: 14px;
             line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            display: flex;
+            flex-direction: column;
         }
 
         /* ══ NAV ══════════════════════════════════════════════ */
@@ -83,9 +84,13 @@
             border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
+            padding: 5px;
+            overflow: hidden;
         }
 
-        .brand-logo-wrap svg { width: 19px; height: 19px; color: var(--white); }
+        .brand-logo-wrap img {
+            width: 100%; height: 100%; object-fit: contain; display: block;
+        }
 
         .brand-text-block { line-height: 1.15; }
         .brand-name {
@@ -154,12 +159,74 @@
         .nav-logout { margin-left: 10px; border: 1px solid var(--border) !important; }
         .nav-logout:hover { background: var(--danger-bg) !important; color: var(--danger) !important; border-color: #f5a89e !important; }
 
+        @media (max-width: 1180px) {
+            .page { padding: 30px 24px 64px; }
+            .page-header { gap: 14px; }
+        }
+
+        @media (max-width: 1024px) {
+            /* iPad 11-inch layout */
+            .nav-inner { padding: 0 20px; gap: 14px; flex-wrap: wrap; height: auto; padding-top: 12px; padding-bottom: 12px; }
+            .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; }
+            .page { padding: 24px 20px 56px; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .btn-danger { width: 100%; justify-content: center; }
+        }
+
         @media (max-width: 900px) {
-            .nav-links li.hide-sm { display: none; }
+            .nav-links { flex-wrap: nowrap; justify-content: center; gap: 1px; }
+            .nav-links li { width: auto; }
+            .nav-links a { padding: 7px 8px; font-size: 11px; gap: 4px; }
+            .nav-links a svg { width: 13px; height: 13px; }
+        }
+
+        @media (max-width: 430px) {
+            /* iPhone 16 Plus layout */
+            .nav-inner { padding: 10px 14px; }
+            .nav-brand { width: 100%; justify-content: center; }
+            .nav-clock { width: 100%; justify-content: center; }
+            .nav-links { gap: 2px; flex-wrap: wrap; }
+            .nav-links a { padding: 6px 6px; font-size: 10px; gap: 3px; }
+            .nav-links a svg { width: 12px; height: 12px; }
+            .page { padding: 18px 14px 48px; }
+            .page-header { align-items: flex-start; }
+            .page-title { font-size: 22px; }
+            .page-subtitle { font-size: 12.5px; }
+            .btn-danger { width: 100%; justify-content: center; }
+            .table-card { border-radius: 12px; }
+            table, thead, tbody, th, td, tr { display: block; }
+            thead { display: none; }
+            tbody tr {
+                padding: 14px 12px;
+                border-bottom: 1px solid var(--border);
+            }
+            tbody tr:last-child { border-bottom: none; }
+            tbody td {
+                padding: 8px 0;
+                border: none;
+            }
+            tbody td::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 10.5px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                margin-bottom: 4px;
+            }
+            .action-group {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .btn-view, .btn-del {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         /* ══ PAGE ═════════════════════════════════════════════ */
-        .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; }
+        .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
 
         .page-header {
             display: flex; align-items: center; justify-content: space-between;
@@ -262,6 +329,136 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: var(--off-white); }
         ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
+
+        /* ══════════════════════════════════════
+           SIMPLIFIED CORPORATE FOOTER
+        ══════════════════════════════════════ */
+        footer {
+            background: var(--navy-950);
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 20px 24px;
+            margin-top: auto;
+            flex-shrink: 0;
+            text-align: center;
+        }
+        .footer-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 12.5px;
+            flex-wrap: wrap;
+        }
+        .footer-brand {
+            font-family: var(--font-serif);
+            font-weight: 700;
+            color: #fff;
+        }
+        .footer-brand em {
+            font-style: italic;
+            color: var(--navy-400);
+        }
+
+        /* ══ LOGOUT CONFIRMATION MODAL ═══════════════════════ */
+        .logout-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 13, 31, 0.55);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .logout-modal-overlay.is-open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .logout-modal {
+            width: 100%;
+            max-width: 380px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
+            padding: 28px;
+            text-align: center;
+            transform: translateY(14px) scale(0.96);
+            opacity: 0;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+        }
+        .logout-modal-overlay.is-open .logout-modal {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        .logout-modal-icon {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: var(--danger-bg);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logout-modal-icon svg { width: 24px; height: 24px; }
+        .logout-modal h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+        .logout-modal p {
+            font-size: 14px;
+            color: var(--text-mid);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .logout-modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .logout-modal-btn {
+            flex: 1;
+            padding: 11px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .logout-modal-btn-no {
+            background: var(--off-white);
+            border-color: var(--border);
+            color: var(--text-mid);
+        }
+        .logout-modal-btn-no:hover {
+            background: var(--border);
+        }
+        .logout-modal-btn-yes {
+            background: var(--danger);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28);
+        }
+        .logout-modal-btn-yes:hover {
+            background: #a5301f;
+            transform: translateY(-1px);
+        }
+        .logout-modal-btn:active { transform: translateY(0); }
+
+        @media (max-width: 480px) {
+            .logout-modal { padding: 22px 18px; }
+            .logout-modal-actions { flex-direction: column-reverse; }
+        }
     </style>
 </head>
 <body>
@@ -364,6 +561,14 @@
     </div>
 </main>
 
+<!-- ══ FOOTER (MATCHING CCTV) ═══════════════════════════════ -->
+<footer>
+    <div class="footer-inner">
+        <span class="footer-brand">Home Detection <em>Security</em></span>
+        <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
+    </div>
+</footer>
+
 <script>
     function updateClock() {
         const now = new Date();
@@ -409,11 +614,11 @@
             events.forEach(event => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="ts">${formatEventTimestamp(event.timestamp)}</td>
-                    <td class="source">${event.source_name || 'N/A'}</td>
-                    <td><span class="${getBadgeClass(event.event_type)}">${event.event_type}</span></td>
-                    <td>${event.description || 'N/A'}</td>
-                    <td>
+                    <td class="ts" data-label="Timestamp">${formatEventTimestamp(event.timestamp)}</td>
+                    <td class="source" data-label="Source">${event.source_name || 'N/A'}</td>
+                    <td data-label="Type"><span class="${getBadgeClass(event.event_type)}">${event.event_type}</span></td>
+                    <td data-label="Description">${event.description || 'N/A'}</td>
+                    <td data-label="Actions">
                         <div class="action-group">
                             <button class="btn-view" data-timestamp="${event.timestamp}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -469,6 +674,75 @@
 
     document.addEventListener('DOMContentLoaded', fetchEvents);
     setInterval(fetchEvents, 10000);
+</script>
+<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
+<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+    <div class="logout-modal">
+        <div class="logout-modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <h3 id="logoutModalTitle">Confirm Logout</h3>
+        <p>Are you sure you want to log out?</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
+            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ══ LOGOUT CONFIRMATION MODAL LOGIC ══════════════════════
+    (function () {
+        var overlay = document.getElementById('logoutModalOverlay');
+        var yesBtn = document.getElementById('logoutModalYes');
+        var noBtn = document.getElementById('logoutModalNo');
+        if (!overlay || !yesBtn || !noBtn) return;
+
+        var pendingHref = null;
+        var lastFocused = null;
+
+        function openModal(href) {
+            pendingHref = href;
+            lastFocused = document.activeElement;
+            overlay.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+            noBtn.focus();
+        }
+
+        function closeModal() {
+            overlay.classList.remove('is-open');
+            document.body.style.overflow = '';
+            pendingHref = null;
+            if (lastFocused && typeof lastFocused.focus === 'function') {
+                lastFocused.focus();
+            }
+        }
+
+        document.querySelectorAll('a.nav-logout').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                openModal(link.getAttribute('href'));
+            });
+        });
+
+        yesBtn.addEventListener('click', function () {
+            if (pendingHref) {
+                window.location.href = pendingHref;
+            }
+        });
+
+        noBtn.addEventListener('click', closeModal);
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+    })();
 </script>
 </body>
 </html>

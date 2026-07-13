@@ -72,12 +72,11 @@
         }
         .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px; background: var(--navy-900); border-radius: 10px;
+            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            padding: 5px; overflow: hidden;
+            padding: 2px; overflow: hidden; border: 1px solid var(--border);
         }
         .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-        .brand-logo-wrap svg { width: 19px; height: 19px; color: var(--white); }
         .brand-text-block { line-height: 1.15; }
         .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
         .brand-name em { font-style: italic; color: var(--navy-600); }
@@ -515,8 +514,7 @@
 <!-- ══ NAV ═══════════════════════════════════════════════════ -->
 <nav>
     <div class="nav-inner">
-        <!-- Brand logo -->
-        <a class="nav-brand" href="admin_dashboard.html">
+        <a class="nav-brand" href="/admin">
             <div class="brand-logo-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -528,7 +526,6 @@
             </div>
         </a>
 
-        <!-- Clock element -->
         <div class="nav-clock">
             <span class="nav-clock-dot"></span>
             <span class="nav-clock-label">Live</span>
@@ -536,62 +533,61 @@
             <span class="nav-clock-time" id="adminClock">--:--:--</span>
         </div>
 
-        <!-- Mobile drawer trigger button -->
-        <button class="menu-toggle" id="menuToggleBtn" aria-label="Toggle navigation menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-        </button>
-
-        <!-- Navigation list links -->
-        <ul class="nav-links" id="navLinksList">
+        <ul class="nav-links">
             <li>
-                <a href="admin_dashboard.html">
+                <a href="/admin">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                         <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
                     </svg>
-                    Dashboard
+                    Overview
                 </a>
             </li>
             <li>
-                <a href="admin_cctv.html" class="nav-cctv">
+                <a href="/admin/cctv" class="nav-cctv">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
                     </svg>
                     CCTV Monitor
                 </a>
             </li>
-            <li>
-                <a href="admin_users.html">
+            <li class="hide-sm">
+                <a href="/admin/users">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
                     Users
                 </a>
             </li>
-            <li>
-                <a href="admin_logs.html">
+            <li class="hide-sm">
+                <a href="/admin/logs">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14 2 14 8 20 8"/>
                     </svg>
-                    Admin Logs
+                    Audit Logs
                 </a>
             </li>
-            <li>
-                <a href="admin_system.html" class="active">
+            <li class="hide-sm">
+                <a href="/admin/system" class="active">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="2" y="3" width="20" height="14" rx="2"/>
                         <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                     </svg>
-                    Settings
+                    System
                 </a>
             </li>
             <li>
-                <a href="login.html" class="nav-logout">
+                <a href="/" class="nav-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Back to App
+                </a>
+            </li>
+            <li>
+                <a href="/logout" class="nav-logout">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                         <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -671,6 +667,72 @@
                     <label class="field-label">Recording Save Path</label>
                     <input type="text" name="recording_path" value="{{ settings.recording_path or './recordings' }}" placeholder="./recordings">
                     <p class="field-hint">Absolute or relative path to the folder where recordings are stored.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Settings -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 5a3 3 0 1 1-3 3 3 3 0 0 1 3-3z"/></svg>
+                </div>
+                <span class="section-title">Detection Settings</span>
+            </div>
+            <div class="section-body">
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Fire &amp; Smoke Detection</div>
+                        <div class="toggle-desc">Enable YOLO detection for fire and smoke events.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="yolo_enabled" {% if settings.yolo_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Facial Recognition</div>
+                        <div class="toggle-desc">Enable face recognition for known person alerts.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="field-group" style="margin-top: 18px;">
+                    <label class="field-label">Frame Processing Interval</label>
+                    <input type="number" name="frame_process_interval" value="{{ settings.frame_process_interval or 3 }}" min="1" max="30">
+                    <p class="field-hint">Process every N-th frame (e.g. 1 = every frame, 3 = every third frame). Higher values significantly boost server performance but slightly delay event detection.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Object/Fire Detection Confidence</label>
+                    <div class="range-row">
+                        <input type="range" min="0.1" max="1.0" step="0.05" name="object_detection_confidence"
+                            value="{{ settings.object_detection_confidence or 0.5 }}"
+                            oninput="document.getElementById('obj-conf-val').innerText = parseFloat(this.value).toFixed(2)">
+                        <span id="obj-conf-val" class="range-val">{{ settings.object_detection_confidence or 0.5 }}</span>
+                    </div>
+                    <p class="field-hint">Lower values are more sensitive; higher values reduce false positives.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Face Recognition Confidence</label>
+                    <div class="range-row">
+                        <input type="range" min="0.1" max="1.0" step="0.05" name="face_recognition_confidence"
+                            value="{{ settings.face_recognition_confidence or 0.6 }}"
+                            oninput="document.getElementById('face-conf-val').innerText = parseFloat(this.value).toFixed(2)">
+                        <span id="face-conf-val" class="range-val">{{ settings.face_recognition_confidence or 0.6 }}</span>
+                    </div>
+                    <p class="field-hint">Lower values are more permissive; higher values require stronger face matches.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Active Detection Classes</label>
+                    <input type="text" name="active_classes" value="{{ settings.active_classes or 'fire,smoke' }}" placeholder="fire,smoke">
+                    <p class="field-hint">Comma-separated classes to trigger alerts (e.g. fire,smoke,person).</p>
                 </div>
             </div>
         </div>
