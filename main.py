@@ -6,17 +6,30 @@ import os
 import sys
 import glob
 import shutil
+import queue
 from multiprocessing import Pool, cpu_count
 from ultralytics import YOLO
 import face_recognition
 import logging
 import click
 
+# Try to import torch to detect NVIDIA CUDA capabilities
+try:
+    import torch
+    CUDA_AVAILABLE = torch.cuda.is_available()
+    if CUDA_AVAILABLE:
+        CUDA_DEVICE_NAME = torch.cuda.get_device_name(0)
+    else:
+        CUDA_DEVICE_NAME = "None"
+except ImportError:
+    CUDA_AVAILABLE = False
+    CUDA_DEVICE_NAME = "None"
+
 # ══════════════════════════════════════════════════════════════
-# OPENVINO OPTIMIZATION SETTINGS
+# OPTIMIZATION SETTINGS
 # ══════════════════════════════════════════════════════════════
-# Limit OpenVINO to 3 CPU threads so it does not starve Flask and your camera reader threads
-os.environ['OV_CPU_THREADS_NUM'] = '3'
+# Limit OpenVINO to 2 CPU threads when CPU is used as backup to avoid starving Flask
+os.environ['OV_CPU_THREADS_NUM'] = '2'
 # Enable model caching to decrease compilation delay on subsequent app launches
 os.environ['OPENVINO_CACHE_DIR'] = 'ov_cache'
 
@@ -48,9 +61,11 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Updated directories pointing to the exported OpenVINO folders
-MODEL_PATH = 'last_openvino_model' # main
-MODEL_PATH_OBJECT = 'yolov8n_openvino_model'  # secondary
+# Dynamic Model Configuration paths
+# We will resolve these to PyTorch (.pt), TensorRT (.engine), or OpenVINO directories depending on hardware
+MODEL_PATH = 'last.pt'                # Primary Model (Fallback to 'last_openvino_model' if only OpenVINO is available)
+MODEL_PATH_OBJECT = 'yolov8n.pt'      # Secondary Model (Fallback to 'yolov8n_openvino_model' if only OpenVINO is available)
+
 BASE_RECORDINGS_DIR = "users_data"
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -59,11 +74,17 @@ detection_pool = None
 yolo_model = None
 yolo_model_object = None
 ALL_YOLO_CLASS_NAMES = []
+ACCELERATOR_DEVICE = "cpu"  # Will be resolved dynamically to 'cuda' (NVIDIA GPU), 'GPU' (Intel), or 'cpu'
 
 active_user_streams = {}
 stream_lock = threading.Lock()
 
 face_cache = {}
+
+# ══════════════════════════════════════════════════════════════
+# ASYNCHRONOUS DATABASE LOGGING QUEUE
+# ══════════════════════════════════════════════════════════════
+db_log_queue = queue.Queue()
 
 
 def is_human_detection_name(name):
@@ -369,6 +390,32 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
         print(f"Email failed: {e}")
 
 
+# ══════════════════════════════════════════════════════════════
+# BACKGROUND EVENT LOGGER THREAD (PREVENTS SQLITE THREAD LOCKING)
+# ══════════════════════════════════════════════════════════════
+def db_logger_worker():
+    """Consumes event logs asynchronously from a queue to prevent blocking streaming pipelines."""
+    while True:
+        try:
+            log_data = db_log_queue.get()
+            if log_data is None:
+                break
+            
+            with app.app_context():
+                log = EventLog(
+                    user_id=log_data['user_id'],
+                    source_name=log_data['source_name'],
+                    event_type=log_data['event_type'],
+                    description=log_data['description']
+                )
+                db.session.add(log)
+                db.session.commit()
+            db_log_queue.task_done()
+        except Exception as e:
+            print(f"[DB LOGGER ERROR] Failed to write event log: {e}")
+            time.sleep(0.1)
+
+
 class VideoStreamManager:
     def __init__(self, user_id, camera_id, source, settings):
         self.user_id = user_id
@@ -380,8 +427,16 @@ class VideoStreamManager:
         
         self.current_frame = None
         self.frame_lock = threading.Lock()
+        
+        # Thread management
         self.reader_thread = None
         self.reader_thread_stop = False
+        self.processor_thread = None
+        self.processor_thread_stop = False
+        
+        # Memory buffer for background processed & compressed JPEG bytes
+        self.latest_annotated_frame = None
+        self.latest_frame_lock = threading.Lock()
         
         self.settings_cache = self._cache_settings(settings)
         
@@ -395,9 +450,19 @@ class VideoStreamManager:
         self.trackers = []          
         self.tracker_active = False
         self.tracker_lost = False
+        self.tracking_scale = 1.0
         
         self.known_encodings, self.known_names = get_user_face_data(user_id)
         self.debug_tracker = True
+
+        # Spawns persistent workers immediately to connect & handle self-healing on connection loss
+        self.reader_thread_stop = False
+        self.reader_thread = threading.Thread(target=self._read_frames_worker, daemon=True)
+        self.reader_thread.start()
+        
+        self.processor_thread_stop = False
+        self.processor_thread = threading.Thread(target=self._process_frames_worker, daemon=True)
+        self.processor_thread.start()
 
     def _cache_settings(self, settings_obj):
         if settings_obj:
@@ -437,10 +502,26 @@ class VideoStreamManager:
             self.tracker_lost = True
             return
 
+        # Target a responsive resolution (e.g., width of 480px) for Fast Fourier transforms inside KCF
+        h, w = frame.shape[:2]
+        target_w = 480
+        self.tracking_scale = min(1.0, target_w / w) if w > target_w else 1.0
+
+        if self.tracking_scale < 1.0:
+            tracking_frame = cv2.resize(frame, (0, 0), fx=self.tracking_scale, fy=self.tracking_scale)
+        else:
+            tracking_frame = frame
+
         for bbox in bboxes:
             x1, y1, x2, y2 = bbox
-            width = max(1, int(x2 - x1))
-            height = max(1, int(y2 - y1))
+            # Downscale coordinate bounds matching the downscaled tracking_frame
+            sx1 = int(x1 * self.tracking_scale)
+            sy1 = int(y1 * self.tracking_scale)
+            sx2 = int(x2 * self.tracking_scale)
+            sy2 = int(y2 * self.tracking_scale)
+            
+            width = max(1, sx2 - sx1)
+            height = max(1, sy2 - sy1)
             try:
                 try:
                     tracker = cv2.legacy.TrackerKCF.create()
@@ -449,14 +530,14 @@ class VideoStreamManager:
                     tracker = cv2.TrackerKCF.create()
                     tracker_name = "KCF"
                     
-                ok = tracker.init(frame, (int(x1), int(y1), width, height))
+                ok = tracker.init(tracking_frame, (sx1, sy1, width, height))
                 if ok:
                     self.trackers.append({
                         "tracker": tracker,
-                        "bbox": (int(x1), int(y1), int(x2), int(y2))
+                        "bbox": (sx1, sy1, sx2, sy2)
                     })
                     if self.debug_tracker:
-                        print(f"[TRACKER] Initialized {tracker_name} at frame {self.frame_count}, bbox=({x1}, {y1}, {x2}, {y2})")
+                        print(f"[TRACKER] Initialized downscaled {tracker_name} at scale {self.tracking_scale:.2f}")
             except Exception as e:
                 print(f"Tracker init error: {e}")
 
@@ -473,23 +554,50 @@ class VideoStreamManager:
             self.tracker_lost = True
             return []
 
+        if self.tracking_scale < 1.0:
+            tracking_frame = cv2.resize(frame, (0, 0), fx=self.tracking_scale, fy=self.tracking_scale)
+        else:
+            tracking_frame = frame
+
         updated_bboxes = []
         active_trackers = []
 
-        for item in self.trackers:
+        from concurrent.futures import ThreadPoolExecutor
+
+        # Parallelize the individual tracker updates across multiple CPU cores (GIL-free in OpenCV C++)
+        def update_single_tracker(item):
             tracker = item["tracker"]
             try:
-                ok, bbox = tracker.update(frame)
+                ok, bbox = tracker.update(tracking_frame)
                 if ok:
-                    x, y, w, h = [int(v) for v in bbox]
-                    new_bbox = (x, y, x + w, y + h)
-                    item["bbox"] = new_bbox
-                    active_trackers.append(item)
-                    updated_bboxes.append(new_bbox)
-                    if self.debug_tracker:
-                        print(f"[TRACKER] Updated active tracker at frame {self.frame_count}, bbox=({x}, {y}, {x+w}, {y+h})")
+                    sx, sy, sw, sh = [int(v) for v in bbox]
+                    
+                    # Convert bounding coordinates back to native resolution for overlays and recording
+                    scale_inv = 1.0 / self.tracking_scale
+                    rx1 = int(sx * scale_inv)
+                    ry1 = int(sy * scale_inv)
+                    rx2 = int((sx + sw) * scale_inv)
+                    ry2 = int((sy + sh) * scale_inv)
+                    
+                    return {
+                        "success": True,
+                        "tracker_item": {
+                            "tracker": tracker,
+                            "bbox": (sx, sy, sx + sw, sy + sh)
+                        },
+                        "original_bbox": (rx1, ry1, rx2, ry2)
+                    }
             except Exception as e:
-                print(f"Tracker update error: {e}")
+                print(f"Parallel Tracker update error: {e}")
+            return {"success": False}
+
+        with ThreadPoolExecutor(max_workers=min(4, len(self.trackers))) as executor:
+            results = list(executor.map(update_single_tracker, self.trackers))
+
+        for res in results:
+            if res["success"]:
+                active_trackers.append(res["tracker_item"])
+                updated_bboxes.append(res["original_bbox"])
 
         self.trackers = active_trackers
         if self.trackers:
@@ -501,52 +609,83 @@ class VideoStreamManager:
 
         return updated_bboxes
 
-    def _open_stream(self):
-        try:
-            self.cap = cv2.VideoCapture(self.video_source)
-            
-            if self.cap and self.cap.isOpened():
-                self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                self.reader_thread_stop = False
-                self.reader_thread = threading.Thread(target=self._read_frames_worker, daemon=True)
-                self.reader_thread.start()
-                return True
-            else:
-                self.cap = None
-                return False
-        except Exception as e:
-            print(f"Error opening stream {self.video_source}: {e}")
-            self.cap = None
-            return False
-
     def _read_frames_worker(self):
-        while not self.reader_thread_stop and self.cap and self.cap.isOpened():
-            ret, frame = self.cap.read()
-            if ret:
-                with self.frame_lock:
-                    self.current_frame = frame
-            else:
-                time.sleep(0.01)
+        """Asynchronous stream reader. Connects, monitors, and automatically reconnects video pipelines."""
+        while not self.reader_thread_stop:
+            # Reconnection check & execution
+            if self.cap is None or not self.cap.isOpened():
+                current_time = time.time()
+                if current_time - self.last_connection_attempt > self.connection_retry_delay:
+                    self.last_connection_attempt = current_time
+                    if self.cap:
+                        try:
+                            self.cap.release()
+                        except Exception:
+                            pass
+                    try:
+                        self.cap = cv2.VideoCapture(self.video_source)
+                        if self.cap and self.cap.isOpened():
+                            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                            print(f"[STREAM SUCCESS] Connected to camera source: {self.video_source}")
+                        else:
+                            self.cap = None
+                            print(f"[STREAM FAILED] Couldn't connect to: {self.video_source}. Retrying...")
+                    except Exception as e:
+                        self.cap = None
+                        print(f"[STREAM ERROR] Exception opening {self.video_source}: {e}")
+                time.sleep(1.0)
+                continue
 
-    def process_frame(self):
-        if self.cap is None:
-            current_time = time.time()
-            if current_time - self.last_connection_attempt > self.connection_retry_delay:
-                self.last_connection_attempt = current_time
-                self._open_stream()
-            if self.cap is None:
-                return None
-        
-        if not self.cap.isOpened():
-            self.cap = None
-            return None
-        
-        with self.frame_lock:
-            frame = self.current_frame
-        
-        if frame is None:
-            return None
+            try:
+                ret, frame = self.cap.read()
+                if ret:
+                    with self.frame_lock:
+                        self.current_frame = frame
+                else:
+                    # Stream disconnected or closed on remote server
+                    print(f"[STREAM ERROR] Frame read returned empty. Re-triggering connection.")
+                    try:
+                        self.cap.release()
+                    except Exception:
+                        pass
+                    self.cap = None
+            except Exception as e:
+                print(f"[STREAM ERROR] Thread exception during reads: {e}")
+                self.cap = None
+            time.sleep(0.01)
 
+    def _process_frames_worker(self):
+        """Dedicated processor running asynchronously to completely decouple AI latency from Flask HTTP threads."""
+        while not self.processor_thread_stop:
+            with self.frame_lock:
+                frame = self.current_frame
+
+            if frame is None:
+                time.sleep(0.05)
+                continue
+
+            # Run computationally intensive detection pipelines
+            try:
+                annotated_frame = self.do_process_frame(frame)
+
+                if annotated_frame is not None:
+                    # Pre-compress to JPEG here so Flask threads don't block compressing images
+                    ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                    if ret:
+                        with self.latest_frame_lock:
+                            self.latest_annotated_frame = buffer.tobytes()
+            except Exception as e:
+                print(f"[PROCESSOR ERROR] Exception in process worker: {e}")
+
+            time.sleep(0.005)
+
+    def get_latest_frame_bytes(self):
+        """Instantly read pre-compiled frame bytes from shared memory (0ms Flask thread processing)."""
+        with self.latest_frame_lock:
+            return self.latest_annotated_frame
+
+    def do_process_frame(self, frame):
+        """Worker executing detection loops (formerly process_frame)."""
         annotated_frame = frame.copy()
         
         scale_down = self.settings_cache.get('scale_down_amount', 2)
@@ -591,7 +730,7 @@ class VideoStreamManager:
                 self._reset_tracker()
 
         # ══════════════════════════════════════════════════════════════
-        # 2. SEARCH STATE (YOLO + PRIMARY FACE RECOGNITION)
+        # 2. SEARCH STATE (YOLO ON INTEL iGPU/CPU OR NVIDIA CUDA + FACE)
         # ══════════════════════════════════════════════════════════════
         if not self.tracker_active:
             critical_detected = False
@@ -599,11 +738,10 @@ class VideoStreamManager:
             self.yolo_detections = []
             human_boxes = []
             
-            # --- Primary YOLO Model (OpenVINO optimized via strict CPU mapping) ---
+            # --- Primary YOLO Model ---
             if self.settings_cache.get('yolo_enabled', True) and yolo_model:
                 obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
-                # Specify device="cpu" to ensure the OpenVINO CPU runtime acts as the backend
-                results = yolo_model.predict(frame, conf=obj_conf, verbose=False, device="cpu")
+                results = yolo_model.predict(frame, conf=obj_conf, verbose=False, device=ACCELERATOR_DEVICE)
                 for r in results:
                     for box in r.boxes:
                         cls_id = int(box.cls[0].item())
@@ -623,8 +761,7 @@ class VideoStreamManager:
             # --- Secondary YOLO Model ---
             if self.settings_cache.get('yolo_object_enabled', True) and yolo_model_object:
                 obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
-                # Specify device="cpu" for OpenVINO execution
-                results = yolo_model_object.predict(frame, conf=obj_conf, verbose=False, device="cpu")
+                results = yolo_model_object.predict(frame, conf=obj_conf, verbose=False, device=ACCELERATOR_DEVICE)
                 for r in results:
                     for box in r.boxes:
                         name = r.names.get(int(box.cls[0].item()))
@@ -643,14 +780,9 @@ class VideoStreamManager:
                 scale_factor = 1.0 / scale_down
                 face_conf = self.settings_cache.get('face_recognition_confidence', 0.6)
                 
-                print(f"[FR] Starting parallel recognition for {len(human_boxes)} ROIs...")
-                
                 roi_tasks = []
                 for bbox in human_boxes:
                     roi_tasks.append((frame, bbox[:4], scale_factor, 1, self.known_encodings, self.known_names, face_conf))
-                    
-                print(f"--- Debugging Parallel FR Call ---")
-                print(f"Number of ROI tasks prepared: {len(roi_tasks)}")
 
                 try:
                     all_results = detection_pool.starmap(detect_faces_in_chunk, roi_tasks)
@@ -711,18 +843,27 @@ class VideoStreamManager:
             self.recording_writer = None
 
     def log_db_event(self, event_type, desc):
-        with app.app_context():
-            log = EventLog(user_id=self.user_id, source_name=f"Cam {self.camera_id}", event_type=event_type, description=desc)
-            db.session.add(log)
-            db.session.commit()
+        """Add event logs asynchronously to the thread-safe database queue."""
+        db_log_queue.put({
+            'user_id': self.user_id,
+            'source_name': f"Cam {self.camera_id}",
+            'event_type': event_type,
+            'description': desc
+        })
 
     def release(self):
         self.stop_recording()
         self.reader_thread_stop = True
+        self.processor_thread_stop = True
         if self.reader_thread:
-            self.reader_thread.join(timeout=2)
+            self.reader_thread.join(timeout=1)
+        if self.processor_thread:
+            self.processor_thread.join(timeout=1)
         if self.cap:
-            self.cap.release()
+            try:
+                self.cap.release()
+            except Exception:
+                pass
 
 
 def is_mobile(request):
@@ -813,7 +954,7 @@ def register():
     
     is_mobile_device = is_mobile(request)
     template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}register.html')
+    return render_template(f'{template_path}register.html', settings=settings)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -923,7 +1064,6 @@ def admin_dashboard():
         email_enabled=email_enabled,
         recent_activity=recent_activity,
     )
-
 
 @app.route('/admin/cctv')
 @admin_required
@@ -1210,7 +1350,7 @@ def video_feed(camera_id):
     return Response(gen_frames(stream_user_id, camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def gen_frames(user_id, camera):
-    """Generator that manages the VideoStreamManager for a specific user/camera."""
+    """Highly optimized frame generator. Reads pre-processed JPEGs directly from memory."""
     global active_user_streams
     
     manager = None
@@ -1227,12 +1367,13 @@ def gen_frames(user_id, camera):
             manager = active_user_streams[user_id][camera.id]
             
     while True:
-        frame = manager.process_frame()
-        if frame is not None:
-            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-            frame = buffer.tobytes()
+        # Instantly fetch pre-encoded JPEG bytes from the background processing thread
+        frame_bytes = manager.get_latest_frame_bytes()
+        if frame_bytes is not None:
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            # Rest to match typical camera feed rates and yield execution to other Flask request workers
+            time.sleep(0.033)  # ~30 FPS limit
         else:
             time.sleep(0.01)
 
@@ -1265,6 +1406,12 @@ def settings():
             user_settings.face_recognition_confidence = float(request.form.get('face_recognition_confidence', 0.6))
         except (ValueError, TypeError):
             user_settings.face_recognition_confidence = 0.6
+
+        # Correctly save the Frame Processing Interval on the user settings page as well
+        try:
+            user_settings.frame_process_interval = int(request.form.get('frame_process_interval', 3))
+        except (ValueError, TypeError):
+            user_settings.frame_process_interval = 3
 
         db.session.commit()
         flash("Settings Updated Successfully", "success")
@@ -1479,26 +1626,99 @@ def api_clear_all_events():
 @app.route('/request_recording', methods=['POST'])
 @login_required
 def request_recording():
-    # Handle your manual recording logic here
+    # Handle manual recording logic here
     flash("Recording request processed", "success")
     return redirect(url_for('settings'))
 
+@app.route('/cctv')
+@login_required
+def cctv():
+    camera_items = []
+    for camera in Camera.query.filter_by(user_id=current_user.id).order_by(Camera.id).all():
+        camera_items.append({
+            'id': camera.id,
+            'name': camera.name,
+            'location': '',
+            'status': 'online' if camera.is_active else 'offline',
+            'motion_detected': False,
+            'is_recording': False,
+            'stream_url': url_for('video_feed', camera_id=camera.id),
+        })
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}cctv.html', cameras=camera_items)
+
+
 # --- INITIALIZATION ---
 def init_app():
-    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES
+    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES, ACCELERATOR_DEVICE
 
     with app.app_context():
         ensure_database_schema()
 
-    # Loads from OpenVINO folders (auto-detected if exported)
-    yolo_model = YOLO(MODEL_PATH)
+    # Start database logger daemon thread
+    log_worker = threading.Thread(target=db_logger_worker, daemon=True)
+    log_worker.start()
+
+    # ══════════════════════════════════════════════════════════════
+    # DYNAMIC HARDWARE ACCELERATION ENGINE
+    # ══════════════════════════════════════════════════════════════
+    # We dynamically map models to NVIDIA CUDA, Intel OpenVINO GPU, or CPU.
+    
+    model_main = 'last.pt'
+    model_secondary = 'yolov8n.pt'
+    
+    if CUDA_AVAILABLE:
+        ACCELERATOR_DEVICE = "cuda"
+        print(f"\n[GPU DETECTED] Success! Found NVIDIA GPU: {CUDA_DEVICE_NAME}")
+        print(f"[ACCELERATOR] Using backend: CUDA.")
+        
+        # Check if TensorRT compiled engines exist (highly optimized)
+        if os.path.exists('last.engine') and os.path.exists('yolov8n.engine'):
+            model_main = 'last.engine'
+            model_secondary = 'yolov8n.engine'
+            print("[ACCELERATOR] Found pre-compiled TensorRT Engines (.engine). Using them for extreme speed!")
+        else:
+            print("[ACCELERATOR] Using standard PyTorch weight weights (.pt) on CUDA.")
+            
+    else:
+        # Fallback to Intel OpenVINO configuration
+        print("\n[GPU NOT DETECTED] NVIDIA GPU (CUDA) not active or not installed.")
+        try:
+            import openvino as ov
+            core = ov.Core()
+            available_devices = core.available_devices
+            print(f"[OPENVINO] Available hardware on your system: {available_devices}")
+            
+            if "GPU" in available_devices:
+                ACCELERATOR_DEVICE = "GPU"
+                model_main = 'last_openvino_model'
+                model_secondary = 'yolov8n_int8_openvino_model'
+                print("[OPENVINO] Intel Integrated Graphics found. Loading OpenVINO models targeting Intel GPU.")
+            else:
+                ACCELERATOR_DEVICE = "CPU"
+                model_main = 'last_openvino_model'
+                model_secondary = 'yolov8n_int8_openvino_model'
+                print("[OPENVINO] Defaulting to AVX-512 accelerated OpenVINO CPU execution.")
+                
+        except (ImportError, Exception) as e:
+            ACCELERATOR_DEVICE = "cpu"
+            print(f"[FALLBACK] No CUDA or OpenVINO found. Defaulting to CPU using PyTorch. Details: {e}")
+
+    # Load computed configurations dynamically
+    print(f"[LOADER] Loading Primary Model: '{model_main}' onto device: {ACCELERATOR_DEVICE}")
+    yolo_model = YOLO(model_main)
     if yolo_model.names:
         ALL_YOLO_CLASS_NAMES = list(yolo_model.names.values())
 
-    yolo_model_object = YOLO(MODEL_PATH_OBJECT)
+    print(f"[LOADER] Loading Secondary Model: '{model_secondary}' onto device: {ACCELERATOR_DEVICE}")
+    yolo_model_object = YOLO(model_secondary)
 
-    detection_pool = Pool(processes=cpu_count())
-    print("App Initialized with OpenVINO runtime structures.")
+    # Core i5-1135G7 or standard processors have 4-8 physical cores.
+    # Spawning workers safely avoiding thread subscription on CPU-bound HOG face tracking.
+    optimal_workers = max(1, min(3, cpu_count() // 2))
+    detection_pool = Pool(processes=optimal_workers)
+    print(f"App Initialized with active structures. Multiprocessing Pool using {optimal_workers} worker threads.\n")
 
 
 def main():
@@ -1522,6 +1742,6 @@ def main():
     app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
     return 0
 
-
 if __name__ == '__main__':
+    app.run(debug=True) ## Note to self: Don't forget to remove this.
     raise SystemExit(main())
