@@ -63,8 +63,8 @@ login_manager.login_view = 'login'
 
 # Dynamic Model Configuration paths
 # We will resolve these to PyTorch (.pt), TensorRT (.engine), or OpenVINO directories depending on hardware
-MODEL_PATH = 'last.pt'                # Primary Model (Fallback to 'last_openvino_model' if only OpenVINO is available)
-MODEL_PATH_OBJECT = 'yolov8n.pt'      # Secondary Model (Fallback to 'yolov8n_openvino_model' if only OpenVINO is available)
+MODEL_PATH = 'yolo26n.pt'                # Primary Model (Fallback to 'last_openvino_model' if only OpenVINO is available)
+MODEL_PATH_OBJECT = 'best.pt'      # Secondary Model (Fallback to 'yolov8n_openvino_model' if only OpenVINO is available)
 
 BASE_RECORDINGS_DIR = "users_data"
 OVERLAP_PIXELS = 44
@@ -1065,6 +1065,13 @@ def admin_dashboard():
         recent_activity=recent_activity,
     )
 
+@app.route('/admin/request')
+@admin_required
+def admin_request():
+    is_mobile_device = is_mobile(request)
+    template_path = 'mobile/' if is_mobile_device else ''
+    return render_template(f'{template_path}admin_request.html')
+
 @app.route('/admin/cctv')
 @admin_required
 def admin_cctv():
@@ -1665,8 +1672,8 @@ def init_app():
     # ══════════════════════════════════════════════════════════════
     # We dynamically map models to NVIDIA CUDA, Intel OpenVINO GPU, or CPU.
     
-    model_main = 'last.pt'
-    model_secondary = 'yolov8n.pt'
+    model_main = 'best.pt'
+    model_secondary = 'yolo26n.pt'
     
     if CUDA_AVAILABLE:
         ACCELERATOR_DEVICE = "cuda"
@@ -1674,9 +1681,9 @@ def init_app():
         print(f"[ACCELERATOR] Using backend: CUDA.")
         
         # Check if TensorRT compiled engines exist (highly optimized)
-        if os.path.exists('last.engine') and os.path.exists('yolov8n.engine'):
-            model_main = 'last.engine'
-            model_secondary = 'yolov8n.engine'
+        if os.path.exists('best.engine') and os.path.exists('yolo26n.engine'):
+            model_main = 'best.engine'
+            model_secondary = 'yolo26n.engine'
             print("[ACCELERATOR] Found pre-compiled TensorRT Engines (.engine). Using them for extreme speed!")
         else:
             print("[ACCELERATOR] Using standard PyTorch weight weights (.pt) on CUDA.")
@@ -1692,13 +1699,13 @@ def init_app():
             
             if "GPU" in available_devices:
                 ACCELERATOR_DEVICE = "GPU"
-                model_main = 'last_openvino_model'
-                model_secondary = 'yolov8n_int8_openvino_model'
+                model_main = 'best_openvino_model'
+                model_secondary = 'yolo26n_int8_openvino_model'
                 print("[OPENVINO] Intel Integrated Graphics found. Loading OpenVINO models targeting Intel GPU.")
             else:
                 ACCELERATOR_DEVICE = "CPU"
-                model_main = 'last_openvino_model'
-                model_secondary = 'yolov8n_int8_openvino_model'
+                model_main = 'best_openvino_model'
+                model_secondary = 'yolo26n_int8_openvino_model'
                 print("[OPENVINO] Defaulting to AVX-512 accelerated OpenVINO CPU execution.")
                 
         except (ImportError, Exception) as e:
@@ -1743,5 +1750,4 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    app.run(debug=True) ## Note to self: Don't forget to remove this.
     raise SystemExit(main())

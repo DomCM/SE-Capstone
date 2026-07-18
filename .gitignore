@@ -3,10 +3,15 @@ __pycache__/
 instance/
 tests/
 users_data/
-Dockerfile/
+Dockerfile
 last.pt
 yolov8n.pt
 bite.txt
 main - Copy.py
 othernote.txt
 datasets/
+
+best.pt
+best_openvino_model/
+yolo26n.pt
+yolo26n_int8_openvino_model/
