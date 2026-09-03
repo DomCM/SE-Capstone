@@ -230,14 +230,6 @@
         tbody td.detail { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* ══════════════════════════════════════
-           EMPTY STATE
-        ══════════════════════════════════════ */
-        .empty-state { padding: 72px 24px; text-align: center; }
-        .empty-state svg { width: 40px; height: 40px; margin: 0 auto 14px; color: var(--navy-200); display: block; }
-        .empty-state p { font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-        .empty-state span { font-size: 13px; color: var(--text-muted); }
-
-        /* ══════════════════════════════════════
            PAGINATION
         ══════════════════════════════════════ */
         .pagination {
@@ -256,15 +248,7 @@
         }
         .page-btn:hover { background: var(--navy-50); border-color: var(--navy-200); color: var(--navy-800); }
         .page-btn.active { background: var(--navy-900); color: #fff; border-color: var(--navy-900); }
-        .page-btn:disabled { opacity: 0.4; cursor: default; }
 
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: var(--off-white); }
-        ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
-
-        /* ══════════════════════════════════════
-           SIMPLIFIED BRAND FOOTER
-        ══════════════════════════════════════ */
         footer {
             background: var(--navy-950);
             color: var(--text-muted);
@@ -284,26 +268,13 @@
             font-size: 12.5px;
             flex-wrap: wrap;
         }
-        .footer-brand {
-            font-family: var(--font-serif);
-            font-weight: 700;
-            color: #fff;
-        }
-        .footer-brand em {
-            font-style: italic;
-            color: var(--navy-400);
-        }
 
-        /* ══════════════════════════════════════
-           RESPONSIVE BREAKPOINTS (TABLET & MOBILE)
-        ══════════════════════════════════════ */
         @media (max-width: 1024px) {
             .nav-inner {
                 padding: 0 20px; height: auto;
                 padding-top: 12px; padding-bottom: 12px;
                 flex-wrap: wrap; gap: 12px;
             }
-            .nav-clock { order: 2; }
             .menu-toggle { display: flex; order: 3; }
             .nav-links {
                 display: none; width: 100%;
@@ -313,151 +284,6 @@
                 margin-top: 8px; gap: 4px;
             }
             .nav-links.show { display: flex; }
-            .nav-links li { width: 100%; }
-            .nav-links a { padding: 10px 14px; width: 100%; justify-content: flex-start; }
-            .nav-links a.nav-logout { margin-left: 0; margin-top: 4px; }
-
-            .page { padding: 24px 20px 56px; }
-            .filter-bar { padding: 16px; }
-        }
-
-        @media (max-width: 640px) {
-            .nav-inner { padding: 8px 14px; }
-            .brand-name { font-size: 13.5px; }
-            .brand-sub { font-size: 8.5px; }
-            .nav-clock { padding: 4px 10px; }
-            .nav-clock-time { font-size: 11px; }
-
-            .page { padding: 16px 12px 48px; }
-            .page-title { font-size: 22px; }
-            .page-subtitle { font-size: 12px; }
-
-            .filter-bar { flex-direction: column; align-items: stretch; gap: 10px; }
-            .filter-field { width: 100%; }
-            .btn-filter, .btn-clear { width: 100%; justify-content: center; height: 39px; }
-
-            /* Mobile-responsive table stacking */
-            .table-card { border-radius: 12px; }
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            tbody tr { padding: 14px 12px; border-bottom: 1px solid var(--border); }
-            tbody tr:last-child { border-bottom: none; }
-            tbody td { padding: 8px 0; border: none; width: 100%; }
-            tbody td::before {
-                content: attr(data-label);
-                display: block;
-                font-size: 10.5px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                color: var(--text-muted);
-                margin-bottom: 4px;
-            }
-            tbody td.ts, tbody td.actor, tbody td.ip { display: inline-block; width: auto; margin-right: 12px; }
-            tbody td.ts::before, tbody td.actor::before, tbody td.ip::before { display: block; }
-            .pagination { flex-direction: column; gap: 12px; text-align: center; }
-        }
-
-        @media (max-width: 360px) {
-            .nav-clock { display: none; }
-        }
-
-        /* ══ LOGOUT CONFIRMATION MODAL ═══════════════════════ */
-        .logout-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(6, 13, 31, 0.55);
-            backdrop-filter: blur(2px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 10000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.25s ease, visibility 0.25s ease;
-        }
-        .logout-modal-overlay.is-open {
-            opacity: 1;
-            visibility: visible;
-        }
-        .logout-modal {
-            width: 100%;
-            max-width: 380px;
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
-            padding: 28px;
-            text-align: center;
-            transform: translateY(14px) scale(0.96);
-            opacity: 0;
-            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
-        }
-        .logout-modal-overlay.is-open .logout-modal {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-        .logout-modal-icon {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 16px;
-            border-radius: 50%;
-            background: var(--danger-bg);
-            color: var(--danger);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .logout-modal-icon svg { width: 24px; height: 24px; }
-        .logout-modal h3 {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-        .logout-modal p {
-            font-size: 14px;
-            color: var(--text-mid);
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .logout-modal-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .logout-modal-btn {
-            flex: 1;
-            padding: 11px 16px;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
-        }
-        .logout-modal-btn-no {
-            background: var(--off-white);
-            border-color: var(--border);
-            color: var(--text-mid);
-        }
-        .logout-modal-btn-no:hover {
-            background: var(--border);
-        }
-        .logout-modal-btn-yes {
-            background: var(--danger);
-            color: var(--white);
-            box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28);
-        }
-        .logout-modal-btn-yes:hover {
-            background: #a5301f;
-            transform: translateY(-1px);
-        }
-        .logout-modal-btn:active { transform: translateY(0); }
-
-        @media (max-width: 480px) {
-            .logout-modal { padding: 22px 18px; }
-            .logout-modal-actions { flex-direction: column-reverse; }
         }
     </style>
 </head>
@@ -485,76 +311,58 @@
             <span class="nav-clock-time" id="adminClock">--:--:--</span>
         </div>
 
-        <!-- Hamburger Menu Toggle Button -->
-        <button class="menu-toggle" id="menuToggleBtn" aria-label="Toggle navigation menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
+        <button class="menu-toggle" id="menuToggleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
 
-        <!-- Nav Links -->
+        <!-- Dynamic Nav Links with Reports Included -->
         <ul class="nav-links" id="navLinksList">
             <li>
                 <a href="/admin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     Dashboard
                 </a>
             </li>
             <li>
-                <a href="/admin/cctv" class="nav-cctv">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
+                <a href="/admin/cctv">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                     CCTV Monitor
+                </a>
+            </li>
+            <!-- 🌐 ADDED REPORTS LINK -->
+            <li>
+                <a href="/admin/reports">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Reports
                 </a>
             </li>
             <li>
                 <a href="/admin/users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     Users
                 </a>
             </li>
-             <li>
-                    <a href="/admin/request">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2"/>
-                            <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                        Request
-                    </a>
-                </li>
+            <li>
+                <a href="/admin/request">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Request
+                </a>
+            </li>
             <li>
                 <a href="/admin/logs" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     Admin Logs
                 </a>
             </li>
             <li>
                 <a href="/admin/system">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="3" width="20" height="14" rx="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     Settings
                 </a>
             </li>
             <li>
                 <a href="/login" class="nav-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Logout
                 </a>
             </li>
@@ -564,15 +372,10 @@
 
 <!-- ══ PAGE ══════════════════════════════════════════════════ -->
 <main class="page">
-
-    <!-- Page Header -->
     <div class="page-header">
         <div class="page-header-left">
             <div class="header-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </div>
             <div>
                 <h1 class="page-title">Audit Logs</h1>
@@ -607,15 +410,12 @@
                 <label>To Date</label>
                 <input type="date" name="to" value="{{ request.args.get('to', '') }}">
             </div>
-            <button type="submit" class="btn-filter">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                Filter
-            </button>
-            <a href="admin_logs.html" class="btn-clear">Clear</a>
+            <button type="submit" class="btn-filter">Filter</button>
+            <button type="button" class="btn-clear" onclick="fetch('{{ url_for('admin_clear_events') }}', { method: 'POST' }).then(() => { window.location.href = '{{ url_for('admin_logs') }}'; });">Clear</button>
         </div>
     </form>
 
-    <!-- Logs Table -->
+    <!-- Table Card -->
     <div class="table-card">
         <div style="overflow-x:auto;">
             <table>
@@ -634,96 +434,25 @@
                         <tr>
                             <td class="ts" data-label="Timestamp">{{ log.timestamp }}</td>
                             <td class="actor" data-label="User">{{ log.username }}</td>
-                            <td data-label="Action">
-                                <span class="badge badge-{{ log.action_type }}">{{ log.action_label }}</span>
-                            </td>
-                            <td class="detail" data-label="Detail" title="{{ log.detail }}">{{ log.detail or '—' }}</td>
+                            <td data-label="Action"><span class="badge badge-{{ log.action_type }}">{{ log.action_label }}</span></td>
+                            <td class="detail" data-label="Detail">{{ log.detail or '—' }}</td>
                             <td class="ip" data-label="IP Address">{{ log.ip_address or '—' }}</td>
                         </tr>
-                        {% endfor %}
-                    {% else %}
-                    <!-- Static Preview Fallback (Shows when logs are missing during template compilation) -->
-                    <tr>
-                        <td class="ts" data-label="Timestamp">2026-07-11 01:00:15</td>
-                        <td class="actor" data-label="User">admin</td>
-                        <td data-label="Action"><span class="badge badge-login">Login</span></td>
-                        <td class="detail" data-label="Detail">Admin logged in successfully from secure terminal</td>
-                        <td class="ip" data-label="IP Address">192.168.1.50</td>
-                    </tr>
-                    <tr>
-                        <td class="ts" data-label="Timestamp">2026-07-11 00:45:10</td>
-                        <td class="actor" data-label="User">system_daemon</td>
-                        <td data-label="Action"><span class="badge badge-settings">Settings</span></td>
-                        <td class="detail" data-label="Detail">Automated cleanup sequence processed 12 temporary files</td>
-                        <td class="ip" data-label="IP Address">localhost</td>
-                    </tr>
-                    <tr>
-                        <td class="ts" data-label="Timestamp">2026-07-10 23:15:44</td>
-                        <td class="actor" data-label="User">operator_one</td>
-                        <td data-label="Action"><span class="badge badge-create">Create</span></td>
-                        <td class="detail" data-label="Detail">Created security system snapshot marker</td>
-                        <td class="ip" data-label="IP Address">192.168.1.112</td>
-                    </tr>
+                        {% endfor %}                    
                     {% endif %}
                 </tbody>
             </table>
         </div>
-
-        {% if logs %}
-        <div class="pagination">
-            <span class="page-info">
-                Showing {{ logs|length }} of {{ total_logs or logs|length }} entries
-            </span>
-            <div class="page-btns">
-                {% if page > 1 %}
-                <a href="?{{ request.query_string.decode() }}&page={{ page - 1 }}" class="page-btn">← Prev</a>
-                {% endif %}
-                <span class="page-btn active">{{ page or 1 }}</span>
-                {% if has_next %}
-                <a href="?{{ request.query_string.decode() }}&page={{ page + 1 }}" class="page-btn">Next →</a>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
     </div>
-
 </main>
 
-<!-- ══ FOOTER ═══════════════════════════════════════════════ -->
 <footer>
     <div class="footer-inner">
-        <span class="footer-brand">Home Detection <em>Security</em></span>
         <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
     </div>
 </footer>
 
 <script>
-    // ═════════════════════════════════════════════════════════
-    // RESPONSIVE MENU DRAWER
-    // ═════════════════════════════════════════════════════════
-    const menuToggleBtn = document.getElementById('menuToggleBtn');
-    const navLinksList = document.getElementById('navLinksList');
-
-    if (menuToggleBtn && navLinksList) {
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            navLinksList.classList.toggle('show');
-        });
-
-        document.addEventListener('click', () => {
-            if (navLinksList.classList.contains('show')) {
-                navLinksList.classList.remove('show');
-            }
-        });
-
-        navLinksList.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    // ═════════════════════════════════════════════════════════
-    // SYSTEM CLOCK
-    // ═════════════════════════════════════════════════════════
     function updateClock() {
         const now = new Date();
         const clockEl = document.getElementById('adminClock');
@@ -734,76 +463,16 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
-</script>
 
-<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
-<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
-    <div class="logout-modal">
-        <div class="logout-modal-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </div>
-        <h3 id="logoutModalTitle">Confirm Logout</h3>
-        <p>Are you sure you want to log out?</p>
-        <div class="logout-modal-actions">
-            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
-            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ══ LOGOUT CONFIRMATION MODAL LOGIC ══════════════════════
-    (function () {
-        var overlay = document.getElementById('logoutModalOverlay');
-        var yesBtn = document.getElementById('logoutModalYes');
-        var noBtn = document.getElementById('logoutModalNo');
-        if (!overlay || !yesBtn || !noBtn) return;
-
-        var pendingHref = null;
-        var lastFocused = null;
-
-        function openModal(href) {
-            pendingHref = href;
-            lastFocused = document.activeElement;
-            overlay.classList.add('is-open');
-            document.body.style.overflow = 'hidden';
-            noBtn.focus();
-        }
-
-        function closeModal() {
-            overlay.classList.remove('is-open');
-            document.body.style.overflow = '';
-            pendingHref = null;
-            if (lastFocused && typeof lastFocused.focus === 'function') {
-                lastFocused.focus();
-            }
-        }
-
-        document.querySelectorAll('a.nav-logout').forEach(function (link) {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                openModal(link.getAttribute('href'));
-            });
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const navLinksList = document.getElementById('navLinksList');
+    if (menuToggleBtn && navLinksList) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navLinksList.classList.toggle('show');
         });
-
-        yesBtn.addEventListener('click', function () {
-            if (pendingHref) {
-                window.location.href = pendingHref;
-            }
-        });
-
-        noBtn.addEventListener('click', closeModal);
-
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) closeModal();
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
-                closeModal();
-            }
-        });
-    })();
+        document.addEventListener('click', () => navLinksList.classList.remove('show'));
+    }
 </script>
 </body>
 </html>

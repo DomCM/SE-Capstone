@@ -6,35 +6,19 @@ import os
 import sys
 import glob
 import shutil
-import queue
+import base64
+import hashlib
+import secrets
 from multiprocessing import Pool, cpu_count
 from ultralytics import YOLO
 import face_recognition
 import logging
 import click
-
-# Try to import torch to detect NVIDIA CUDA capabilities
-try:
-    import torch
-    CUDA_AVAILABLE = torch.cuda.is_available()
-    if CUDA_AVAILABLE:
-        CUDA_DEVICE_NAME = torch.cuda.get_device_name(0)
-    else:
-        CUDA_DEVICE_NAME = "None"
-except ImportError:
-    CUDA_AVAILABLE = False
-    CUDA_DEVICE_NAME = "None"
-
-# ══════════════════════════════════════════════════════════════
-# OPTIMIZATION SETTINGS
-# ══════════════════════════════════════════════════════════════
-# Limit OpenVINO to 2 CPU threads when CPU is used as backup to avoid starving Flask
-os.environ['OV_CPU_THREADS_NUM'] = '2'
-# Enable model caching to decrease compilation delay on subsequent app launches
-os.environ['OPENVINO_CACHE_DIR'] = 'ov_cache'
+from dotenv import load_dotenv
 
 logging.getLogger('opencv-python').setLevel(logging.ERROR)
 os.environ['FFREPORT'] = 'file=/dev/null'
+load_dotenv()
 
 from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
 from flask_sqlalchemy import SQLAlchemy
@@ -49,23 +33,27 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from datetime import datetime, timedelta
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text, or_
+from cryptography.fernet import Fernet, InvalidToken
+import pyotp
+import qrcode
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smart_security.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+app.config['SMTP_PORT'] = int(os.environ.get('SMTP_PORT', '587'))
+app.config['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
+app.config['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Dynamic Model Configuration paths
-# We will resolve these to PyTorch (.pt), TensorRT (.engine), or OpenVINO directories depending on hardware
-MODEL_PATH = 'yolo26n.pt'                # Primary Model (Fallback to 'last_openvino_model' if only OpenVINO is available)
-MODEL_PATH_OBJECT = 'best.pt'      # Secondary Model (Fallback to 'yolov8n_openvino_model' if only OpenVINO is available)
-
+MODEL_PATH = 'best.pt' # main
+MODEL_PATH_OBJECT = 'yolo26n.pt'  # secondary
 BASE_RECORDINGS_DIR = "users_data"
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -74,17 +62,12 @@ detection_pool = None
 yolo_model = None
 yolo_model_object = None
 ALL_YOLO_CLASS_NAMES = []
-ACCELERATOR_DEVICE = "cpu"  # Will be resolved dynamically to 'cuda' (NVIDIA GPU), 'GPU' (Intel), or 'cpu'
 
 active_user_streams = {}
 stream_lock = threading.Lock()
 
 face_cache = {}
-
-# ══════════════════════════════════════════════════════════════
-# ASYNCHRONOUS DATABASE LOGGING QUEUE
-# ══════════════════════════════════════════════════════════════
-db_log_queue = queue.Queue()
+MAX_DETECTION_POOL_PROCESSES = max(1, min(4, cpu_count() or 1))
 
 
 def is_human_detection_name(name):
@@ -122,6 +105,7 @@ def should_run_face_recognition(frame_count, process_interval, has_active_tracke
         return True
     return frame_count % process_interval == 0 or not has_active_tracker
 
+# for
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -131,7 +115,13 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default='user')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
-    
+    totp_secret = db.Column(db.String(500), nullable=True)
+    totp_enabled = db.Column(db.Boolean, nullable=False, default=False)
+
+    @property
+    def banned(self):
+        return self.role == 'banned'
+
     #relationships
     cameras = db.relationship('Camera', backref='owner', lazy=True)
     settings = db.relationship('Settings', backref='owner', uselist=False, lazy=True)
@@ -160,20 +150,28 @@ class Settings(db.Model):
     # ACCESS CONTROL SETTINGS
     allow_registration = db.Column(db.Boolean, default=True)
     require_disclaimer = db.Column(db.Boolean, default=False)
-    session_timeout_enabled = db.Column(db.Boolean, default=False)
-    session_timeout_minutes = db.Column(db.Integer, default=60)
+    session_timeout_enabled = db.Column(db.Boolean, default=False) # might remove in future
+    session_timeout_minutes = db.Column(db.Integer, default=60) # might remove in future
     
-    #email
+    #notification preferences; SMTP transport is system-wide
     email_alerts_enabled = db.Column(db.Boolean, default=False)
-    smtp_server = db.Column(db.String(100), default="smtp.gmail.com")
-    smtp_port = db.Column(db.Integer, default=587)
-    sender_email = db.Column(db.String(150))
-    sender_password = db.Column(db.String(150))
     recipient_email = db.Column(db.String(150))
 
     #perf
     scale_down_amount = db.Column(db.Integer, default=2)
     frame_process_interval = db.Column(db.Integer, default=3)
+
+class OtpChallenge(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    purpose = db.Column(db.String(30), nullable=False)
+    code_hash = db.Column(db.String(256), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    used_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='otp_challenges', lazy=True)
 
 class EventLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -182,6 +180,7 @@ class EventLog(db.Model):
     source_name = db.Column(db.String(100))
     event_type = db.Column(db.String(50))
     description = db.Column(db.String(500))
+    ip_address = db.Column(db.String(45), nullable=True)
 
     user = db.relationship('User', backref='event_logs', lazy=True)
 
@@ -213,10 +212,7 @@ class EventLog(db.Model):
     def detail(self):
         return self.description or self.source_name or '—'
 
-    @property
-    def ip_address(self):
-        return None
-
+#main
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -250,8 +246,126 @@ def is_admin_user(user_or_email):
     return get_user_role(user_or_email) == 'admin'
 
 
+AUDIT_EVENT_TYPES = {'login', 'logout', 'create', 'delete', 'settings'}
+
+
+def get_client_ip():
+    if request is None:
+        return None
+
+    forwarded_for = request.headers.get('X-Forwarded-For')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip() or request.remote_addr
+
+    return request.remote_addr or 'unknown'
+
+
+def record_audit_event(user_id, event_type, description, source_name='System', ip_address=None):
+    """Persist a user/admin action for the audit trail only."""
+    if user_id is None:
+        return None
+
+    normalized_type = (event_type or 'settings').strip().lower()
+    if normalized_type not in AUDIT_EVENT_TYPES:
+        normalized_type = 'settings'
+
+    safe_description = (description or '').strip()
+    if not safe_description:
+        safe_description = f"{normalized_type.title()} action recorded"
+
+    try:
+        with app.app_context():
+            log_entry = EventLog(
+                user_id=user_id,
+                source_name=source_name or 'System',
+                event_type=normalized_type,
+                description=safe_description[:500],
+                ip_address=ip_address or get_client_ip(),
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+            return log_entry
+    except Exception:
+        db.session.rollback()
+        return None
+
+
 def get_dashboard_target(user):
     return 'admin_dashboard' if is_admin_user(user) else 'index'
+
+
+def _security_fernet():
+    secret = app.config['SECRET_KEY']
+    if isinstance(secret, str):
+        secret = secret.encode()
+    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(secret).digest()))
+
+
+def encrypt_totp_secret(secret):
+    return _security_fernet().encrypt(secret.encode()).decode()
+
+
+def decrypt_totp_secret(encrypted_secret):
+    if not encrypted_secret:
+        return None
+    try:
+        return _security_fernet().decrypt(encrypted_secret.encode()).decode()
+    except (InvalidToken, ValueError):
+        return None
+
+
+def get_or_create_totp_secret(user):
+    secret = decrypt_totp_secret(user.totp_secret)
+    if secret:
+        return secret
+    secret = pyotp.random_base32()
+    user.totp_secret = encrypt_totp_secret(secret)
+    db.session.commit()
+    return secret
+
+
+def send_security_email(user, subject, body):
+    sender = app.config['SMTP_USERNAME']
+    password = app.config['SMTP_PASSWORD']
+    if not sender or not password:
+        return False
+    try:
+        message = MIMEText(body, 'plain')
+        message['From'] = sender
+        message['To'] = user.email
+        message['Subject'] = subject
+        with smtplib.SMTP(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
+            server.starttls()
+            server.login(sender, password)
+            server.send_message(message)
+        return True
+    except Exception as exc:
+        app.logger.warning('Security email failed: %s', exc)
+        return False
+
+
+def create_email_otp(user):
+    OtpChallenge.query.filter_by(user_id=user.id, purpose='password_reset', used_at=None).update(
+        {'used_at': datetime.utcnow()}
+    )
+    code = f'{secrets.randbelow(1000000):06d}'
+    challenge = OtpChallenge(
+        user_id=user.id,
+        purpose='password_reset',
+        code_hash=generate_password_hash(code),
+        expires_at=datetime.utcnow() + timedelta(minutes=10),
+    )
+    db.session.add(challenge)
+    db.session.commit()
+    return code
+
+
+def clear_audit_events_for_user(user_id=None):
+    query = EventLog.query
+    if user_id is not None:
+        query = query.filter_by(user_id=user_id)
+    query = query.filter(EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)))
+    return query.delete(synchronize_session=False)
 
 
 def ensure_database_schema():
@@ -261,6 +375,12 @@ def ensure_database_schema():
         user_columns = {column['name'] for column in inspector.get_columns('user')}
         if 'role' not in user_columns:
             db.session.execute(text("ALTER TABLE user ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'"))
+            db.session.commit()
+        if 'totp_secret' not in user_columns:
+            db.session.execute(text("ALTER TABLE user ADD COLUMN totp_secret VARCHAR(500)"))
+            db.session.commit()
+        if 'totp_enabled' not in user_columns:
+            db.session.execute(text("ALTER TABLE user ADD COLUMN totp_enabled BOOLEAN NOT NULL DEFAULT 0"))
             db.session.commit()
 
         camera_columns = {column['name'] for column in inspector.get_columns('camera')}
@@ -306,6 +426,7 @@ def get_user_face_data(user_id):
     known_names = []
     
     if os.path.exists(user_faces_dir):
+        # print(f"Loading faces for User {user_id}...") 
         for name in os.listdir(user_faces_dir):
             person_dir = os.path.join(user_faces_dir, name)
             if os.path.isdir(person_dir):
@@ -325,34 +446,41 @@ def get_user_face_data(user_id):
 def detect_faces_in_chunk(full_frame, bbox, scale_factor, upsample_amount, known_encodings, known_names, face_confidence=0.6):
     """
     Optimized worker function. Processes facial recognition only within a specific bounding box (ROI).
+    
+    Args:
+        full_frame: The original frame (used for coordinate translation).
+        bbox: A tuple (x1, y1, x2, y2) defining the ROI.
     """
     if full_frame is None or bbox is None:
         return []
 
     x1, y1, x2, y2 = map(int, bbox)
     cropped_image = full_frame[y1:y2, x1:x2]
-    
+
     if cropped_image.size == 0:
         return []
-        
+
     if scale_factor != 1.0:
         cropped_image = cv2.resize(cropped_image, (0, 0), fx=scale_factor, fy=scale_factor)
-        
+
     rgb_cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB)
-    
-    chunk_face_locations = face_recognition.face_locations(rgb_cropped_image, model="hog", number_of_times_to_upsample=upsample_amount)
+    chunk_face_locations = face_recognition.face_locations(
+        rgb_cropped_image,
+        model="hog",
+        number_of_times_to_upsample=upsample_amount,
+    )
     chunk_face_encodings = face_recognition.face_encodings(rgb_cropped_image, chunk_face_locations, num_jitters=0)
-    
+
     results = []
     scale_up = 1.0 / scale_factor
     tolerance = 1.0 - face_confidence
-    
+
     for (top, right, bottom, left), face_encoding in zip(chunk_face_locations, chunk_face_encodings):
         t_scaled = int((top * scale_up) + y1)
         r_scaled = int((right * scale_up) + x1)
         b_scaled = int((bottom * scale_up) + y1)
         l_scaled = int((left * scale_up) + x1)
-        
+
         name = "Unknown"
         if known_encodings:
             face_distances = face_recognition.face_distance(known_encodings, face_encoding)
@@ -361,17 +489,40 @@ def detect_faces_in_chunk(full_frame, bbox, scale_factor, upsample_amount, known
                 best_distance = face_distances[best_match_index]
                 if best_distance <= tolerance:
                     name = known_names[best_match_index]
-        
+
         results.append((t_scaled, r_scaled, b_scaled, l_scaled, name))
     return results
+
+
+def run_roi_detection(roi_tasks):
+    """Run face-detection ROI tasks with a safe fallback to avoid crashing on a pool failure."""
+    if not roi_tasks:
+        return []
+
+    if len(roi_tasks) == 1:
+        return [detect_faces_in_chunk(*roi_tasks[0])]
+
+    if detection_pool is None:
+        return [detect_faces_in_chunk(*task) for task in roi_tasks]
+
+    try:
+        return detection_pool.starmap(detect_faces_in_chunk, roi_tasks)
+    except Exception:
+        return [detect_faces_in_chunk(*task) for task in roi_tasks]
+
 
 def send_email_alert(user_settings, subject, body, image_frame=None):
     if not user_settings or not user_settings.email_alerts_enabled:
         return
 
+    sender = app.config['SMTP_USERNAME']
+    password = app.config['SMTP_PASSWORD']
+    if not sender or not password or not user_settings.recipient_email:
+        return
+
     try:
         msg = MIMEMultipart()
-        msg['From'] = user_settings.sender_email
+        msg['From'] = sender
         msg['To'] = user_settings.recipient_email
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
@@ -381,41 +532,15 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
             if success:
                 msg.attach(MIMEImage(encoded_image.tobytes(), name="alert.jpg"))
 
-        with smtplib.SMTP(user_settings.smtp_server, user_settings.smtp_port) as s:
+        with smtplib.SMTP(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as s:
             s.starttls()
-            s.login(user_settings.sender_email, user_settings.sender_password)
+            s.login(sender, password)
             s.send_message(msg)
         print(f"Email sent to {user_settings.recipient_email}")
     except Exception as e:
         print(f"Email failed: {e}")
 
-
-# ══════════════════════════════════════════════════════════════
-# BACKGROUND EVENT LOGGER THREAD (PREVENTS SQLITE THREAD LOCKING)
-# ══════════════════════════════════════════════════════════════
-def db_logger_worker():
-    """Consumes event logs asynchronously from a queue to prevent blocking streaming pipelines."""
-    while True:
-        try:
-            log_data = db_log_queue.get()
-            if log_data is None:
-                break
-            
-            with app.app_context():
-                log = EventLog(
-                    user_id=log_data['user_id'],
-                    source_name=log_data['source_name'],
-                    event_type=log_data['event_type'],
-                    description=log_data['description']
-                )
-                db.session.add(log)
-                db.session.commit()
-            db_log_queue.task_done()
-        except Exception as e:
-            print(f"[DB LOGGER ERROR] Failed to write event log: {e}")
-            time.sleep(0.1)
-
-
+#video
 class VideoStreamManager:
     def __init__(self, user_id, camera_id, source, settings):
         self.user_id = user_id
@@ -427,16 +552,10 @@ class VideoStreamManager:
         
         self.current_frame = None
         self.frame_lock = threading.Lock()
-        
-        # Thread management
+        self.processing_lock = threading.Lock()
         self.reader_thread = None
         self.reader_thread_stop = False
-        self.processor_thread = None
-        self.processor_thread_stop = False
-        
-        # Memory buffer for background processed & compressed JPEG bytes
-        self.latest_annotated_frame = None
-        self.latest_frame_lock = threading.Lock()
+        self.stream_stop_event = threading.Event()
         
         self.settings_cache = self._cache_settings(settings)
         
@@ -447,24 +566,19 @@ class VideoStreamManager:
         self.recording_writer = None
         self.is_recording = False
         
+        # Multitracking collection structure
         self.trackers = []          
         self.tracker_active = False
         self.tracker_lost = False
-        self.tracking_scale = 1.0
+        self.tracker_frame_count = 0
         
         self.known_encodings, self.known_names = get_user_face_data(user_id)
-        self.debug_tracker = True
-
-        # Spawns persistent workers immediately to connect & handle self-healing on connection loss
-        self.reader_thread_stop = False
-        self.reader_thread = threading.Thread(target=self._read_frames_worker, daemon=True)
-        self.reader_thread.start()
-        
-        self.processor_thread_stop = False
-        self.processor_thread = threading.Thread(target=self._process_frames_worker, daemon=True)
-        self.processor_thread.start()
+        self.debug_tracker = True  # Set to True to see tracker debug logs
+        self._recent_event_cache = {}
+        self._last_full_scan_time = 0.0
 
     def _cache_settings(self, settings_obj):
+        """Cache settings values from the SQLAlchemy object to avoid detached instance errors."""
         if settings_obj:
             return {
                 'yolo_enabled': settings_obj.yolo_enabled,
@@ -475,10 +589,6 @@ class VideoStreamManager:
                 'face_recognition_confidence': getattr(settings_obj, 'face_recognition_confidence', 0.6),
                 'active_classes': settings_obj.active_classes,
                 'email_alerts_enabled': settings_obj.email_alerts_enabled,
-                'smtp_server': settings_obj.smtp_server,
-                'smtp_port': settings_obj.smtp_port,
-                'sender_email': settings_obj.sender_email,
-                'sender_password': settings_obj.sender_password,
                 'recipient_email': settings_obj.recipient_email,
                 'scale_down_amount': settings_obj.scale_down_amount,
                 'frame_process_interval': settings_obj.frame_process_interval,
@@ -486,6 +596,7 @@ class VideoStreamManager:
         return {}
 
     def update_settings(self, settings_obj):
+        """Update the settings cache with new values."""
         self.settings_cache = self._cache_settings(settings_obj)
 
     def _reset_tracker(self):
@@ -496,32 +607,17 @@ class VideoStreamManager:
         self.tracker_lost = True
 
     def _initialize_trackers(self, frame, bboxes):
+        """Initialize independent trackers for multiple detected humans."""
         self.trackers = []
         if frame is None or not bboxes:
             self.tracker_active = False
             self.tracker_lost = True
             return
 
-        # Target a responsive resolution (e.g., width of 480px) for Fast Fourier transforms inside KCF
-        h, w = frame.shape[:2]
-        target_w = 480
-        self.tracking_scale = min(1.0, target_w / w) if w > target_w else 1.0
-
-        if self.tracking_scale < 1.0:
-            tracking_frame = cv2.resize(frame, (0, 0), fx=self.tracking_scale, fy=self.tracking_scale)
-        else:
-            tracking_frame = frame
-
         for bbox in bboxes:
             x1, y1, x2, y2 = bbox
-            # Downscale coordinate bounds matching the downscaled tracking_frame
-            sx1 = int(x1 * self.tracking_scale)
-            sy1 = int(y1 * self.tracking_scale)
-            sx2 = int(x2 * self.tracking_scale)
-            sy2 = int(y2 * self.tracking_scale)
-            
-            width = max(1, sx2 - sx1)
-            height = max(1, sy2 - sy1)
+            width = max(1, int(x2 - x1))
+            height = max(1, int(y2 - y1))
             try:
                 try:
                     tracker = cv2.legacy.TrackerKCF.create()
@@ -530,163 +626,117 @@ class VideoStreamManager:
                     tracker = cv2.TrackerKCF.create()
                     tracker_name = "KCF"
                     
-                ok = tracker.init(tracking_frame, (sx1, sy1, width, height))
+                ok = tracker.init(frame, (int(x1), int(y1), width, height))
                 if ok:
                     self.trackers.append({
                         "tracker": tracker,
-                        "bbox": (sx1, sy1, sx2, sy2)
+                        "bbox": (int(x1), int(y1), int(x2), int(y2))
                     })
                     if self.debug_tracker:
-                        print(f"[TRACKER] Initialized downscaled {tracker_name} at scale {self.tracking_scale:.2f}")
+                        print(f"[TRACKER] Initialized {tracker_name} at frame {self.frame_count}, bbox=({x1}, {y1}, {x2}, {y2})")
             except Exception as e:
                 print(f"Tracker init error: {e}")
 
         if self.trackers:
             self.tracker_active = True
             self.tracker_lost = False
+            self.tracker_frame_count = 0
         else:
             self.tracker_active = False
             self.tracker_lost = True
 
     def _update_trackers(self, frame):
+        """Update all active trackers and prune any that failed/lost track."""
         if not self.trackers or frame is None:
             self.tracker_active = False
             self.tracker_lost = True
             return []
 
-        if self.tracking_scale < 1.0:
-            tracking_frame = cv2.resize(frame, (0, 0), fx=self.tracking_scale, fy=self.tracking_scale)
-        else:
-            tracking_frame = frame
-
         updated_bboxes = []
         active_trackers = []
 
-        from concurrent.futures import ThreadPoolExecutor
-
-        # Parallelize the individual tracker updates across multiple CPU cores (GIL-free in OpenCV C++)
-        def update_single_tracker(item):
+        for item in self.trackers:
             tracker = item["tracker"]
             try:
-                ok, bbox = tracker.update(tracking_frame)
+                ok, bbox = tracker.update(frame)
                 if ok:
-                    sx, sy, sw, sh = [int(v) for v in bbox]
-                    
-                    # Convert bounding coordinates back to native resolution for overlays and recording
-                    scale_inv = 1.0 / self.tracking_scale
-                    rx1 = int(sx * scale_inv)
-                    ry1 = int(sy * scale_inv)
-                    rx2 = int((sx + sw) * scale_inv)
-                    ry2 = int((sy + sh) * scale_inv)
-                    
-                    return {
-                        "success": True,
-                        "tracker_item": {
-                            "tracker": tracker,
-                            "bbox": (sx, sy, sx + sw, sy + sh)
-                        },
-                        "original_bbox": (rx1, ry1, rx2, ry2)
-                    }
+                    x, y, w, h = [int(v) for v in bbox]
+                    new_bbox = (x, y, x + w, y + h)
+                    item["bbox"] = new_bbox
+                    active_trackers.append(item)
+                    updated_bboxes.append(new_bbox)
+                    if self.debug_tracker:
+                        print(f"[TRACKER] Updated active tracker at frame {self.frame_count}, bbox=({x}, {y}, {x+w}, {y+h})")
             except Exception as e:
-                print(f"Parallel Tracker update error: {e}")
-            return {"success": False}
-
-        with ThreadPoolExecutor(max_workers=min(4, len(self.trackers))) as executor:
-            results = list(executor.map(update_single_tracker, self.trackers))
-
-        for res in results:
-            if res["success"]:
-                active_trackers.append(res["tracker_item"])
-                updated_bboxes.append(res["original_bbox"])
+                print(f"Tracker update error: {e}")
 
         self.trackers = active_trackers
         if self.trackers:
             self.tracker_active = True
             self.tracker_lost = False
+            self.tracker_frame_count += 1
         else:
             self.tracker_active = False
             self.tracker_lost = True
 
         return updated_bboxes
 
+    def _open_stream(self):
+        """Lazily open the video stream with error handling."""
+        try:
+            self.cap = cv2.VideoCapture(self.video_source)
+            
+            if self.cap and self.cap.isOpened():
+                self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                self.reader_thread_stop = False
+                self.reader_thread = threading.Thread(target=self._read_frames_worker, daemon=True)
+                self.reader_thread.start()
+                return True
+            else:
+                self.cap = None
+                return False
+        except Exception as e:
+            print(f"Error opening stream {self.video_source}: {e}")
+            self.cap = None
+            return False
+
     def _read_frames_worker(self):
-        """Asynchronous stream reader. Connects, monitors, and automatically reconnects video pipelines."""
-        while not self.reader_thread_stop:
-            # Reconnection check & execution
-            if self.cap is None or not self.cap.isOpened():
+        """Background thread that continuously reads frames from the camera."""
+        while not self.reader_thread_stop and self.cap and self.cap.isOpened():
+            ret, frame = self.cap.read()
+            if ret:
+                with self.frame_lock:
+                    self.current_frame = frame
+            else:
+                time.sleep(0.01)
+
+    def process_frame(self):
+        if self.stream_stop_event.is_set():
+            return None
+
+        with self.processing_lock:
+            if self.stream_stop_event.is_set():
+                return None
+
+            if self.cap is None:
                 current_time = time.time()
                 if current_time - self.last_connection_attempt > self.connection_retry_delay:
                     self.last_connection_attempt = current_time
-                    if self.cap:
-                        try:
-                            self.cap.release()
-                        except Exception:
-                            pass
-                    try:
-                        self.cap = cv2.VideoCapture(self.video_source)
-                        if self.cap and self.cap.isOpened():
-                            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                            print(f"[STREAM SUCCESS] Connected to camera source: {self.video_source}")
-                        else:
-                            self.cap = None
-                            print(f"[STREAM FAILED] Couldn't connect to: {self.video_source}. Retrying...")
-                    except Exception as e:
-                        self.cap = None
-                        print(f"[STREAM ERROR] Exception opening {self.video_source}: {e}")
-                time.sleep(1.0)
-                continue
+                    self._open_stream()
+                if self.cap is None:
+                    return None
 
-            try:
-                ret, frame = self.cap.read()
-                if ret:
-                    with self.frame_lock:
-                        self.current_frame = frame
-                else:
-                    # Stream disconnected or closed on remote server
-                    print(f"[STREAM ERROR] Frame read returned empty. Re-triggering connection.")
-                    try:
-                        self.cap.release()
-                    except Exception:
-                        pass
-                    self.cap = None
-            except Exception as e:
-                print(f"[STREAM ERROR] Thread exception during reads: {e}")
+            if not self.cap.isOpened():
                 self.cap = None
-            time.sleep(0.01)
+                return None
 
-    def _process_frames_worker(self):
-        """Dedicated processor running asynchronously to completely decouple AI latency from Flask HTTP threads."""
-        while not self.processor_thread_stop:
             with self.frame_lock:
                 frame = self.current_frame
 
             if frame is None:
-                time.sleep(0.05)
-                continue
+                return None
 
-            # Run computationally intensive detection pipelines
-            try:
-                annotated_frame = self.do_process_frame(frame)
-
-                if annotated_frame is not None:
-                    # Pre-compress to JPEG here so Flask threads don't block compressing images
-                    ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                    if ret:
-                        with self.latest_frame_lock:
-                            self.latest_annotated_frame = buffer.tobytes()
-            except Exception as e:
-                print(f"[PROCESSOR ERROR] Exception in process worker: {e}")
-
-            time.sleep(0.005)
-
-    def get_latest_frame_bytes(self):
-        """Instantly read pre-compiled frame bytes from shared memory (0ms Flask thread processing)."""
-        with self.latest_frame_lock:
-            return self.latest_annotated_frame
-
-    def do_process_frame(self, frame):
-        """Worker executing detection loops (formerly process_frame)."""
-        annotated_frame = frame.copy()
+            annotated_frame = frame.copy()
         
         scale_down = self.settings_cache.get('scale_down_amount', 2)
         process_interval = max(1, self.settings_cache.get('frame_process_interval', 3))
@@ -697,28 +747,17 @@ class VideoStreamManager:
              self.known_encodings, self.known_names = get_user_face_data(self.user_id)
 
         # ══════════════════════════════════════════════════════════════
-        # 1. KCF TRACKING WITH PERIODIC FACE RE-VERIFICATION
+        # 1. KCF TRACKING FOR A SHORT BURST
         # ══════════════════════════════════════════════════════════════
         if self.tracker_active:
             tracked_boxes = self._update_trackers(frame)
             
             if tracked_boxes:
+                # KCF successfully tracked the bounding boxes
                 for x1, y1, x2, y2 in tracked_boxes:
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
                 
-                if self.frame_count % process_interval == 0 and self.settings_cache.get('face_recognition_enabled', True):
-                    scale_factor = 1.0 / scale_down
-                    face_conf = self.settings_cache.get('face_recognition_confidence', 0.6)
-                    
-                    try:
-                        self.face_detections = []
-                        for tracked_box in tracked_boxes:
-                            results = detect_faces_in_chunk(frame, tracked_box, scale_factor, 1, self.known_encodings, self.known_names, face_conf)
-                            for t, r, b, l, name in results:
-                                self.face_detections.append(((t, r, b, l), name))
-                    except Exception as e:
-                        print(f"Periodic Face Rec Error: {e}")
-                
+                # Draw the face labels from the most recent full scan.
                 for (top, right, bottom, left), name in self.face_detections:
                     color = (0, 165, 255) if name == "Unknown" else (255, 255, 0)
                     cv2.rectangle(annotated_frame, (left, top), (right, bottom), color, 2)
@@ -726,22 +765,38 @@ class VideoStreamManager:
                 
                 cv2.putText(annotated_frame, f"Tracking Active ({len(tracked_boxes)} Persons — YOLO Suspended)", (20, 40), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+
+                if self.tracker_frame_count >= process_interval:
+                    self._reset_tracker()
             else:
+                # KCF trackers all lost track on this frame! Trigger fallback instantly
                 self._reset_tracker()
 
         # ══════════════════════════════════════════════════════════════
-        # 2. SEARCH STATE (YOLO ON INTEL iGPU/CPU OR NVIDIA CUDA + FACE)
+        # 2. SEARCH STATE (YOLO + PRIMARY FACE RECOGNITION)
         # ══════════════════════════════════════════════════════════════
         if not self.tracker_active:
+            now = time.monotonic()
+            if now - self._last_full_scan_time < 0.25:
+                if self.is_recording:
+                    if not self.recording_writer:
+                        self.start_recording(annotated_frame)
+                    self.recording_writer.write(annotated_frame)
+                elif self.recording_writer:
+                    self.stop_recording()
+                self.frame_count += 1
+                return annotated_frame
+
+            self._last_full_scan_time = now
             critical_detected = False
             detected_crit_names = []
             self.yolo_detections = []
             human_boxes = []
             
-            # --- Primary YOLO Model ---
+            # --- Primary YOLO Model (for fire/smoke or general) ---
             if self.settings_cache.get('yolo_enabled', True) and yolo_model:
                 obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
-                results = yolo_model.predict(frame, conf=obj_conf, verbose=False, device=ACCELERATOR_DEVICE)
+                results = yolo_model.predict(frame, conf=obj_conf, verbose=False)
                 for r in results:
                     for box in r.boxes:
                         cls_id = int(box.cls[0].item())
@@ -761,7 +816,7 @@ class VideoStreamManager:
             # --- Secondary YOLO Model ---
             if self.settings_cache.get('yolo_object_enabled', True) and yolo_model_object:
                 obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
-                results = yolo_model_object.predict(frame, conf=obj_conf, verbose=False, device=ACCELERATOR_DEVICE)
+                results = yolo_model_object.predict(frame, conf=obj_conf, verbose=False)
                 for r in results:
                     for box in r.boxes:
                         name = r.names.get(int(box.cls[0].item()))
@@ -771,27 +826,37 @@ class VideoStreamManager:
                         if is_human_detection_name(name):
                             human_boxes.append((x1, y1, x2, y2, confidence))
 
+            # Draw YOLO detections
             for (x1, y1, x2, y2, name, is_crit) in self.yolo_detections:
                 color = (0, 0, 255) if is_crit else (0, 255, 0)
                 cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(annotated_frame, name, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
+            # If YOLO detects people, perform a parallel startup face verification pass and lock on trackers
             if human_boxes and self.settings_cache.get('face_recognition_enabled', True):
+    
                 scale_factor = 1.0 / scale_down
                 face_conf = self.settings_cache.get('face_recognition_confidence', 0.6)
                 
+                print(f"[FR] Starting parallel recognition for {len(human_boxes)} ROIs...")
+                
+                # Prepare a list of tuples containing parameters for each ROI pass
                 roi_tasks = []
                 for bbox in human_boxes:
+                    # Exclude the 5th element (confidence) so ROI mapping remains robust
                     roi_tasks.append((frame, bbox[:4], scale_factor, 1, self.known_encodings, self.known_names, face_conf))
+                    
+                print(f"--- Debugging Parallel FR Call ---")
+                print(f"Number of ROI tasks prepared: {len(roi_tasks)}")
 
                 try:
-                    all_results = detection_pool.starmap(detect_faces_in_chunk, roi_tasks)
-                    
+                    all_results = run_roi_detection(roi_tasks)
+
                     self.face_detections = []
                     for results_list in all_results:
                         for t, r, b, l, name in results_list:
                             self.face_detections.append(((t, r, b, l), name))
-                            
+
                             if name == "Unknown":
                                 self.log_db_event("UNKNOWN FACE", "Unidentified person detected in an ROI.")
                             else:
@@ -800,14 +865,17 @@ class VideoStreamManager:
                 except Exception as e:
                     print(f"Parallel Face Recognition Error: {e}")
 
+                # Draw startup face bounds
                 for (top, right, bottom, left), name in self.face_detections:
                     color = (0, 165, 255) if name == "Unknown" else (255, 255, 0)
                     cv2.rectangle(annotated_frame, (left, top), (right, bottom), color, 2)
                     cv2.putText(annotated_frame, name, (left, bottom+20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
+                # Instantly initialize the trackers on ALL detected human boxes!
                 bboxes_to_track = [box[:4] for box in human_boxes]
                 self._initialize_trackers(frame, bboxes_to_track)
 
+            # Handle Alerts (Fire, smoke, etc.)
             if critical_detected and not self.fire_alert_active:
                 msg = f"Detected: {', '.join(set(detected_crit_names))}"
                 self.log_db_event("CRITICAL ALERT", msg)
@@ -816,10 +884,11 @@ class VideoStreamManager:
                 settings_obj = SettingsObj()
                 for k, v in self.settings_cache.items():
                     setattr(settings_obj, k, v)
-                threading.Thread(target=send_email_alert, args=(settings_obj, "CRITICAL ALERT", msg, annotated_frame)).start()
+                threading.Thread(target=send_email_alert, args=(settings_obj, "CRITICAL ALERT", msg, annotated_frame), daemon=True).start()
             
             self.fire_alert_active = critical_detected
 
+        # Record stream frames
         if self.is_recording:
             if not self.recording_writer:
                 self.start_recording(annotated_frame)
@@ -843,34 +912,39 @@ class VideoStreamManager:
             self.recording_writer = None
 
     def log_db_event(self, event_type, desc):
-        """Add event logs asynchronously to the thread-safe database queue."""
-        db_log_queue.put({
-            'user_id': self.user_id,
-            'source_name': f"Cam {self.camera_id}",
-            'event_type': event_type,
-            'description': desc
-        })
+        dedupe_key = (event_type, (desc or '')[:180])
+        now = time.monotonic()
+        last_logged = self._recent_event_cache.get(dedupe_key)
+        if last_logged and now - last_logged < 15:
+            return
+        self._recent_event_cache[dedupe_key] = now
+
+        with app.app_context():
+            log = EventLog(user_id=self.user_id, source_name=f"Cam {self.camera_id}", event_type=event_type, description=desc)
+            db.session.add(log)
+            db.session.commit()
 
     def release(self):
+        self.stream_stop_event.set()
         self.stop_recording()
         self.reader_thread_stop = True
-        self.processor_thread_stop = True
         if self.reader_thread:
-            self.reader_thread.join(timeout=1)
-        if self.processor_thread:
-            self.processor_thread.join(timeout=1)
+            self.reader_thread.join(timeout=2)
         if self.cap:
-            try:
-                self.cap.release()
-            except Exception:
-                pass
+            self.cap.release()
 
+#routes
 
 def is_mobile(request):
+    """
+    Checks the User-Agent header to determine if the request is coming from a mobile device.
+    """
     if 'User-Agent' not in request.headers:
         return False
     
     user_agent = request.headers['User-Agent'].lower()
+    
+    # Keywords commonly found in mobile device user agents
     mobile_keywords = [
         'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone', 'opera mini'
     ]
@@ -880,26 +954,36 @@ def is_mobile(request):
             return True
     return False
 
-
+#gatekeep start
 @app.before_request
 def check_privacy_agreement():
+    """
+    This function runs before EVERY request. 
+    It checks if the user has accepted the disclaimer in the current session.
+    """
     allowed_endpoints = ['disclaimer', 'accept_terms', 'static']
+    
     if request.endpoint in allowed_endpoints:
         return
+
     if not session.get('privacy_agreed'):
         return redirect(url_for('disclaimer'))
 
+    enrollment_endpoints = {'security_setup', 'logout', 'static', 'disclaimer', 'accept_terms'}
+    if (current_user.is_authenticated and current_user.totp_secret
+            and not current_user.totp_enabled
+            and request.endpoint not in enrollment_endpoints):
+        return redirect(url_for('security_setup'))
+
 @app.route('/disclaimer')
 def disclaimer():
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}disclaimer.html')
+    return render_template('disclaimer.html')
 
 @app.route('/accept_terms', methods=['POST'])
 def accept_terms():
     session['privacy_agreed'] = True
     return redirect(url_for('login'))
-
+#gatekeep end
 
 def admin_required(view_func):
     @wraps(view_func)
@@ -912,8 +996,123 @@ def admin_required(view_func):
     return wrapped
 
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if user:
+            code = create_email_otp(user)
+            send_security_email(
+                user,
+                'Home Detection Security password reset code',
+                f'Your password reset code is {code}. It expires in 10 minutes.',
+            )
+        session['recovery_email'] = email
+        return redirect(url_for('verify_otp', purpose='password_reset'))
+    return render_template('forgot_password.html')
+
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    purpose = request.args.get('purpose') or session.get('otp_purpose')
+    if purpose not in {'login', 'password_reset'}:
+        return redirect(url_for('login'))
+    session['otp_purpose'] = purpose
+
+    if request.method == 'POST':
+        code = request.form.get('otp', '').strip()
+        if not code.isdigit() or len(code) != 6:
+            flash('Enter the 6-digit verification code.', 'danger')
+            return render_template('verify_otp.html', purpose=purpose, email=session.get('recovery_email'))
+
+        if purpose == 'login':
+            user = db.session.get(User, session.get('pending_login_user_id'))
+            secret = decrypt_totp_secret(user.totp_secret) if user else None
+            valid = bool(user and user.totp_enabled and secret and pyotp.TOTP(secret).verify(code))
+        else:
+            email = session.get('recovery_email')
+            user = User.query.filter_by(email=email).first() if email else None
+            challenge = OtpChallenge.query.filter_by(
+                user_id=user.id if user else 0, purpose='password_reset', used_at=None
+            ).order_by(OtpChallenge.created_at.desc()).first() if user else None
+            valid = bool(
+                challenge and challenge.expires_at > datetime.utcnow()
+                and challenge.attempts < 5
+                and check_password_hash(challenge.code_hash, code)
+            )
+            if challenge:
+                challenge.attempts += 1
+                if valid:
+                    challenge.used_at = datetime.utcnow()
+                db.session.commit()
+
+        if valid:
+            if purpose == 'login':
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                login_user(user)
+                session.pop('pending_login_user_id', None)
+                session.pop('otp_purpose', None)
+                return redirect(url_for(get_dashboard_target(user)))
+            session['password_reset_user_id'] = user.id
+            session.pop('otp_purpose', None)
+            return redirect(url_for('reset_password'))
+
+        flash('That verification code is invalid or expired.', 'danger')
+
+    return render_template('verify_otp.html', purpose=purpose, email=session.get('recovery_email'))
+
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    user = db.session.get(User, session.get('password_reset_user_id'))
+    if not user:
+        return redirect(url_for('forgot_password'))
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirmation = request.form.get('confirm_password', '')
+        if len(password) < 12 or password != confirmation:
+            flash('Use a strong password and make sure both fields match.', 'danger')
+            return render_template('reset_password.html')
+        user.password = generate_password_hash(password)
+        db.session.commit()
+        session.pop('password_reset_user_id', None)
+        return redirect(url_for('password_success'))
+    return render_template('reset_password.html')
+
+
+@app.route('/password-success')
+def password_success():
+    return render_template('password_success.html')
+
+
+@app.route('/security/setup', methods=['GET', 'POST'])
+@login_required
+def security_setup():
+    secret = get_or_create_totp_secret(current_user)
+    if request.method == 'POST':
+        code = request.form.get('otp', '').strip()
+        if pyotp.TOTP(secret).verify(code):
+            current_user.totp_enabled = True
+            db.session.commit()
+            flash('Authenticator verification is now enabled.', 'success')
+            return redirect(url_for(get_dashboard_target(current_user)))
+        flash('Enter the current 6-digit code from your authenticator.', 'danger')
+
+    uri = pyotp.TOTP(secret).provisioning_uri(
+        name=current_user.email, issuer_name='Home Detection Security'
+    )
+    qr = qrcode.make(uri)
+    image = BytesIO()
+    qr.save(image, format='PNG')
+    qr_data = base64.b64encode(image.getvalue()).decode()
+    return render_template('security_setup.html', qr_data=qr_data, secret=secret)
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # Fetch settings first (as per previous fix)
     with app.app_context():
         settings = Settings.query.first()
         
@@ -922,39 +1121,50 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         
+        # 1. VALIDATION CHECK (CRITICAL FIX)
         if not username or not email or not password:
             flash('All fields are required.', 'danger')
             return redirect(url_for('register'))
 
+        # Check for username collision
         if User.query.filter_by(username=username).first():
             flash('This username is already taken.', 'danger')
             return redirect(url_for('register'))
         
+        # Check for email collision
         if User.query.filter_by(email=email).first():
             flash('Email already exists.', 'danger')
             return redirect(url_for('register'))
 
+        # 2. ADMIN GATECHECK (Previous fix)
         if settings and not settings.allow_registration:
             flash("Public registration is disabled by the administrator.", "danger")
             return redirect(url_for('register'))
         
-        new_user = User(username=username, email=email, password=generate_password_hash(password), role='user')
+        # If all checks pass, proceed with creation
+        new_user = User(
+            username=username,
+            email=email,
+            password=generate_password_hash(password),
+            role='user',
+            totp_secret=encrypt_totp_secret(pyotp.random_base32()),
+        )
         db.session.add(new_user)
         db.session.commit()
-        
+
         default_settings = Settings(user_id=new_user.id, recipient_email=email)
         db.session.add(default_settings)
         db.session.commit()
-        
+
         os.makedirs(os.path.join(BASE_RECORDINGS_DIR, str(new_user.id), "known_faces"), exist_ok=True)
         os.makedirs(os.path.join(BASE_RECORDINGS_DIR, str(new_user.id), "recordings"), exist_ok=True)
-        
+
+        record_audit_event(new_user.id, 'create', f"Created account for {new_user.username}", 'Auth', get_client_ip())
+
         login_user(new_user)
-        return redirect(url_for('index'))
+        return redirect(url_for('security_setup'))
     
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}register.html', settings=settings)
+    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -962,28 +1172,36 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         user = User.query.filter_by(email=email).first()
-        
+
         if user and check_password_hash(user.password, password):
+            if user.totp_secret and user.totp_enabled:
+                session['pending_login_user_id'] = user.id
+                session['otp_purpose'] = 'login'
+                return redirect(url_for('verify_otp', purpose='login'))
+            if user.totp_secret and not user.totp_enabled:
+                login_user(user)
+                return redirect(url_for('security_setup'))
             user.last_login = datetime.utcnow()
             db.session.commit()
             login_user(user)
+            record_audit_event(user.id, 'login', f"{user.username} logged in", 'Auth', get_client_ip())
             return redirect(url_for(get_dashboard_target(user)))
         else:
             flash('Login failed. Check details.', 'danger')
                 
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}login.html')    
+    return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
+    user = current_user
     with stream_lock:
         if current_user.id in active_user_streams:
             for mgr in active_user_streams[current_user.id].values():
                 mgr.release()
             del active_user_streams[current_user.id]
-            
+
+    record_audit_event(user.id, 'logout', f"{user.username} logged out", 'Auth', get_client_ip())
     logout_user()
     return redirect(url_for('login'))
 
@@ -995,9 +1213,7 @@ def index():
     
     user_cameras = Camera.query.filter_by(user_id=current_user.id).all()
     
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}index.html', cameras=user_cameras)    
+    return render_template('index.html', cameras=user_cameras)
 
 
 @app.route('/admin')
@@ -1033,7 +1249,7 @@ def admin_dashboard():
         event_type = (event.event_type or '').lower()
         if 'critical' in event_type or 'alert' in event_type or 'unknown' in event_type or 'error' in event_type:
             dot_type = 'danger'
-        elif 'login' in event_type or 'recognized' in event_type or 'person' in event_type:
+        elif 'login' in event_type or 'recognized' in event_type or 'recognized' in event_type or 'person' in event_type:
             dot_type = 'success'
         elif 'logout' in event_type or 'settings' in event_type or 'recording' in event_type or 'camera' in event_type:
             dot_type = 'amber'
@@ -1047,10 +1263,8 @@ def admin_dashboard():
             'type': dot_type,
         })
 
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
     return render_template(
-        f'{template_path}admin_dashboard.html',
+        'admin_dashboard.html',
         total_users=total_users,
         active_cameras=active_cameras,
         total_events=total_events,
@@ -1065,12 +1279,6 @@ def admin_dashboard():
         recent_activity=recent_activity,
     )
 
-@app.route('/admin/request')
-@admin_required
-def admin_request():
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}admin_request.html')
 
 @app.route('/admin/cctv')
 @admin_required
@@ -1086,17 +1294,15 @@ def admin_cctv():
             'is_recording': False,
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}admin_cctv.html', cameras=camera_items)
+    return render_template('admin_cctv.html', cameras=camera_items)
 
 
 @app.route('/admin/users')
 @admin_required
 def admin_users():
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}admin_users.html', users=User.query.order_by(User.id).all(), message=None)
+    users = User.query.order_by(User.id).all()
+    return render_template('admin_users.html', users=users, message=None)
+
 
 @app.route('/admin/users/create', methods=['POST'])
 @admin_required
@@ -1104,6 +1310,7 @@ def admin_create_user():
     username = request.form.get('username', '').strip()
     email = request.form.get('email', '').strip()
     password = request.form.get('password', '').strip()
+    requested_role = request.form.get('role', 'user').strip().lower()
 
     if not username or not email or not password:
         flash('Username, email, and password are required.', 'danger')
@@ -1113,15 +1320,21 @@ def admin_create_user():
         flash('A user with that email or username already exists.', 'danger')
         return redirect(url_for('admin_users'))
 
-    new_user = User(username=username, email=email, password=generate_password_hash(password), role='user')
+    if requested_role not in {'user', 'admin'}:
+        requested_role = 'user'
+
+    new_user = User(username=username, email=email, password=generate_password_hash(password), role=requested_role)
     db.session.add(new_user)
     db.session.commit()
 
+    Settings(user_id=new_user.id, recipient_email=email)
     db.session.add(Settings(user_id=new_user.id, recipient_email=email))
     db.session.commit()
 
     os.makedirs(os.path.join(BASE_RECORDINGS_DIR, str(new_user.id), 'known_faces'), exist_ok=True)
     os.makedirs(os.path.join(BASE_RECORDINGS_DIR, str(new_user.id), 'recordings'), exist_ok=True)
+
+    record_audit_event(current_user.id, 'create', f"Created user \"{username}\" ({requested_role})", 'Admin', get_client_ip())
     flash(f'User "{username}" created successfully.', 'success')
     return redirect(url_for('admin_users'))
 
@@ -1134,8 +1347,10 @@ def admin_toggle_role(user_id):
         return redirect(url_for('admin_users'))
 
     user = User.query.get_or_404(user_id)
-    user.role = 'admin' if get_user_role(user) != 'admin' else 'user'
+    new_role = 'admin' if get_user_role(user) != 'admin' else 'user'
+    user.role = new_role
     db.session.commit()
+    record_audit_event(current_user.id, 'settings', f"Updated role for {user.username} to {new_role}", 'Admin', get_client_ip())
     flash(f'Role updated for {user.username}.', 'success')
     return redirect(url_for('admin_users'))
 
@@ -1148,8 +1363,10 @@ def admin_toggle_ban(user_id):
         return redirect(url_for('admin_users'))
 
     user = User.query.get_or_404(user_id)
-    user.role = 'banned' if get_user_role(user) != 'banned' else 'user'
+    new_role = 'banned' if get_user_role(user) != 'banned' else 'user'
+    user.role = new_role
     db.session.commit()
+    record_audit_event(current_user.id, 'settings', f"Updated access state for {user.username} to {new_role}", 'Admin', get_client_ip())
     flash(f'Access state updated for {user.username}.', 'success')
     return redirect(url_for('admin_users'))
 
@@ -1168,6 +1385,7 @@ def admin_delete_user(user_id):
         EventLog.query.filter_by(user_id=user.id).delete()
         db.session.delete(user)
         db.session.commit()
+        record_audit_event(current_user.id, 'delete', f"Deleted user \"{user.username}\"", 'Admin', get_client_ip())
         flash(f'User {user.username} deleted.', 'success')
     except Exception as exc:
         db.session.rollback()
@@ -1178,19 +1396,58 @@ def admin_delete_user(user_id):
 @app.route('/admin/logs')
 @admin_required
 def admin_logs():
-    logs = EventLog.query.order_by(EventLog.timestamp.desc()).all()
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}admin_logs.html', logs=logs, total_logs=len(logs), page=1)
+    query = EventLog.query.join(User, EventLog.user_id == User.id, isouter=True)
+
+    user_filter = (request.args.get('user') or '').strip()
+    action_filter = (request.args.get('action') or '').strip()
+    from_date = (request.args.get('from') or '').strip()
+    to_date = (request.args.get('to') or '').strip()
+
+    if user_filter:
+        search = f"%{user_filter}%"
+        query = query.filter(or_(User.username.ilike(search), User.email.ilike(search)))
+
+    if action_filter:
+        query = query.filter(EventLog.event_type.ilike(action_filter))
+
+    if from_date:
+        try:
+            from_dt = datetime.strptime(from_date, '%Y-%m-%d')
+            query = query.filter(EventLog.timestamp >= from_dt)
+        except ValueError:
+            pass
+
+    if to_date:
+        try:
+            to_dt = datetime.strptime(to_date, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(EventLog.timestamp < to_dt)
+        except ValueError:
+            pass
+
+    query = query.filter(EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)))
+    logs = query.order_by(EventLog.timestamp.desc()).all()
+    return render_template('admin_logs.html', logs=logs, total_logs=len(logs), page=1)
+
+
+@app.route('/admin/reports')
+@admin_required
+def admin_reports():
+    return render_template('admin_reports.html')
+
+
+@app.route('/admin/request')
+@admin_required
+def admin_request():
+    return render_template('admin_request.html')
 
 
 @app.route('/admin/clear_events', methods=['POST'])
 @admin_required
 def admin_clear_events():
-    EventLog.query.delete()
+    clear_audit_events_for_user(current_user.id)
     db.session.commit()
-    flash('All event logs were cleared.', 'success')
-    return redirect(url_for('admin_dashboard'))
+    flash('All audit logs were cleared.', 'success')
+    return redirect(url_for('admin_logs'))
 
 
 @app.route('/admin/system')
@@ -1202,10 +1459,8 @@ def admin_system():
         db.session.add(settings)
         db.session.commit()
 
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
     return render_template(
-        f'{template_path}admin_system.html',
+        'admin_system.html',
         settings=settings,
         storage_pct=0,
         storage_used='0 MB',
@@ -1239,9 +1494,9 @@ def admin_system_save():
     settings.face_recognition_confidence = float(request.form.get('face_recognition_confidence', 0.6))
     settings.active_classes = request.form.get('active_classes', 'fire,smoke')    
     settings.frame_process_interval = int(request.form.get('frame_process_interval', 3))
-    
 
     db.session.commit()
+    record_audit_event(current_user.id, 'settings', 'Updated system settings', 'Admin', get_client_ip())
 
     with stream_lock:
         if current_user.id in active_user_streams:
@@ -1266,9 +1521,9 @@ def admin_clear_recordings():
 @app.route('/admin/system/clear_events', methods=['POST'])
 @admin_required
 def admin_system_clear_events():
-    EventLog.query.delete()
+    clear_audit_events_for_user(current_user.id)
     db.session.commit()
-    flash('All event logs were cleared.', 'success')
+    flash('All audit logs were cleared.', 'success')
     return redirect(url_for('admin_system'))
 
 
@@ -1357,42 +1612,45 @@ def video_feed(camera_id):
     return Response(gen_frames(stream_user_id, camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def gen_frames(user_id, camera):
-    """Highly optimized frame generator. Reads pre-processed JPEGs directly from memory."""
+    """Generator that manages the VideoStreamManager for a specific user/camera."""
     global active_user_streams
-    
+
     manager = None
     with stream_lock:
         if user_id not in active_user_streams:
             active_user_streams[user_id] = {}
-            
-        if camera.id not in active_user_streams[user_id]:
-            with app.app_context():
-                user_settings = Settings.query.filter_by(user_id=user_id).first()
-            manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings)
-            active_user_streams[user_id][camera.id] = manager
-        else:
-            manager = active_user_streams[user_id][camera.id]
-            
-    while True:
-        # Instantly fetch pre-encoded JPEG bytes from the background processing thread
-        frame_bytes = manager.get_latest_frame_bytes()
-        if frame_bytes is not None:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            # Rest to match typical camera feed rates and yield execution to other Flask request workers
-            time.sleep(0.033)  # ~30 FPS limit
-        else:
-            time.sleep(0.01)
+
+        if camera.id in active_user_streams[user_id]:
+            old_manager = active_user_streams[user_id][camera.id]
+            old_manager.release()
+            del active_user_streams[user_id][camera.id]
+
+        with app.app_context():
+            user_settings = Settings.query.filter_by(user_id=user_id).first()
+        manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings)
+        active_user_streams[user_id][camera.id] = manager
+
+    try:
+        while not manager.stream_stop_event.is_set():
+            frame = manager.process_frame()
+            if frame is not None:
+                ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                frame = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            else:
+                time.sleep(0.01)
+    finally:
+        manager.release()
+        with stream_lock:
+            if user_id in active_user_streams and camera.id in active_user_streams[user_id]:
+                if active_user_streams[user_id][camera.id] is manager:
+                    del active_user_streams[user_id][camera.id]
 
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
     user_settings = Settings.query.filter_by(user_id=current_user.id).first()
-    # Ensure settings entry always exists for current user
-    if not user_settings:
-        user_settings = Settings(user_id=current_user.id)
-        db.session.add(user_settings)
-        db.session.commit()
     
     user_faces_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "known_faces")
     known_faces_list = []
@@ -1400,28 +1658,10 @@ def settings():
         known_faces_list = [name for name in os.listdir(user_faces_dir) if os.path.isdir(os.path.join(user_faces_dir, name))]
 
     if request.method == 'POST':
-        # Process settings attributes sent by settings.html
-        user_settings.yolo_enabled = 'yolo_enabled' in request.form
-        user_settings.face_recognition_enabled = 'face_rec_enabled' in request.form
-        
-        try:
-            user_settings.object_detection_confidence = float(request.form.get('object_detection_confidence', 0.5))
-        except (ValueError, TypeError):
-            user_settings.object_detection_confidence = 0.5
-            
-        try:
-            user_settings.face_recognition_confidence = float(request.form.get('face_recognition_confidence', 0.6))
-        except (ValueError, TypeError):
-            user_settings.face_recognition_confidence = 0.6
-
-        # Correctly save the Frame Processing Interval on the user settings page as well
-        try:
-            user_settings.frame_process_interval = int(request.form.get('frame_process_interval', 3))
-        except (ValueError, TypeError):
-            user_settings.frame_process_interval = 3
-
+        user_settings.email_alerts_enabled = 'email_enabled' in request.form
+        user_settings.recipient_email = request.form.get('recipient_email')
         db.session.commit()
-        flash("Settings Updated Successfully", "success")
+        flash("Settings Updated", "success")
         
         with stream_lock:
             if current_user.id in active_user_streams:
@@ -1430,9 +1670,7 @@ def settings():
         
         return redirect(url_for('settings'))
         
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}settings.html', settings=user_settings, known_faces=known_faces_list)
+    return render_template('settings.html', settings=user_settings, known_faces=known_faces_list)
 
 @app.route('/add_face', methods=['POST'])
 @login_required
@@ -1504,16 +1742,12 @@ def toggle_recording(camera_id):
 @app.route('/recordings')
 @login_required
 def recordings_page():
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}recordings.html')
+    return render_template('recordings.html')
 
 @app.route('/events')
 @login_required
 def events_page():
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}events.html')
+    return render_template('events.html')
 
 @app.route('/api/recordings', methods=['GET'])
 @login_required
@@ -1624,108 +1858,31 @@ def delete_event(event_id):
 @login_required
 def api_clear_all_events():
     try:
-        EventLog.query.filter_by(user_id=current_user.id).delete()
+        clear_audit_events_for_user(current_user.id)
         db.session.commit()
-        return jsonify({"success": True, "message": "All events cleared"})
+        return jsonify({"success": True, "message": "All audit events cleared"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/request_recording', methods=['POST'])
-@login_required
-def request_recording():
-    # Handle manual recording logic here
-    flash("Recording request processed", "success")
-    return redirect(url_for('settings'))
-
-@app.route('/cctv')
-@login_required
-def cctv():
-    camera_items = []
-    for camera in Camera.query.filter_by(user_id=current_user.id).order_by(Camera.id).all():
-        camera_items.append({
-            'id': camera.id,
-            'name': camera.name,
-            'location': '',
-            'status': 'online' if camera.is_active else 'offline',
-            'motion_detected': False,
-            'is_recording': False,
-            'stream_url': url_for('video_feed', camera_id=camera.id),
-        })
-    is_mobile_device = is_mobile(request)
-    template_path = 'mobile/' if is_mobile_device else ''
-    return render_template(f'{template_path}cctv.html', cameras=camera_items)
-
-
 # --- INITIALIZATION ---
 def init_app():
-    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES, ACCELERATOR_DEVICE
+    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES
 
     with app.app_context():
         ensure_database_schema()
 
-    # Start database logger daemon thread
-    log_worker = threading.Thread(target=db_logger_worker, daemon=True)
-    log_worker.start()
+    if yolo_model is None:
+        yolo_model = YOLO(MODEL_PATH)
+        if yolo_model.names:
+            ALL_YOLO_CLASS_NAMES = list(yolo_model.names.values())
 
-    # ══════════════════════════════════════════════════════════════
-    # DYNAMIC HARDWARE ACCELERATION ENGINE
-    # ══════════════════════════════════════════════════════════════
-    # We dynamically map models to NVIDIA CUDA, Intel OpenVINO GPU, or CPU.
-    
-    model_main = 'best.pt'
-    model_secondary = 'yolo26n.pt'
-    
-    if CUDA_AVAILABLE:
-        ACCELERATOR_DEVICE = "cuda"
-        print(f"\n[GPU DETECTED] Success! Found NVIDIA GPU: {CUDA_DEVICE_NAME}")
-        print(f"[ACCELERATOR] Using backend: CUDA.")
-        
-        # Check if TensorRT compiled engines exist (highly optimized)
-        if os.path.exists('best.engine') and os.path.exists('yolo26n.engine'):
-            model_main = 'best.engine'
-            model_secondary = 'yolo26n.engine'
-            print("[ACCELERATOR] Found pre-compiled TensorRT Engines (.engine). Using them for extreme speed!")
-        else:
-            print("[ACCELERATOR] Using standard PyTorch weight weights (.pt) on CUDA.")
-            
-    else:
-        # Fallback to Intel OpenVINO configuration
-        print("\n[GPU NOT DETECTED] NVIDIA GPU (CUDA) not active or not installed.")
-        try:
-            import openvino as ov
-            core = ov.Core()
-            available_devices = core.available_devices
-            print(f"[OPENVINO] Available hardware on your system: {available_devices}")
-            
-            if "GPU" in available_devices:
-                ACCELERATOR_DEVICE = "GPU"
-                model_main = 'best_openvino_model'
-                model_secondary = 'yolo26n_int8_openvino_model'
-                print("[OPENVINO] Intel Integrated Graphics found. Loading OpenVINO models targeting Intel GPU.")
-            else:
-                ACCELERATOR_DEVICE = "CPU"
-                model_main = 'best_openvino_model'
-                model_secondary = 'yolo26n_int8_openvino_model'
-                print("[OPENVINO] Defaulting to AVX-512 accelerated OpenVINO CPU execution.")
-                
-        except (ImportError, Exception) as e:
-            ACCELERATOR_DEVICE = "cpu"
-            print(f"[FALLBACK] No CUDA or OpenVINO found. Defaulting to CPU using PyTorch. Details: {e}")
+    if yolo_model_object is None:
+        yolo_model_object = YOLO(MODEL_PATH_OBJECT)
 
-    # Load computed configurations dynamically
-    print(f"[LOADER] Loading Primary Model: '{model_main}' onto device: {ACCELERATOR_DEVICE}")
-    yolo_model = YOLO(model_main)
-    if yolo_model.names:
-        ALL_YOLO_CLASS_NAMES = list(yolo_model.names.values())
+    if detection_pool is None:
+        detection_pool = Pool(processes=MAX_DETECTION_POOL_PROCESSES)
 
-    print(f"[LOADER] Loading Secondary Model: '{model_secondary}' onto device: {ACCELERATOR_DEVICE}")
-    yolo_model_object = YOLO(model_secondary)
-
-    # Core i5-1135G7 or standard processors have 4-8 physical cores.
-    # Spawning workers safely avoiding thread subscription on CPU-bound HOG face tracking.
-    optimal_workers = max(1, min(3, cpu_count() // 2))
-    detection_pool = Pool(processes=optimal_workers)
-    print(f"App Initialized with active structures. Multiprocessing Pool using {optimal_workers} worker threads.\n")
+    print("App Initialized.")
 
 
 def main():
@@ -1748,6 +1905,7 @@ def main():
     init_app()
     app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
     return 0
+
 
 if __name__ == '__main__':
     raise SystemExit(main())

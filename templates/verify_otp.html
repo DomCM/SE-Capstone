@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Code — Home Detection Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy-950:  #050b1a;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-400:  #4a6db5;
+            --navy-200:  #b8c6e8;
+            --navy-100:  #dce4f5;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f7f8fc;
+            --border:    #e2e8f5;
+            --text-dark: #0b1735;
+            --text-mid:  #3a4d70;
+            --text-muted:#7a8fba;
+            --emerald-500: #10b981;
+            --primary-glow: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(11, 23, 53, 0) 70%);
+        }
+
+        body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; background: var(--white); }
+
+        .left-panel {
+            width: 55%; background: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-900) 100%);
+            position: relative; display: flex; flex-direction: column; justify-content: space-between;
+            padding: 48px 56px; overflow: hidden; box-shadow: 4px 0 24px rgba(5, 11, 26, 0.15);
+        }
+
+        .left-panel-grid {
+            position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 56px 56px; pointer-events: none;
+        }
+
+        .left-brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
+        .left-logo-box { width: 44px; height: 44px; background: #ffffff; border-radius: 12px; padding: 3px; display: flex; align-items: center; justify-content: center;}
+        .left-logo-box img { width: 100%; height: 100%; object-fit: contain; }
+        .left-brand-name { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); }
+        .left-brand-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.4); text-transform: uppercase; }
+
+        .left-hero { position: relative; z-index: 2; animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .left-headline { font-family: 'Playfair Display', Georgia, serif; font-size: 48px; font-weight: 700; color: var(--white); margin-bottom: 20px; }
+        .left-desc { font-size: 14px; color: rgba(255, 255, 255, 0.6); max-width: 380px; line-height: 1.7; }
+
+        .right-panel { width: 45%; display: flex; align-items: center; justify-content: center; padding: 48px 56px; }
+        .right-inner { width: 100%; max-width: 360px; animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .right-greeting { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--navy-400); margin-bottom: 10px; }
+        .right-title { font-family: 'Playfair Display', Georgia, serif; font-size: 30px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; }
+        .right-subtitle { font-size: 13.5px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+
+        /* Email Banner Info */
+        .email-notice {
+            background: var(--navy-50);
+            border: 1px solid var(--navy-100);
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            color: var(--text-mid);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .email-notice svg { width: 18px; height: 18px; color: var(--navy-600); flex-shrink: 0; }
+        .email-notice strong { color: var(--navy-900); font-weight: 600; word-break: break-all; }
+
+        /* OTP Inputs Box */
+        .otp-container { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 24px; }
+        .otp-input {
+            width: 48px; height: 52px; background: var(--off-white);
+            border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: 20px; font-weight: 700; text-align: center;
+            color: var(--navy-900); outline: none; transition: all 0.15s;
+        }
+        .otp-input:focus { border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100); background: var(--white); }
+
+        .btn-submit {
+            width: 100%; background: var(--navy-800); color: var(--white);
+            border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: background 0.15s; box-shadow: 0 4px 16px rgba(13,27,62,0.25);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-submit:hover { background: var(--navy-950); }
+
+        @media (max-width: 840px) { .left-panel { display: none; } .right-panel { width: 100%; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="left-panel">
+        <div class="left-panel-grid"></div>
+        <div class="left-brand">
+            <div class="left-logo-box">
+                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
+            </div>
+            <div>
+                <div class="left-brand-name">Home Detection Security</div>
+                <div class="left-brand-sub">Monitoring System</div>
+            </div>
+        </div>
+        <div class="left-hero">
+            <h1 class="left-headline">Check your<br><em>inbox.</em></h1>
+            <p class="left-desc">We sent a 6-digit security code to your registered email address. Enter the code below to verify.</p>
+        </div>
+        <div></div>
+    </div>
+
+    <div class="right-panel">
+        <div class="right-inner">
+            <p class="right-greeting">{{ 'Login Verification' if purpose == 'login' else 'Password Recovery' }}</p>
+            <h2 class="right-title">Enter OTP Code</h2>
+            <p class="right-subtitle">
+                {% if purpose == 'login' %}Enter the current code from your authenticator app.{% else %}Enter the 6-digit code sent to your email.{% endif %}
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}<p class="right-subtitle">{{ message }}</p>{% endfor %}
+            {% endwith %}
+
+            <div class="email-notice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>{% if purpose == 'login' %}Authenticator code for{% else %}Code sent to{% endif %} <strong id="user-email-display">{{ email or 'your account' }}</strong></span>
+            </div>
+
+            <form action="{{ url_for('verify_otp', purpose=purpose) }}" method="POST" id="otp-form">
+                <div class="otp-container" id="otp-inputs">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required autofocus>
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
+                </div>
+                <input type="hidden" name="otp" id="otp-value">
+
+                <button type="submit" class="btn-submit">
+                    Verify & Continue
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailParam = urlParams.get('email');
+        if (emailParam) {
+            document.getElementById('user-email-display').textContent = emailParam;
+        }
+
+        const inputs = document.querySelectorAll('.otp-input');
+        const otpForm = document.getElementById('otp-form');
+        const otpValue = document.getElementById('otp-value');
+
+        otpForm.addEventListener('submit', (event) => {
+            otpValue.value = Array.from(inputs).map(input => input.value).join('');
+        });
+
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+                if (!/^[0-9]$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+                if (value.length === 1 && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').trim();
+                if (/^\d{6}$/.test(pasteData)) {
+                    pasteData.split('').forEach((char, i) => {
+                        if (inputs[i]) inputs[i].value = char;
+                    });
+                    inputs[inputs.length - 1].focus();
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

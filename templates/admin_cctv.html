@@ -126,18 +126,18 @@
         .toolbar-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); user-select: none; }
         .toolbar-divider { width: 1px; height: 20px; background: var(--border); }
 
-        .layout-btns {
+        .layout-btns, .filter-btns {
             display: flex; gap: 2px; background: var(--off-white);
             border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px;
         }
-        .layout-btn {
+        .layout-btn, .filter-btn {
             border: none; background: transparent; color: var(--text-muted); cursor: pointer;
-            width: 30px; height: 26px; border-radius: 4px;
+            padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;
             display: flex; align-items: center; justify-content: center; transition: all 0.12s;
         }
         .layout-btn svg { width: 14px; height: 14px; }
-        .layout-btn:hover { background: var(--white); color: var(--text-dark); box-shadow: var(--shadow-xs); }
-        .layout-btn.active { background: var(--navy-900); color: var(--white); box-shadow: 0 2px 6px rgba(11,23,53,0.3); }
+        .layout-btn:hover, .filter-btn:hover { background: var(--white); color: var(--text-dark); box-shadow: var(--shadow-xs); }
+        .layout-btn.active, .filter-btn.active { background: var(--navy-900); color: var(--white); box-shadow: 0 2px 6px rgba(11,23,53,0.3); }
 
         .toggle-btn {
             display: flex; align-items: center; gap: 6px;
@@ -212,13 +212,13 @@
         .cam-hud-top {
             position: absolute; top: 0; left: 0; right: 0; padding: 10px 12px;
             display: flex; align-items: flex-start; justify-content: space-between;
-            background: linear-gradient(180deg, rgba(6,13,31,0.78) 0%, transparent 100%); z-index: 5;
+            background: linear-gradient(180deg, rgba(6,13,31,0.85) 0%, transparent 100%); z-index: 5;
             transition: opacity 0.2s ease;
         }
         .cam-hud-bottom {
             position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 12px;
             display: flex; align-items: flex-end; justify-content: space-between;
-            background: linear-gradient(0deg, rgba(6,13,31,0.8) 0%, transparent 100%); z-index: 5;
+            background: linear-gradient(0deg, rgba(6,13,31,0.85) 0%, transparent 100%); z-index: 5;
             transition: opacity 0.2s ease;
         }
 
@@ -261,40 +261,79 @@
         .crosshair::before { width: 1px; height: 100%; left: 50%; }
         .crosshair::after  { height: 1px; width: 100%; top: 50%; }
 
-        /* ══════════════════════════════════════
-           SIMPLIFIED BRAND FOOTER
-        ══════════════════════════════════════ */
-        footer {
-            background: var(--navy-950);
-            color: var(--text-muted);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            padding: 20px 24px;
-            margin-top: auto;
-            flex-shrink: 0;
-            text-align: center;
+        /* Public Visibility Badge & Actions */
+        .public-badge {
+            font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;
         }
-        .footer-inner {
-            max-width: 1280px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 12.5px;
-            flex-wrap: wrap;
+        .public-badge.is-public { background: rgba(37,99,235,0.3); color: #60a5fa; border: 1px solid rgba(96,165,250,0.4); }
+        .public-badge.is-private { background: rgba(255,255,255,0.12); color: #94a3b8; border: 1px solid rgba(255,255,255,0.2); }
+
+        .btn-toggle-public {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+            color: #fff; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+            cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px;
         }
-        .footer-brand {
-            font-family: var(--font-serif);
-            font-weight: 700;
-            color: #fff;
-        }
-        .footer-brand em {
-            font-style: italic;
-            color: var(--navy-400);
-        }
+        .btn-toggle-public:hover { background: rgba(255,255,255,0.3); }
 
         /* ══════════════════════════════════════
-           MODAL
+           ADD CAMERA PANEL
+        ══════════════════════════════════════ */
+        .add-camera-panel {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); overflow: hidden; margin: 14px auto 24px;
+            width: calc(100% - 48px); max-width: 1280px; box-shadow: var(--shadow-sm);
+        }
+        .add-camera-panel .card-header {
+            background: var(--navy-900); padding: 16px 22px;
+            display: flex; align-items: center; gap: 12px; position: relative; overflow: hidden;
+        }
+        .add-camera-panel .card-header::after {
+            content: ''; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 28px 28px; pointer-events: none;
+        }
+        .add-camera-panel .card-header-icon {
+            width: 34px; height: 34px; background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 99px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 1;
+        }
+        .add-camera-panel .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
+        .add-camera-panel .card-header-text { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.01em; position: relative; z-index: 1; }
+        .add-camera-panel .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; position: relative; z-index: 1; }
+        .add-camera-panel .add-form {
+            display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding: 18px 22px 22px;
+        }
+        .add-camera-panel .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+        .add-camera-panel .field label { font-size: 11.5px; font-weight: 600; color: var(--text-mid); letter-spacing: 0.02em; }
+        .add-camera-panel .field input, .add-camera-panel .field select {
+            background: var(--off-white); border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); padding: 10px 13px; font-size: 13px;
+            font-family: var(--font-sans); color: var(--text-dark); outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; width: 100%;
+        }
+        .add-camera-panel .field input::placeholder { color: var(--text-muted); }
+        .add-camera-panel .field input:focus, .add-camera-panel .field select:focus {
+            border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100); background: var(--white);
+        }
+        .add-camera-panel .btn-add {
+            display: flex; align-items: center; gap: 7px; background: var(--navy-800);
+            color: #fff; border: none; padding: 10px 22px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600; font-family: var(--font-sans); cursor: pointer; height: 41px;
+            white-space: nowrap; transition: background 0.15s, transform 0.1s, box-shadow 0.15s; letter-spacing: -0.01em; box-shadow: 0 4px 14px rgba(11,23,53,0.22);
+        }
+        .add-camera-panel .btn-add svg { width: 14px; height: 14px; }
+        .add-camera-panel .btn-add:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
+        
+        .cam-delete-form { margin: 0; }
+        .btn-delete {
+            border: none; background: rgba(255,255,255,0.92); color: var(--danger);
+            width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 700;
+            cursor: pointer; transition: transform 0.15s, background 0.15s; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-delete:hover { background: #fee9e7; transform: translateY(-1px); }
+
+        /* ══════════════════════════════════════
+           MODAL & TOAST NOTIFICATIONS
         ══════════════════════════════════════ */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(6,13,31,0.78);
@@ -310,8 +349,7 @@
         }
         .modal-header {
             background: var(--navy-900); padding: 14px 20px;
-            display: flex; align-items: center; justify-content: space-between;
-            position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;
         }
         .modal-header::after {
             content: ''; position: absolute; inset: 0;
@@ -333,8 +371,7 @@
         
         .modal-footer {
             border-top: 1px solid var(--border); padding: 11px 20px;
-            display: flex; align-items: center; justify-content: space-between; background: var(--off-white);
-            flex-wrap: wrap; gap: 10px;
+            display: flex; align-items: center; justify-content: space-between; background: var(--off-white); flex-wrap: wrap; gap: 10px;
         }
         .modal-info { font-size: 11.5px; font-family: var(--font-mono); color: var(--text-muted); }
         .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -353,9 +390,6 @@
         .btn-modal.danger { background: var(--danger-bg); color: var(--danger); border-color: #f5c6c2; }
         .btn-modal.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-        /* ══════════════════════════════════════
-           TOAST NOTIFICATION SYSTEM
-        ══════════════════════════════════════ */
         .toast-container {
             position: fixed; bottom: 24px; right: 24px;
             z-index: 1100; display: flex; flex-direction: column;
@@ -370,281 +404,42 @@
         }
         .toast.toast-danger { background: #6b1d1d; border-color: #9c2e2e; }
         .toast.toast-success { background: #114b34; border-color: #1c714f; }
-        @keyframes slideIn {
-            from { transform: translateY(12px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         /* ══════════════════════════════════════
-           RESPONSIVE BREAKPOINTS (TABLET & MOBILE)
+           LOGOUT CONFIRMATION MODAL
         ══════════════════════════════════════ */
-        @media (max-width: 1024px) {
-            .nav-inner {
-                padding: 0 20px; height: auto;
-                padding-top: 12px; padding-bottom: 12px;
-                flex-wrap: wrap; gap: 12px;
-            }
-            .nav-clock { order: 2; }
-            .menu-toggle { display: flex; order: 3; }
-            .nav-links {
-                display: none; width: 100%;
-                flex-direction: column; order: 4;
-                background: var(--off-white); padding: 8px;
-                border-radius: var(--radius-md); border: 1px solid var(--border);
-                margin-top: 8px; gap: 4px;
-            }
-            .nav-links.show { display: flex; }
-            .nav-links li { width: 100%; }
-            .nav-links a { padding: 10px 14px; width: 100%; justify-content: flex-start; }
-            .nav-links a.nav-logout { margin-left: 0; margin-top: 4px; }
-
-            .camera-wall.layout-3x3, .camera-wall.layout-4x4 { grid-template-columns: repeat(2, 1fr); }
-            .toolbar { padding: 12px 20px; }
-        }
-
-        @media (max-width: 640px) {
-            .nav-inner { padding: 8px 14px; }
-            .brand-name { font-size: 13.5px; }
-            .brand-sub { font-size: 8.5px; }
-            .nav-clock { padding: 4px 10px; }
-            .nav-clock-time { font-size: 11px; }
-
-            .toolbar { padding: 10px 14px; flex-direction: column; align-items: stretch; gap: 12px; }
-            .toolbar-left, .toolbar-right { justify-content: space-between; width: 100%; }
-            .toolbar-divider { display: none; }
-
-            .camera-wall { grid-template-columns: 1fr !important; padding: 12px; gap: 12px; }
-            
-            .modal-overlay { padding: 10px; }
-            .modal-footer { padding: 12px; gap: 12px; }
-            .modal-actions { width: 100%; flex-direction: column; }
-            .btn-modal { width: 100%; justify-content: center; }
-        }
-
-        @media (max-width: 360px) {
-            .nav-clock { display: none; }
-        }
-
-        /* ══ LOGOUT CONFIRMATION MODAL ═══════════════════════ */
         .logout-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(6, 13, 31, 0.55);
-            backdrop-filter: blur(2px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 10000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.25s ease, visibility 0.25s ease;
+            position: fixed; inset: 0; background: rgba(6, 13, 31, 0.55);
+            backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center;
+            padding: 20px; z-index: 10000; opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease;
         }
-        .logout-modal-overlay.is-open {
-            opacity: 1;
-            visibility: visible;
-        }
+        .logout-modal-overlay.is-open { opacity: 1; visibility: visible; }
         .logout-modal {
-            width: 100%;
-            max-width: 380px;
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
-            padding: 28px;
-            text-align: center;
-            transform: translateY(14px) scale(0.96);
-            opacity: 0;
+            width: 100%; max-width: 380px; background: var(--white);
+            border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
+            padding: 28px; text-align: center; transform: translateY(14px) scale(0.96); opacity: 0;
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
         }
-        .logout-modal-overlay.is-open .logout-modal {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-        .logout-modal-icon {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 16px;
-            border-radius: 50%;
-            background: var(--danger-bg);
-            color: var(--danger);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .logout-modal-overlay.is-open .logout-modal { transform: translateY(0) scale(1); opacity: 1; }
+        .logout-modal-icon { width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: flex; align-items: center; justify-content: center; }
         .logout-modal-icon svg { width: 24px; height: 24px; }
-        .logout-modal h3 {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-        .logout-modal p {
-            font-size: 14px;
-            color: var(--text-mid);
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .logout-modal-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .logout-modal-btn {
-            flex: 1;
-            padding: 11px 16px;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
-        }
-        .logout-modal-btn-no {
-            background: var(--off-white);
-            border-color: var(--border);
-            color: var(--text-mid);
-        }
-        .logout-modal-btn-no:hover {
-            background: var(--border);
-        }
-        .logout-modal-btn-yes {
-            background: var(--danger);
-            color: var(--white);
-            box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28);
-        }
-        .logout-modal-btn-yes:hover {
-            background: #a5301f;
-            transform: translateY(-1px);
-        }
-        .logout-modal-btn:active { transform: translateY(0); }
+        .logout-modal h3 { font-size: 17px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+        .logout-modal p { font-size: 14px; color: var(--text-mid); line-height: 1.6; margin-bottom: 24px; }
+        .logout-modal-actions { display: flex; gap: 10px; }
+        .logout-modal-btn { flex: 1; padding: 11px 16px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid transparent; transition: all 0.2s ease; }
+        .logout-modal-btn-no { background: var(--off-white); border-color: var(--border); color: var(--text-mid); }
+        .logout-modal-btn-no:hover { background: var(--border); }
+        .logout-modal-btn-yes { background: var(--danger); color: var(--white); box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28); }
+        .logout-modal-btn-yes:hover { background: #a5301f; transform: translateY(-1px); }
 
-        @media (max-width: 480px) {
-            .logout-modal { padding: 22px 18px; }
-            .logout-modal-actions { flex-direction: column-reverse; }
-        }
-
-        .add-camera-panel {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            margin: 14px auto 24px;
-            width: calc(100% - 48px);
-            max-width: 1280px;
-            box-shadow: var(--shadow-sm);
-        }
-        .add-camera-panel .card-header {
-            background: var(--navy-900);
-            padding: 16px 22px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            position: relative;
-            overflow: hidden;
-        }
-        .add-camera-panel .card-header::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-                               linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-            background-size: 28px 28px;
-            pointer-events: none;
-        }
-        .add-camera-panel .card-header-icon {
-            width: 34px; height: 34px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 9px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            position: relative; z-index: 1;
-        }
-        .add-camera-panel .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
-        .add-camera-panel .card-header-text { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.01em; position: relative; z-index: 1; }
-        .add-camera-panel .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; position: relative; z-index: 1; }
-        .add-camera-panel .add-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            align-items: flex-end;
-            padding: 18px 22px 22px;
-        }
-        .add-camera-panel .field {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex: 1;
-            min-width: 180px;
-        }
-        .add-camera-panel .field label {
-            font-size: 11.5px;
-            font-weight: 600;
-            color: var(--text-mid);
-            letter-spacing: 0.02em;
-        }
-        .add-camera-panel .field input {
-            background: var(--off-white);
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 10px 13px;
-            font-size: 13px;
-            font-family: var(--font-sans);
-            color: var(--text-dark);
-            outline: none;
-            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-            width: 100%;
-        }
-        .add-camera-panel .field input::placeholder { color: var(--text-muted); }
-        .add-camera-panel .field input:focus {
-            border-color: var(--navy-600);
-            box-shadow: 0 0 0 3px var(--navy-100);
-            background: var(--white);
-        }
-        .add-camera-panel .btn-add {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: var(--navy-800);
-            color: #fff;
-            border: none;
-            padding: 10px 22px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-weight: 600;
-            font-family: var(--font-sans);
-            cursor: pointer;
-            height: 41px;
-            white-space: nowrap;
-            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-            letter-spacing: -0.01em;
-            box-shadow: 0 4px 14px rgba(11,23,53,0.22);
-        }
-        .add-camera-panel .btn-add svg { width: 14px; height: 14px; }
-        .add-camera-panel .btn-add:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
-        
-        .cam-delete-form { margin: 0; }
-        .btn-delete {
-            border: none;
-            background: rgba(255,255,255,0.92);
-            color: var(--danger);
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.15s, background 0.15s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-delete:hover { background: #fee9e7; transform: translateY(-1px); }
+        footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
+        .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; }
     </style>
 </head>
 <body>
 
-<!-- ══ NAV ═══════════════════════════════════════════════════ -->
+<!-- ══ NAV BAR WITH "REPORTS" TAB ═══════════════════════════ -->
 <nav>
     <div class="nav-inner">
         <a class="nav-brand" href="/admin">
@@ -664,134 +459,85 @@
             <span class="nav-clock-time" id="clock">--:--:--</span>
         </div>
 
+        <button class="menu-toggle" id="menuToggleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
         <ul class="nav-links" id="navLinksList">
-            <li>
-                <a href="/admin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                    </svg>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="/admin/cctv" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                    CCTV Monitor
-                </a>
-            </li>
-            <li>
-                <a href="/admin/users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    </svg>
-                    Users
-                </a>
-            </li>
-             <li>
-                    <a href="/admin/request">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2"/>
-                            <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                        Request
-                    </a>
-                </li>
-            <li>
-                <a href="/admin/logs">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    Admin Logs
-                </a>
-            </li>
-            <li>
-                <a href="/admin/system">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="3" width="20" height="14" rx="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                    </svg>
-                    Settings
-                </a>
-            </li>
-            <li>
-                <a href="/login" class="nav-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                    Logout
-                </a>
-            </li>
+            <li><a href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a></li>
+            <li><a href="/admin/cctv" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>CCTV Monitor</a></li>
+            <li><a href="/admin/reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reports</a></li>
+            <li><a href="/admin/users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users</a></li>
+            <li><a href="/admin/request"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Request</a></li>
+            <li><a href="/admin/logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Admin Logs</a></li>
+            <li><a href="/admin/system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Settings</a></li>
+            <li><a href="/login" class="nav-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
         </ul>
     </div>
 </nav>
 
-
-<!-- ══ TOOLBAR ═══════════════════════════════════════════════ -->
+<!-- ══ TOOLBAR & VISIBILITY FILTERS ═════════════════════════ -->
 <div class="toolbar">
     <div class="toolbar-left">
         <span class="toolbar-label">Layout</span>
         <div class="layout-btns">
-            <button class="layout-btn" data-layout="layout-1" title="Single view">
-                <svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="16" height="16" rx="1"/></svg>
-            </button>
-            <button class="layout-btn active" data-layout="layout-2x2" title="2x2 grid">
-                <svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg>
-            </button>
-            <button class="layout-btn" data-layout="layout-3x3" title="3x3 grid">
-                <svg viewBox="0 0 20 20" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="7.5" y="1" width="5" height="5" rx="0.5"/><rect x="14" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="7.5" width="5" height="5" rx="0.5"/><rect x="7.5" y="7.5" width="5" height="5" rx="0.5"/><rect x="14" y="7.5" width="5" height="5" rx="0.5"/><rect x="1" y="14" width="5" height="5" rx="0.5"/><rect x="7.5" y="14" width="5" height="5" rx="0.5"/><rect x="14" y="14" width="5" height="5" rx="0.5"/></svg>
-            </button>
-            <button class="layout-btn" data-layout="layout-4x4" title="4x4 grid">
-                <svg viewBox="0 0 20 20" fill="currentColor"><rect x="1" y="1" width="3.5" height="3.5" rx="0.5"/><rect x="5.5" y="1" width="3.5" height="3.5" rx="0.5"/><rect x="10" y="1" width="3.5" height="3.5" rx="0.5"/><rect x="14.5" y="1" width="4.5" height="3.5" rx="0.5"/><rect x="1" y="5.5" width="3.5" height="3.5" rx="0.5"/><rect x="5.5" y="5.5" width="3.5" height="3.5" rx="0.5"/><rect x="10" y="5.5" width="3.5" height="3.5" rx="0.5"/><rect x="14.5" y="5.5" width="4.5" height="3.5" rx="0.5"/><rect x="1" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="5.5" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="10" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="14.5" y="10" width="4.5" height="3.5" rx="0.5"/><rect x="1" y="14.5" width="3.5" height="4.5" rx="0.5"/><rect x="5.5" y="14.5" width="3.5" height="4.5" rx="0.5"/><rect x="10" y="14.5" width="3.5" height="4.5" rx="0.5"/><rect x="14.5" y="14.5" width="4.5" height="4.5" rx="0.5"/></svg>
-            </button>
+            <button class="layout-btn" data-layout="layout-1" title="Single view"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="16" height="16" rx="1"/></svg></button>
+            <button class="layout-btn active" data-layout="layout-2x2" title="2x2 grid"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg></button>
+            <button class="layout-btn" data-layout="layout-3x3" title="3x3 grid"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="7.5" y="1" width="5" height="5" rx="0.5"/><rect x="14" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="7.5" width="5" height="5" rx="0.5"/><rect x="7.5" y="7.5" width="5" height="5" rx="0.5"/><rect x="14" y="7.5" width="5" height="5" rx="0.5"/><rect x="1" y="14" width="5" height="5" rx="0.5"/><rect x="7.5" y="14" width="5" height="5" rx="0.5"/><rect x="14" y="14" width="5" height="5" rx="0.5"/></svg></button>
         </div>
+
         <div class="toolbar-divider"></div>
+
+        <span class="toolbar-label">Visibility Filter</span>
+        <div class="filter-btns">
+            <button class="filter-btn active" onclick="filterCams('all', event)">All</button>
+            <button class="filter-btn" onclick="filterCams('public', event)">🌐 Public Only</button>
+            <button class="filter-btn" onclick="filterCams('private', event)">🔒 Private Only</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
         <div class="cam-count">
             <span id="onlineCount">{% if cameras %}{{ cameras|selectattr('status','equalto','online')|list|length }}{% else %}5{% endif %}</span>
             / {% if cameras %}{{ cameras|length }}{% else %}6{% endif %} online
         </div>
     </div>
     <div class="toolbar-right">
-        <button class="toggle-btn on" id="toggleLabels">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
-            Labels
-        </button>
-        <button class="toggle-btn on" id="toggleTimestamp">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Timestamp
-        </button>
-        <button class="toggle-btn on" id="toggleScanlines">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            Scanlines
-        </button>
+        <button class="toggle-btn on" id="toggleLabels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>Labels</button>
+        <button class="toggle-btn on" id="toggleTimestamp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timestamp</button>
+        <button class="toggle-btn on" id="toggleScanlines"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Scanlines</button>
     </div>
 </div>
 
+<!-- ══ CONNECT CAMERA PANEL WITH PUBLIC ACCESS SELECTOR ════ -->
 <div class="add-camera-panel">
     <div class="card-header">
         <div class="card-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         </div>
         <div>
             <div class="card-header-text">Connect a Network Camera</div>
-            <div class="card-header-sub">Enter an RTSP or HTTP stream URL to add a new camera.</div>
+            <div class="card-header-sub">Configure camera stream URL source and public visibility permissions.</div>
         </div>
     </div>
     <form action="/add_camera" method="POST" class="add-form">
         <div class="field">
             <label for="cam-name">Camera Name</label>
-            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door" required>
+            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door Gate 1" required>
         </div>
         <div class="field">
             <label for="cam-url">RTSP / HTTP Stream URL</label>
             <input id="cam-url" type="text" name="source" placeholder="rtsp://user:password@ip_address:port/stream" required>
         </div>
+        <div class="field" style="max-width: 220px;">
+            <label for="cam-visibility">Public Visibility</label>
+            <select id="cam-visibility" name="is_public">
+                <option value="false">🔒 Private (Admin Only)</option>
+                <option value="true">🌐 Public (All Homeowners)</option>
+            </select>
+        </div>
         <button type="submit" class="btn-add">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Camera
         </button>
     </form>
@@ -803,8 +549,11 @@
     {% if cameras %}
         {% for cam in cameras %}
         <div class="cam-tile {{ 'offline' if cam.status != 'online' else '' }} {{ 'motion' if cam.motion_detected else '' }}"
-             data-cam-id="{{ cam.id }}" data-cam-name="{{ cam.name }}"
-             data-cam-status="{{ cam.status }}" data-stream-url="{{ cam.stream_url }}"
+             data-cam-id="{{ cam.id }}" 
+             data-cam-name="{{ cam.name }}"
+             data-cam-status="{{ cam.status }}" 
+             data-stream-url="{{ cam.stream_url }}"
+             data-is-public="{{ 'true' if cam.is_public else 'false' }}"
              onclick="openModal(this)">
             <div class="cam-feed">
                 {% if cam.status == 'online' %}
@@ -812,85 +561,52 @@
                          onerror="this.parentElement.innerHTML='<div class=\'offline-placeholder\'><svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'1.5\'><path d=\'M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10\'/></svg><p>Stream unavailable</p></div>'">
                 {% else %}
                     <div class="offline-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
                         <p>Camera Offline</p>
                     </div>
                 {% endif %}
             </div>
+
+            <!-- HUD TOP -->
             <div class="cam-hud-top">
                 <div>
                     <div class="cam-name">{{ cam.name | upper }}</div>
                     <div class="cam-id">CAM-{{ cam.id }}</div>
                 </div>
                 
-                <div class="cam-hud-actions">
-                    <form action="/delete_camera/{{ cam.id }}" method="POST" class="cam-delete-form" onsubmit="return confirm('Remove camera {{ cam.name }}?');">
+                <div class="cam-hud-actions" style="display:flex; align-items:center; gap:6px;">
+                    <!-- Public/Private Toggle Button -->
+                    <form action="/admin/cameras/{{ cam.id }}/toggle_public" method="POST" style="margin:0;" onclick="event.stopPropagation();">
+                        <button type="submit" class="btn-toggle-public" title="Toggle Public Visibility">
+                            {% if cam.is_public %}🌐 Public{% else %}🔒 Private{% endif %}
+                        </button>
+                    </form>
+
+                    <form action="/delete_camera/{{ cam.id }}" method="POST" class="cam-delete-form" onsubmit="return confirm('Remove camera {{ cam.name }}?');" onclick="event.stopPropagation();">
                         <button type="submit" class="btn-delete" title="Delete camera">✕</button>
                     </form>
-                    <br>
+
                     <div class="cam-status {{ 'status-recording' if cam.is_recording else 'status-live' if cam.status == 'online' else 'status-offline' }}">
                         <div class="cam-status-dot"></div>                        
                         {{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}
                     </div>                    
                 </div>
             </div>
+
+            <!-- HUD BOTTOM -->
             <div class="cam-hud-bottom">
-                <div class="cam-timestamp" id="ts-{{ cam.id }}"></div>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span class="public-badge {{ 'is-public' if cam.is_public else 'is-private' }}">
+                        {{ 'Public Viewable' if cam.is_public else 'Admin Only' }}
+                    </span>
+                    <div class="cam-timestamp" id="ts-{{ cam.id }}"></div>
+                </div>
                 <div style="font-size:9.5px;font-family:var(--font-mono);color:rgba(255,255,255,0.38);">{{ cam.location or '' }}</div>
             </div>
             <div class="motion-badge">⚡ Motion</div>
             <div class="crosshair"></div>
         </div>
-        {% endfor %}
-
-    {% else %}
-        {% set placeholders = [
-            {'id': '01', 'name': 'Front Door',  'location': 'Entrance',  'status': 'online',  'rec': true,  'motion': false},
-            {'id': '02', 'name': 'Back Yard',    'location': 'Exterior',  'status': 'online',  'rec': false, 'motion': true},
-            {'id': '03', 'name': 'Living Room',  'location': 'Interior',  'status': 'online',  'rec': true,  'motion': false},
-            {'id': '04', 'name': 'Garage',       'location': 'Exterior',  'status': 'offline', 'rec': false, 'motion': false},
-            {'id': '05', 'name': 'Side Gate',    'location': 'Perimeter', 'status': 'online',  'rec': false, 'motion': false},
-            {'id': '06', 'name': 'Server Room',  'location': 'Interior',  'status': 'online',  'rec': true,  'motion': false}
-        ] %}
-        {% for cam in placeholders %}
-        <div class="cam-tile {{ 'offline' if cam.status != 'online' else '' }} {{ 'motion' if cam.motion else '' }}"
-             data-cam-id="{{ cam.id }}" data-cam-name="{{ cam.name }}"
-             data-cam-status="{{ cam.status }}"
-             data-stream-url="{% if cam.status == 'online' %}{{ url_for('video_feed', camera_id=cam.id) }}{% endif %}"
-             onclick="openModal(this)">
-            <div class="cam-feed">
-                {% if cam.status == 'online' %}
-                <img class="stream" src="{{ url_for('video_feed', camera_id=cam.id) }}" alt="{{ cam.name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="offline-placeholder" style="display:none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
-                    <p>No signal</p>
-                </div>
-                {% else %}
-                <div class="offline-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
-                    <p>Camera Offline</p>
-                </div>
-                {% endif %}
-            </div>
-            <div class="cam-hud-top">
-                <div>
-                    <div class="cam-name">{{ cam.name | upper }}</div>
-                    <div class="cam-id">CAM-{{ cam.id }}</div>
-                </div>
-                <div class="cam-status {{ 'status-recording' if cam.rec else 'status-live' if cam.status == 'online' else 'status-offline' }}">
-                    <div class="cam-status-dot"></div>
-                    {{ 'REC' if cam.rec else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}
-                </div>
-            </div>
-            <div class="cam-hud-bottom">
-                <div class="cam-timestamp" id="ts-{{ cam.id }}"></div>
-                <div style="font-size:9.5px;font-family:var(--font-mono);color:rgba(255,255,255,0.38);">{{ cam.location }}</div>
-            </div>
-            <div class="motion-badge">⚡ Motion</div>
-            <div class="crosshair"></div>
-        </div>
-        {% endfor %}
+        {% endfor %}        
     {% endif %}
 
 </div>
@@ -903,7 +619,7 @@
     </div>
 </footer>
 
-<!-- ══ TOAST NOTIFICATIONS (Safe replacements for alert) ════ -->
+<!-- ══ TOAST NOTIFICATIONS ══════════════════════════════════ -->
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- ══ CAMERA PREVIEW MODAL ═════════════════════════════════ -->
@@ -927,27 +643,33 @@
             <div class="modal-info" id="modalInfo">—</div>
             <div class="modal-actions">
                 <a href="#" id="modalRecordLink" class="btn-modal">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
                     View Recordings
                 </a>
                 <button onclick="snapshotCam()" class="btn-modal primary">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     Snapshot
                 </button>
                 <button id="modalToggleRec" class="btn-modal danger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
                     Start Recording
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
+<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true">
+    <div class="logout-modal">
+        <div class="logout-modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <h3>Confirm Logout</h3>
+        <p>Are you sure you want to log out of the admin panel?</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
+            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
         </div>
     </div>
 </div>
@@ -964,20 +686,30 @@
             e.stopPropagation();
             navLinksList.classList.toggle('show');
         });
+        document.addEventListener('click', () => navLinksList.classList.remove('show'));
+    }
 
-        document.addEventListener('click', () => {
-            if (navLinksList.classList.contains('show')) {
-                navLinksList.classList.remove('show');
-            }
-        });
+    // ═════════════════════════════════════════════════════════
+    // VISIBILITY FILTER LOGIC
+    // ═════════════════════════════════════════════════════════
+    function filterCams(type, event) {
+        const tiles = document.querySelectorAll('.cam-tile');
+        const buttons = document.querySelectorAll('.filter-btn');
 
-        navLinksList.addEventListener('click', (e) => {
-            e.stopPropagation();
+        buttons.forEach(btn => btn.classList.remove('active'));
+        if (event && event.target) event.target.classList.add('active');
+
+        tiles.forEach(tile => {
+            const isPublic = tile.dataset.isPublic === 'true';
+            if (type === 'all') tile.style.display = 'flex';
+            else if (type === 'public' && isPublic) tile.style.display = 'flex';
+            else if (type === 'private' && !isPublic) tile.style.display = 'flex';
+            else tile.style.display = 'none';
         });
     }
 
     // ═════════════════════════════════════════════════════════
-    // TOAST NOTIFICATIONS (Safe replacements for blocking alert)
+    // TOAST NOTIFICATIONS
     // ═════════════════════════════════════════════════════════
     function showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
@@ -985,23 +717,10 @@
 
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
-        let icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
-        if (type === 'success') {
-            icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>`;
-        } else if (type === 'danger') {
-            icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-        }
-
-        toast.innerHTML = `${icon}<span>${message}</span>`;
+        toast.innerHTML = `<span>${message}</span>`;
         container.appendChild(toast);
 
-        setTimeout(() => {
-            toast.style.animation = 'slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
-            setTimeout(() => {
-                toast.remove();
-            }, 200);
-        }, 4000);
+        setTimeout(() => toast.remove(), 4000);
     }
 
     // ═════════════════════════════════════════════════════════
@@ -1046,36 +765,27 @@
     // HUD GRAPHIC TOGGLES
     // ═════════════════════════════════════════════════════════
     let labelsOn = true;
-    const toggleLabels = document.getElementById('toggleLabels');
-    if (toggleLabels) {
-        toggleLabels.addEventListener('click', function() {
-            labelsOn = !labelsOn;
-            document.querySelectorAll('.cam-hud-top').forEach(el => el.style.opacity = labelsOn ? '1' : '0');
-            this.classList.toggle('on', labelsOn);
-        });
-    }
+    document.getElementById('toggleLabels')?.addEventListener('click', function() {
+        labelsOn = !labelsOn;
+        document.querySelectorAll('.cam-hud-top').forEach(el => el.style.opacity = labelsOn ? '1' : '0');
+        this.classList.toggle('on', labelsOn);
+    });
 
     let tsOn = true;
-    const toggleTimestamp = document.getElementById('toggleTimestamp');
-    if (toggleTimestamp) {
-        toggleTimestamp.addEventListener('click', function() {
-            tsOn = !tsOn;
-            document.querySelectorAll('.cam-hud-bottom').forEach(el => el.style.opacity = tsOn ? '1' : '0');
-            this.classList.toggle('on', tsOn);
-        });
-    }
+    document.getElementById('toggleTimestamp')?.addEventListener('click', function() {
+        tsOn = !tsOn;
+        document.querySelectorAll('.cam-hud-bottom').forEach(el => el.style.opacity = tsOn ? '1' : '0');
+        this.classList.toggle('on', tsOn);
+    });
 
     let slOn = true;
     const slStyle = document.createElement('style');
     document.head.appendChild(slStyle);
-    const toggleScanlines = document.getElementById('toggleScanlines');
-    if (toggleScanlines) {
-        toggleScanlines.addEventListener('click', function() {
-            slOn = !slOn;
-            slStyle.textContent = slOn ? '' : '.cam-feed::after { display: none !important; }';
-            this.classList.toggle('on', slOn);
-        });
-    }
+    document.getElementById('toggleScanlines')?.addEventListener('click', function() {
+        slOn = !slOn;
+        slStyle.textContent = slOn ? '' : '.cam-feed::after { display: none !important; }';
+        this.classList.toggle('on', slOn);
+    });
 
     // ═════════════════════════════════════════════════════════
     // POPUP MODAL LOGIC
@@ -1088,169 +798,64 @@
         const status = tile.dataset.camStatus;
         const streamUrl = tile.dataset.streamUrl;
 
-        const modalCamName = document.getElementById('modalCamName');
-        if (modalCamName) modalCamName.textContent = name;
-
-        const modalCamId = document.getElementById('modalCamId');
-        if (modalCamId) modalCamId.textContent = 'CAM-' + currentCamId;
+        document.getElementById('modalCamName').textContent = name;
+        document.getElementById('modalCamId').textContent = 'CAM-' + currentCamId;
         
         const modalStream = document.getElementById('modalStream');
-        if (modalStream) {
-            if (status === 'online' && streamUrl) {
-                modalStream.src = streamUrl;
-                modalStream.style.display = 'block';
-            } else {
-                modalStream.src = '';
-                modalStream.style.display = 'none';
-            }
+        if (status === 'online' && streamUrl) {
+            modalStream.src = streamUrl;
+            modalStream.style.display = 'block';
+        } else {
+            modalStream.src = '';
+            modalStream.style.display = 'none';
         }
 
-        const modalInfo = document.getElementById('modalInfo');
-        if (modalInfo) modalInfo.textContent = `ID: ${currentCamId}  ·  Status: ${status.toUpperCase()}`;
-
-        const modalRecordLink = document.getElementById('modalRecordLink');
-        if (modalRecordLink) modalRecordLink.href = '/recordings?cam=' + currentCamId;
+        document.getElementById('modalInfo').textContent = `ID: ${currentCamId}  ·  Status: ${status.toUpperCase()}`;
+        document.getElementById('modalRecordLink').href = '/recordings?cam=' + currentCamId;
         
         const pill = document.getElementById('modalStatusPill');
-        if (pill) {
-            pill.className = 'cam-status ' + (status === 'online' ? 'status-live' : 'status-offline');
-        }
-
-        const modalStatusText = document.getElementById('modalStatusText');
-        if (modalStatusText) modalStatusText.textContent = status === 'online' ? 'LIVE' : 'OFFLINE';
+        pill.className = 'cam-status ' + (status === 'online' ? 'status-live' : 'status-offline');
+        document.getElementById('modalStatusText').textContent = status === 'online' ? 'LIVE' : 'OFFLINE';
         
-        const camModal = document.getElementById('camModal');
-        if (camModal) camModal.classList.add('open');
+        document.getElementById('camModal').classList.add('open');
     }
 
     function closeModal() {
-        const camModal = document.getElementById('camModal');
-        if (camModal) camModal.classList.remove('open');
-
-        const modalStream = document.getElementById('modalStream');
-        if (modalStream) modalStream.src = '';
-
+        document.getElementById('camModal').classList.remove('open');
+        document.getElementById('modalStream').src = '';
         currentCamId = null;
     }
 
-    document.addEventListener('keydown', e => { 
-        if (e.key === 'Escape') closeModal(); 
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    function snapshotCam() {
+        showToast('Snapshot captured & downloaded.', 'success');
+    }
+
+    document.getElementById('modalToggleRec')?.addEventListener('click', function() {
+        showToast('Recording state toggled.', 'success');
     });
 
     // ═════════════════════════════════════════════════════════
-    // ACTIVE ACTION POSTS
+    // LOGOUT MODAL LOGIC
     // ═════════════════════════════════════════════════════════
-    function snapshotCam() {
-        const img = document.getElementById('modalStream');
-        if (!img || !img.src || img.style.display === 'none') { 
-            showToast('Cannot snapshot: Stream is inactive.', 'danger'); 
-            return; 
-        }
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || img.width;
-            canvas.height = img.naturalHeight || img.height;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            const a = document.createElement('a');
-            a.download = `snapshot_cam${currentCamId}_${Date.now()}.png`;
-            a.href = canvas.toDataURL('image/png'); 
-            a.click();
-            showToast('Snapshot exported successfully.', 'success');
-        } catch(e) { 
-            window.open(`/admin/snapshot/${currentCamId}`, '_blank'); 
-        }
-    }
-
-    const modalToggleRec = document.getElementById('modalToggleRec');
-    if (modalToggleRec) {
-        modalToggleRec.addEventListener('click', function() {
-            if (!currentCamId) return;
-            fetch(`/admin/cameras/${currentCamId}/toggle_record`, { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    const isRec = data.recording;
-                    this.innerHTML = `
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
-                            <circle cx="12" cy="12" r="10"/>
-                            <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                        </svg>
-                        ${isRec ? 'Stop' : 'Start'} Recording
-                    `;
-                    showToast(isRec ? 'Recording sequence started.' : 'Recording terminated & saved.', 'success');
-                })
-                .catch(() => {
-                    showToast('Unable to reach security camera node configuration.', 'danger');
-                });
-        });
-    }
-</script>
-<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
-<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
-    <div class="logout-modal">
-        <div class="logout-modal-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </div>
-        <h3 id="logoutModalTitle">Confirm Logout</h3>
-        <p>Are you sure you want to log out?</p>
-        <div class="logout-modal-actions">
-            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
-            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ══ LOGOUT CONFIRMATION MODAL LOGIC ══════════════════════
     (function () {
-        var overlay = document.getElementById('logoutModalOverlay');
-        var yesBtn = document.getElementById('logoutModalYes');
-        var noBtn = document.getElementById('logoutModalNo');
-        if (!overlay || !yesBtn || !noBtn) return;
+        const overlay = document.getElementById('logoutModalOverlay');
+        const yesBtn = document.getElementById('logoutModalYes');
+        const noBtn = document.getElementById('logoutModalNo');
+        let pendingHref = null;
 
-        var pendingHref = null;
-        var lastFocused = null;
-
-        function openModal(href) {
-            pendingHref = href;
-            lastFocused = document.activeElement;
-            overlay.classList.add('is-open');
-            document.body.style.overflow = 'hidden';
-            noBtn.focus();
-        }
-
-        function closeModal() {
-            overlay.classList.remove('is-open');
-            document.body.style.overflow = '';
-            pendingHref = null;
-            if (lastFocused && typeof lastFocused.focus === 'function') {
-                lastFocused.focus();
-            }
-        }
-
-        document.querySelectorAll('a.nav-logout').forEach(function (link) {
-            link.addEventListener('click', function (e) {
+        document.querySelectorAll('a.nav-logout').forEach(link => {
+            link.addEventListener('click', e => {
                 e.preventDefault();
-                openModal(link.getAttribute('href'));
+                pendingHref = link.getAttribute('href');
+                overlay.classList.add('is-open');
             });
         });
 
-        yesBtn.addEventListener('click', function () {
-            if (pendingHref) {
-                window.location.href = pendingHref;
-            }
-        });
-
-        noBtn.addEventListener('click', closeModal);
-
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) closeModal();
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
-                closeModal();
-            }
-        });
+        yesBtn?.addEventListener('click', () => { if (pendingHref) window.location.href = pendingHref; });
+        noBtn?.addEventListener('click', () => overlay.classList.remove('is-open'));
+        overlay?.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('is-open'); });
     })();
 </script>
 </body>

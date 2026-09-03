@@ -1,3 +1,4 @@
+.env
 .venv/
 __pycache__/
 instance/
@@ -6,10 +7,14 @@ users_data/
 Dockerfile
 last.pt
 yolov8n.pt
+yolo26n.pt
+best.pt
 bite.txt
 main - Copy.py
 othernote.txt
 datasets/
+test/
+.pytest_cache/
 
 best.pt
 best_openvino_model/

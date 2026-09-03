@@ -115,7 +115,7 @@
         /* ══════════════════════════════════════
            PAGE CONTENT LAYOUT
         ══════════════════════════════════════ */
-        .page { max-width: 820px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
+        .page { max-width: 860px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
 
         .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
         .header-icon {
@@ -133,9 +133,7 @@
         }
         .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
 
-        /* ══════════════════════════════════════
-           FLASH MESSAGE STYLING
-        ══════════════════════════════════════ */
+        /* Flash Message */
         .flash {
             display: flex; align-items: center; gap: 9px;
             padding: 12px 16px;
@@ -143,7 +141,6 @@
             margin-bottom: 18px;
             font-size: 13.5px; font-weight: 500;
         }
-        .flash svg { width: 16px; height: 16px; flex-shrink: 0; }
         .flash-danger  { background: var(--danger-bg);  border: 1px solid #f5a89e; color: var(--danger); }
         .flash-success { background: var(--success-bg); border: 1px solid #9bd4b8; color: var(--success); }
 
@@ -161,7 +158,7 @@
         .section-header {
             background: var(--navy-900);
             padding: 15px 22px;
-            display: flex; align-items: center; gap: 12px;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
             position: relative; overflow: hidden;
         }
         .section-header::after {
@@ -173,26 +170,27 @@
             background-size: 28px 28px;
             pointer-events: none;
         }
+        .section-header-left { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
         .section-header-icon {
             width: 32px; height: 32px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; position: relative; z-index: 1;
+            flex-shrink: 0;
         }
         .section-header-icon svg { width: 15px; height: 15px; color: var(--navy-200); }
-        .section-title { font-size: 13.5px; font-weight: 600; color: #fff; position: relative; z-index: 1; }
+        .section-title { font-size: 13.5px; font-weight: 600; color: #fff; }
         .section-body { padding: 22px; }
 
         /* ══════════════════════════════════════
-           FORM FIELDS
+           FORM FIELDS & BUTTONS
         ══════════════════════════════════════ */
         .field-group { margin-bottom: 18px; }
         .field-group:last-child { margin-bottom: 0; }
         .field-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-mid); margin-bottom: 6px; letter-spacing: 0.01em; }
         .field-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; }
-        input[type="text"], input[type="number"], input[type="email"], select, textarea {
+        input[type="text"], input[type="number"], input[type="email"], input[type="password"], select, textarea {
             width: 100%;
             background: var(--off-white);
             border: 1.5px solid var(--border);
@@ -203,17 +201,22 @@
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
         }
-        input:focus, select:focus, textarea:focus {
+        input:disabled {
+            background: #f0f2f7;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            border-color: #e2e8f5;
+        }
+        input:focus:not(:disabled) {
             border-color: var(--navy-600);
             box-shadow: 0 0 0 3px var(--navy-100);
             background: var(--white);
         }
-        input::placeholder, textarea::placeholder { color: var(--text-muted); }
-        textarea { resize: vertical; min-height: 80px; }
 
-        /* ══════════════════════════════════════
-           TOGGLES & SWITCHES
-        ══════════════════════════════════════ */
+        .range-row { display: flex; align-items: center; gap: 12px; }
+        .range-row input[type="range"] { flex: 1; accent-color: var(--navy-800); cursor: pointer; }
+        .range-val { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; color: var(--navy-800); min-width: 32px; text-align: right; }
+
         .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
         .toggle-info { flex: 1; }
@@ -226,27 +229,41 @@
         .toggle-switch input:checked + .toggle-slider { background: var(--navy-600); }
         .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-        /* ══════════════════════════════════════
-           GRID & ACTION ACTIONS
-        ══════════════════════════════════════ */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         @media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        .btn-action {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border-radius: var(--radius-sm);
+            font-size: 12.5px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; border: 1px solid var(--border); transition: all 0.15s;
+            position: relative; z-index: 1;
+        }
+        .btn-edit-header { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.25); }
+        .btn-edit-header:hover { background: rgba(255,255,255,0.25); }
 
         .btn-save {
             display: inline-flex; align-items: center; gap: 8px;
             background: var(--navy-800); color: #fff; border: none;
-            padding: 12px 28px; border-radius: var(--radius-sm);
-            font-size: 13.5px; font-weight: 600; font-family: var(--font-sans);
-            cursor: pointer; transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-            margin-top: 8px;
+            padding: 10px 22px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; transition: all 0.15s;
             box-shadow: 0 4px 14px rgba(11,23,53,0.22);
         }
-        .btn-save:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
-        .btn-save svg { width: 14px; height: 14px; }
+        .btn-save:hover { background: var(--navy-700); transform: translateY(-1px); }
 
-        /* ══════════════════════════════════════
-           DANGER ZONE CARD
-        ══════════════════════════════════════ */
+        .btn-cancel {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--white); color: var(--text-mid); border: 1px solid var(--border);
+            padding: 10px 18px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; transition: all 0.15s; margin-left: 8px;
+        }
+        .btn-cancel:hover { background: var(--navy-50); }
+
+        .action-bar-right { display: flex; justify-content: flex-end; margin-top: 18px; }
+
+        /* Danger Zone */
         .danger-zone {
             background: var(--white);
             border: 1.5px solid #f5a89e;
@@ -260,7 +277,6 @@
             margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
             text-transform: uppercase; letter-spacing: 0.06em;
         }
-        .danger-zone-title svg { width: 15px; height: 15px; }
         .danger-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #f5d7d2; }
         .danger-row:last-child { border-bottom: none; padding-bottom: 0; }
         .danger-info .danger-label { font-size: 13.5px; font-weight: 500; color: var(--text-dark); }
@@ -275,19 +291,12 @@
             cursor: pointer; transition: all 0.15s; flex-shrink: 0; margin-left: 16px;
         }
         .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-        .btn-danger svg { width: 13px; height: 13px; }
 
-        /* ══════════════════════════════════════
-           STORAGE PERCENT PROGRESS BAR
-        ══════════════════════════════════════ */
         .storage-bar-wrap { margin-top: 8px; }
         .storage-bar-track { background: var(--off-white); border: 1px solid var(--border); border-radius: 99px; height: 9px; overflow: hidden; }
         .storage-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--navy-900), var(--navy-400)); transition: width 0.4s ease; }
         .storage-labels { display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 6px; }
 
-        /* ══════════════════════════════════════
-           SERVER METADATA ROWS
-        ══════════════════════════════════════ */
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
         @media (max-width: 560px) { .info-grid { grid-template-columns: 1fr; } }
         .info-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
@@ -295,41 +304,16 @@
         .info-label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
         .info-val { font-size: 12.5px; font-family: var(--font-mono); color: var(--text-dark); font-weight: 600; }
 
-        /* ══════════════════════════════════════
-           SIMPLIFIED BRAND FOOTER (MATCHING CCTV)
-        ══════════════════════════════════════ */
         footer {
-            background: var(--navy-950);
-            color: var(--text-muted);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            padding: 20px 24px;
-            margin-top: auto;
-            flex-shrink: 0;
-            text-align: center;
+            background: var(--navy-950); color: var(--text-muted);
+            border-top: 1px solid rgba(255,255,255,0.08); padding: 20px 24px;
+            margin-top: auto; flex-shrink: 0; text-align: center;
         }
         .footer-inner {
-            max-width: 1280px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 12.5px;
-            flex-wrap: wrap;
-        }
-        .footer-brand {
-            font-family: var(--font-serif);
-            font-weight: 700;
-            color: #fff;
-        }
-        .footer-brand em {
-            font-style: italic;
-            color: var(--navy-400);
+            max-width: 1280px; margin: 0 auto; display: flex;
+            align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; flex-wrap: wrap;
         }
 
-        /* ══════════════════════════════════════
-           DYNAMIC CONFIRM OVERLAY DIALOGS (NON-BLOCKING)
-        ══════════════════════════════════════ */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(6,13,31,0.78);
             backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -339,8 +323,7 @@
         .modal-card {
             background: var(--white); border: 1px solid var(--border);
             border-radius: var(--radius-lg); overflow: hidden;
-            width: 100%; max-width: 420px; display: flex; flex-direction: column;
-            box-shadow: var(--shadow-lg);
+            width: 100%; max-width: 420px; display: flex; flex-direction: column; box-shadow: var(--shadow-lg);
         }
         .modal-body { padding: 24px; }
         .modal-title { font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
@@ -351,174 +334,31 @@
         }
         .btn-modal {
             padding: 8px 16px; border-radius: var(--radius-sm);
-            font-size: 12.5px; font-weight: 600; cursor: pointer;
-            border: 1px solid var(--border); font-family: var(--font-sans);
-            transition: background 0.1s, color 0.1s;
+            font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); font-family: var(--font-sans);
         }
         .btn-modal-cancel { background: var(--white); color: var(--text-mid); }
-        .btn-modal-cancel:hover { background: var(--navy-50); }
         .btn-modal-confirm { background: var(--danger); color: #fff; border-color: var(--danger); }
-        .btn-modal-confirm:hover { background: #a82e22; }
 
-        /* ══════════════════════════════════════
-           RESPONSIVE BREAKPOINTS (TABLETS & PHONES)
-        ══════════════════════════════════════ */
         @media (max-width: 1024px) {
-            .nav-inner {
-                padding: 0 20px; height: auto;
-                padding-top: 12px; padding-bottom: 12px;
-                flex-wrap: wrap; gap: 12px;
-            }
-            .nav-clock { order: 2; }
+            .nav-inner { padding: 12px 20px; flex-wrap: wrap; gap: 12px; height: auto; }
             .menu-toggle { display: flex; order: 3; }
             .nav-links {
-                display: none; width: 100%;
-                flex-direction: column; order: 4;
-                background: var(--off-white); padding: 8px;
-                border-radius: var(--radius-md); border: 1px solid var(--border);
-                margin-top: 8px; gap: 4px;
+                display: none; width: 100%; flex-direction: column; order: 4;
+                background: var(--off-white); padding: 8px; border-radius: var(--radius-md);
+                border: 1px solid var(--border); margin-top: 8px; gap: 4px;
             }
             .nav-links.show { display: flex; }
-            .nav-links li { width: 100%; }
-            .nav-links a { padding: 10px 14px; width: 100%; justify-content: flex-start; }
-            .nav-links a.nav-logout { margin-left: 0; margin-top: 4px; }
-
-            .page { padding: 24px 20px 56px; }
-        }
-
-        @media (max-width: 640px) {
-            .nav-inner { padding: 8px 14px; }
-            .brand-name { font-size: 13.5px; }
-            .brand-sub { font-size: 8.5px; }
-            .nav-clock { padding: 4px 10px; }
-            .nav-clock-time { font-size: 11px; }
-
-            .page { padding: 16px 12px 48px; }
-            .page-title { font-size: 22px; }
-            .page-subtitle { font-size: 12px; }
-
-            .danger-row { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .btn-danger { margin-left: 0; width: 100%; justify-content: center; }
-            .modal-overlay { padding: 12px; }
-        }
-
-        @media (max-width: 360px) {
-            .nav-clock { display: none; }
-        }
-
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: var(--off-white); }
-        ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
-
-        /* ══ LOGOUT CONFIRMATION MODAL ═══════════════════════ */
-        .logout-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(6, 13, 31, 0.55);
-            backdrop-filter: blur(2px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 10000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.25s ease, visibility 0.25s ease;
-        }
-        .logout-modal-overlay.is-open {
-            opacity: 1;
-            visibility: visible;
-        }
-        .logout-modal {
-            width: 100%;
-            max-width: 380px;
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
-            padding: 28px;
-            text-align: center;
-            transform: translateY(14px) scale(0.96);
-            opacity: 0;
-            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
-        }
-        .logout-modal-overlay.is-open .logout-modal {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-        .logout-modal-icon {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 16px;
-            border-radius: 50%;
-            background: var(--danger-bg);
-            color: var(--danger);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .logout-modal-icon svg { width: 24px; height: 24px; }
-        .logout-modal h3 {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-        .logout-modal p {
-            font-size: 14px;
-            color: var(--text-mid);
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .logout-modal-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .logout-modal-btn {
-            flex: 1;
-            padding: 11px 16px;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
-        }
-        .logout-modal-btn-no {
-            background: var(--off-white);
-            border-color: var(--border);
-            color: var(--text-mid);
-        }
-        .logout-modal-btn-no:hover {
-            background: var(--border);
-        }
-        .logout-modal-btn-yes {
-            background: var(--danger);
-            color: var(--white);
-            box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28);
-        }
-        .logout-modal-btn-yes:hover {
-            background: #a5301f;
-            transform: translateY(-1px);
-        }
-        .logout-modal-btn:active { transform: translateY(0); }
-
-        @media (max-width: 480px) {
-            .logout-modal { padding: 22px 18px; }
-            .logout-modal-actions { flex-direction: column-reverse; }
         }
     </style>
 </head>
 <body>
 
-<!-- ══ NAV ═══════════════════════════════════════════════════ -->
+<!-- ══ NAV BAR ═══════════════════════════════════════════════ -->
 <nav>
     <div class="nav-inner">
         <a class="nav-brand" href="/admin">
             <div class="brand-logo-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
             <div class="brand-text-block">
                 <div class="brand-name">Home Detection <em>Security</em></div>
@@ -533,66 +373,56 @@
             <span class="nav-clock-time" id="adminClock">--:--:--</span>
         </div>
 
+        <button class="menu-toggle" id="menuToggleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
         <ul class="nav-links" id="navLinksList">
             <li>
                 <a href="/admin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     Dashboard
                 </a>
             </li>
             <li>
-                <a href="/admin/cctv" class="nav-cctv">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
+                <a href="/admin/cctv">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                     CCTV Monitor
                 </a>
             </li>
             <li>
+                <a href="/admin/reports">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Reports
+                </a>
+            </li>
+            <li>
                 <a href="/admin/users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     Users
                 </a>
             </li>
-             <li>
-                    <a href="/admin/request">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2"/>
-                            <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                        Request
-                    </a>
-                </li>
+            <li>
+                <a href="/admin/request">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Request
+                </a>
+            </li>
             <li>
                 <a href="/admin/logs">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     Admin Logs
                 </a>
             </li>
-            
             <li>
                 <a href="/admin/system" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="3" width="20" height="14" rx="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                     Settings
                 </a>
             </li>
             <li>
                 <a href="/login" class="nav-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Logout
                 </a>
             </li>
@@ -605,344 +435,305 @@
 
     <div class="page-header">
         <div class="header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         </div>
         <div>
             <h1 class="page-title">System Settings</h1>
-            <p class="page-subtitle">Storage limits, maintenance, and server-level configuration</p>
+            <p class="page-subtitle">Configure detection logic, storage retention, access control, and admin profile</p>
         </div>
     </div>
 
-    <!-- Alert / Flask Notification Messaging -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}{% for category, message in messages %}
         <div class="flash {{ 'flash-danger' if category == 'danger' else 'flash-success' }}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             {{ message }}
         </div>
         {% endfor %}{% endif %}
     {% endwith %}
 
-    <form action="/admin/system/save" method="POST">
-
-        <!-- Storage & Retention -->
-        <div class="section-card">
+    <!-- 👤 1. PROFILE MANAGEMENT CARD (HIWALAY NA FORM NA MAY EDIT/SAVE BUTTONS) -->
+    <div class="section-card">
+        <form action="/admin/system/update_profile" method="POST" id="profileForm">
             <div class="section-header">
-                <div class="section-header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                <div class="section-header-left">
+                    <div class="section-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span class="section-title">Profile Management</span>
                 </div>
-                <span class="section-title">Storage &amp; Retention</span>
+                <button type="button" class="btn-action btn-edit-header" id="editProfileBtn" onclick="enableProfileEdit()">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Edit Profile
+                </button>
             </div>
             <div class="section-body">
-                <!-- Storage progress bar track -->
-                <div class="field-group">
-                    <label class="field-label">Disk Usage</label>
-                    <div class="storage-bar-wrap">
-                        <div class="storage-bar-track">
-                            <div class="storage-bar-fill" style="width:{{ storage_pct or 0 }}%"></div>
-                        </div>
-                        <div class="storage-labels">
-                            <span>{{ storage_used or '0.0 GB' }} used</span>
-                            <span>{{ storage_free or '4.0 TB' }} free / {{ storage_total or '4.0 TB' }} total</span>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="grid-2">
                     <div class="field-group">
-                        <label class="field-label">Max Recording Storage (GB)</label>
-                        <input type="number" name="max_storage_gb" value="{{ settings.max_storage_gb or 50 }}" min="1" max="1000">
-                        <p class="field-hint">Oldest recordings are deleted automatically when this limit is reached.</p>
+                        <label class="field-label">Administrator Username</label>
+                        <input type="text" name="admin_username" id="adminUsername" value="{{ current_user.username if current_user is defined else 'admin' }}" disabled required>
                     </div>
                     <div class="field-group">
-                        <label class="field-label">Recording Retention (days)</label>
-                        <input type="number" name="retention_days" value="{{ settings.retention_days or 30 }}" min="1" max="365">
-                        <p class="field-hint">Recordings older than this are deleted automatically. Set to 0 to disable.</p>
+                        <label class="field-label">Email Address</label>
+                        <input type="email" name="admin_email" id="adminEmail" value="{{ current_user.email if current_user is defined else 'admin@eusebiobliss.gov.ph' }}" disabled required>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Display Name</label>
+                        <input type="text" name="admin_name" id="adminName" value="{{ current_user.username if current_user is defined else 'Head Administrator' }}" disabled>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Change Password (Optional)</label>
+                        <input type="password" name="admin_password" id="adminPassword" placeholder="••••••••" disabled>
                     </div>
                 </div>
 
-                <div class="field-group">
-                    <label class="field-label">Recording Save Path</label>
-                    <input type="text" name="recording_path" value="{{ settings.recording_path or './recordings' }}" placeholder="./recordings">
-                    <p class="field-hint">Absolute or relative path to the folder where recordings are stored.</p>
+                <!-- Hidden Save Actions -->
+                <div class="action-bar-right" id="profileActions" style="display: none;">
+                    <button type="button" class="btn-cancel" onclick="disableProfileEdit()">Cancel</button>
+                    <button type="submit" class="btn-save">Save Profile</button>
                 </div>
             </div>
-        </div>
+        </form>
+    </div>
 
-        <!-- Detection Settings -->
+    <!-- MAIN SYSTEM SETTINGS FORM -->
+    <form action="/admin/system/save" method="POST">
+
+        <!-- ⚙️ 2. Detection Logic -->
         <div class="section-card">
             <div class="section-header">
-                <div class="section-header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 5a3 3 0 1 1-3 3 3 3 0 0 1 3-3z"/></svg>
+                <div class="section-header-left">
+                    <div class="section-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 5a3 3 0 1 1-3 3 3 3 0 0 1 3-3z"/></svg>
+                    </div>
+                    <span class="section-title">Detection Logic</span>
                 </div>
-                <span class="section-title">Detection Settings</span>
             </div>
             <div class="section-body">
                 <div class="toggle-row">
                     <div class="toggle-info">
                         <div class="toggle-label">Fire &amp; Smoke Detection</div>
-                        <div class="toggle-desc">Enable YOLO detection for fire and smoke events.</div>
+                        <div class="toggle-desc">Turn Fire &amp; Smoke Detection on or off system-wide.</div>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" name="yolo_enabled" {% if settings.yolo_enabled %}checked{% endif %}>
+                        <input type="checkbox" name="yolo_enabled" {% if settings.yolo_enabled or settings.yolo_enabled is undefined %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
                 <div class="toggle-row">
                     <div class="toggle-info">
                         <div class="toggle-label">Facial Recognition</div>
-                        <div class="toggle-desc">Enable face recognition for known person alerts.</div>
+                        <div class="toggle-desc">Enable facial recognition matching for registered residents and known faces.</div>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
+                        <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled or settings.face_recognition_enabled is undefined %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
 
                 <div class="field-group" style="margin-top: 18px;">
-                    <label class="field-label">Frame Processing Interval</label>
-                    <input type="number" name="frame_process_interval" value="{{ settings.frame_process_interval or 3 }}" min="1" max="30">
-                    <p class="field-hint">Process every N-th frame (e.g. 1 = every frame, 3 = every third frame). Higher values significantly boost server performance but slightly delay event detection.</p>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Object/Fire Detection Confidence</label>
+                    <label class="field-label">Fire &amp; Smoke Detection Confidence Threshold</label>
                     <div class="range-row">
                         <input type="range" min="0.1" max="1.0" step="0.05" name="object_detection_confidence"
                             value="{{ settings.object_detection_confidence or 0.5 }}"
                             oninput="document.getElementById('obj-conf-val').innerText = parseFloat(this.value).toFixed(2)">
                         <span id="obj-conf-val" class="range-val">{{ settings.object_detection_confidence or 0.5 }}</span>
                     </div>
-                    <p class="field-hint">Lower values are more sensitive; higher values reduce false positives.</p>
+                    <p class="field-hint">Adjust confidence percentage threshold required to log a fire/smoke security event.</p>
                 </div>
 
                 <div class="field-group">
-                    <label class="field-label">Face Recognition Confidence</label>
+                    <label class="field-label">Facial Recognition Confidence Threshold</label>
                     <div class="range-row">
                         <input type="range" min="0.1" max="1.0" step="0.05" name="face_recognition_confidence"
                             value="{{ settings.face_recognition_confidence or 0.6 }}"
                             oninput="document.getElementById('face-conf-val').innerText = parseFloat(this.value).toFixed(2)">
                         <span id="face-conf-val" class="range-val">{{ settings.face_recognition_confidence or 0.6 }}</span>
                     </div>
-                    <p class="field-hint">Lower values are more permissive; higher values require stronger face matches.</p>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Active Detection Classes</label>
-                    <input type="text" name="active_classes" value="{{ settings.active_classes or 'fire,smoke' }}" placeholder="fire,smoke">
-                    <p class="field-hint">Comma-separated classes to trigger alerts (e.g. fire,smoke,person).</p>
+                    <p class="field-hint">Adjust accuracy requirement for facial recognition matches before registering identity.</p>
                 </div>
             </div>
         </div>
 
-        <!-- Access Control -->
+        <!-- 💾 3. Storage Retention -->
         <div class="section-card">
             <div class="section-header">
-                <div class="section-header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <div class="section-header-left">
+                    <div class="section-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                    </div>
+                    <span class="section-title">Storage Retention</span>
                 </div>
-                <span class="section-title">Access Control</span>
+            </div>
+            <div class="section-body">
+                <div class="field-group">
+                    <label class="field-label">Current Storage Usage</label>
+                    <div class="storage-bar-wrap">
+                        <div class="storage-bar-track">
+                            <div class="storage-bar-fill" style="width:{{ storage_pct or 25 }}%"></div>
+                        </div>
+                        <div class="storage-labels">
+                            <span>{{ storage_used or '120 GB' }} used</span>
+                            <span>{{ storage_free or '3.8 TB' }} free / {{ storage_total or '4.0 TB' }} total</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Recorded Footage Retention (Days)</label>
+                        <input type="number" name="retention_days" value="{{ settings.retention_days or 30 }}" min="1" max="365">
+                        <p class="field-hint">Recorded footage files are kept for this duration before automatic deletion.</p>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Event Snapshots Retention (Days)</label>
+                        <input type="number" name="snapshot_retention_days" value="{{ settings.snapshot_retention_days or 60 }}" min="1" max="365">
+                        <p class="field-hint">Image snapshots of security events are kept before automatic cleanup.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔐 4. Access Control -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="section-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
+                    <span class="section-title">Access Control</span>
+                </div>
             </div>
             <div class="section-body">
                 <div class="toggle-row">
                     <div class="toggle-info">
-                        <div class="toggle-label">Allow Public Registration</div>
-                        <div class="toggle-desc">When disabled, only admins can create new accounts.</div>
+                        <div class="toggle-label">Public Self-Registration</div>
+                        <div class="toggle-desc">Allow public users/homeowners to register their accounts online.</div>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" name="allow_registration" {% if settings.allow_registration %}checked{% endif %}>
+                        <input type="checkbox" name="allow_registration" {% if settings.allow_registration or settings.allow_registration is undefined %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
                 <div class="toggle-row">
                     <div class="toggle-info">
-                        <div class="toggle-label">Require Disclaimer Acceptance</div>
-                        <div class="toggle-desc">Users must agree to the Data Privacy terms on every server restart.</div>
+                        <div class="toggle-label">Disclaimer Requirement</div>
+                        <div class="toggle-desc">Require users to accept the system terms &amp; privacy disclaimer upon logging in.</div>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" name="require_disclaimer" {% if settings.require_disclaimer %}checked{% endif %}>
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="toggle-row">
-                    <div class="toggle-info">
-                        <div class="toggle-label">Session Timeout</div>
-                        <div class="toggle-desc">Automatically log out inactive users after a set period.</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" name="session_timeout_enabled" {% if settings.session_timeout_enabled %}checked{% endif %}>
+                        <input type="checkbox" name="require_disclaimer" {% if settings.require_disclaimer or settings.require_disclaimer is undefined %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
                 <div class="field-group" style="margin-top:18px;">
-                    <label class="field-label">Session Timeout Duration (minutes)</label>
-                    <input type="number" name="session_timeout_minutes" value="{{ settings.session_timeout_minutes or 60 }}" min="5" max="1440" style="max-width:200px;">
+                    <label class="field-label">Session Timeout Duration (Minutes)</label>
+                    <input type="number" name="session_timeout_minutes" value="{{ settings.session_timeout_minutes or 60 }}" min="5" max="1440" style="max-width:240px;">
+                    <p class="field-hint">Inactivity duration before a user is automatically logged out.</p>
                 </div>
             </div>
         </div>
 
-        <!-- Server Info -->
+        <!-- 🖥️ 5. Server Information -->
         <div class="section-card">
             <div class="section-header">
-                <div class="section-header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <div class="section-header-left">
+                    <div class="section-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    </div>
+                    <span class="section-title">Server Information</span>
                 </div>
-                <span class="section-title">Server Information</span>
             </div>
             <div class="section-body">
                 <div class="info-grid">
                     <div>
                         <div class="info-row">
-                            <span class="info-label">Python Version</span>
-                            <span class="info-val">{{ sys_info.python_version or '3.10.x' }}</span>
+                            <span class="info-label">Server Uptime</span>
+                            <span class="info-val">{{ sys_info.uptime or '14 days, 6 hours' }}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Flask Version</span>
-                            <span class="info-val">{{ sys_info.flask_version or '2.2.x' }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">OpenCV Version</span>
-                            <span class="info-val">{{ sys_info.cv2_version or '4.x.x' }}</span>
+                            <span class="info-label">Storage Usage</span>
+                            <span class="info-val">{{ storage_used or '120 GB' }} / {{ storage_total or '4.0 TB' }}</span>
                         </div>
                     </div>
                     <div>
                         <div class="info-row">
-                            <span class="info-label">Server Uptime</span>
-                            <span class="info-val">{{ sys_info.uptime or '0d 0h 0m' }}</span>
+                            <span class="info-label">Connected Camera Count</span>
+                            <span class="info-val">{{ sys_info.camera_count or '4 Active Cameras' }}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Host</span>
-                            <span class="info-val">{{ sys_info.host or 'localhost' }}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Debug Mode</span>
-                            <span class="info-val">{{ 'On' if sys_info.debug else 'Off' }}</span>
+                            <span class="info-label">Environment</span>
+                            <span class="info-val">Python {{ sys_info.python_version or '3.10.x' }} / Flask {{ sys_info.flask_version or '2.2.x' }}</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <button type="submit" class="btn-save">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save Changes
-        </button>
+        <button type="submit" class="btn-save">Save System Configuration</button>
     </form>
 
-    <!-- Danger Zone Card -->
+    <!-- ⚠️ 6. Danger Zone -->
     <div class="danger-zone" style="margin-top:32px;">
         <div class="danger-zone-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Danger Zone
         </div>
 
         <div class="danger-row">
             <div class="danger-info">
-                <div class="danger-label">Clear All Recordings</div>
-                <div class="danger-desc">Permanently deletes every stored video file. This cannot be undone.</div>
-            </div>
-            <form action="/admin/system/clear_recordings" method="POST" class="destructive-form" data-title="Purge All Video Recordings?" data-desc="This operation permanently purges all motion recordings and security camera files. These cannot be restored.">
-                <button type="submit" class="btn-danger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                    Clear Recordings
-                </button>
-            </form>
-        </div>
-
-        <div class="danger-row">
-            <div class="danger-info">
                 <div class="danger-label">Clear All Security Events</div>
-                <div class="danger-desc">Wipes the entire event log. Face recognition alerts will be lost.</div>
+                <div class="danger-desc">Permanently wipes all recorded fire, smoke, and security alert log entries.</div>
             </div>
-            <form action="/admin/system/clear_events" method="POST" class="destructive-form" data-title="Wipe Security Event Log?" data-desc="This wipes every single logged security detection, entry report, and alarm notification. All face matches will be lost.">
-                <button type="submit" class="btn-danger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                    Clear Events
-                </button>
+            <form action="/admin/system/clear_events" method="POST" class="destructive-form" data-title="Clear All Security Events?" data-desc="This action permanently wipes all logged alert records from the database. This cannot be undone.">
+                <button type="submit" class="btn-danger">Clear Events</button>
             </form>
         </div>
 
         <div class="danger-row">
             <div class="danger-info">
                 <div class="danger-label">Reset All Known Faces</div>
-                <div class="danger-desc">Deletes all enrolled face images. The system will no longer recognize anyone.</div>
+                <div class="danger-desc">Deletes all enrolled face images and recognition embeddings from system memory.</div>
             </div>
-            <form action="/admin/system/clear_faces" method="POST" class="destructive-form" data-title="Delete All Enrolled Faces?" data-desc="This wipes all registered user biometric assets from memory. No automated identity detection can occur until profiles are re-uploaded.">
-                <button type="submit" class="btn-danger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                    Clear Faces
-                </button>
+            <form action="/admin/system/clear_faces" method="POST" class="destructive-form" data-title="Reset All Known Faces?" data-desc="This removes all face biometric profiles. The system will no longer recognize known persons until re-uploaded.">
+                <button type="submit" class="btn-danger">Reset Faces</button>
             </form>
         </div>
 
         <div class="danger-row">
             <div class="danger-info">
                 <div class="danger-label">Factory Reset</div>
-                <div class="danger-desc">Resets all settings to defaults, clears all data. Users are not deleted.</div>
+                <div class="danger-desc">Resets all detection thresholds, access controls, and retention limits back to defaults.</div>
             </div>
-            <form action="/admin/system/factory_reset" method="POST" class="destructive-form" data-title="Initiate Complete Factory Reset?" data-desc="This operation defaults all configuration limits, restores camera parameters, and voids storage variables. Active operators will remain intact.">
-                <button type="submit" class="btn-danger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.58"/></svg>
-                    Factory Reset
-                </button>
+            <form action="/admin/system/factory_reset" method="POST" class="destructive-form" data-title="Perform System Factory Reset?" data-desc="This restores all initial system configurations. User accounts and logs will remain intact.">
+                <button type="submit" class="btn-danger">Factory Reset</button>
             </form>
         </div>
     </div>
 
 </main>
 
-<!-- ══ FOOTER ═══════════════════════════════════════════════ -->
 <footer>
     <div class="footer-inner">
-        <span class="footer-brand">Home Detection <em>Security</em></span>
         <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
     </div>
 </footer>
 
-<!-- ══ TOAST WARNING DIALOGS (NON-BLOCKING MODAL) ══════════ -->
+<!-- ══ CONFIRMATION MODAL DIALOG ══════════════════════════ -->
 <div class="modal-overlay" id="confirmModal">
     <div class="modal-card">
         <div class="modal-body">
-            <h3 class="modal-title" id="confirmModalTitle">Execute destructive action?</h3>
-            <p class="modal-desc" id="confirmModalDesc">Are you completely sure you want to run this cleanup command? This process cannot be undone.</p>
+            <h3 class="modal-title" id="confirmModalTitle">Execute Action?</h3>
+            <p class="modal-desc" id="confirmModalDesc">Are you sure you want to perform this operation?</p>
         </div>
         <div class="modal-actions">
             <button class="btn-modal btn-modal-cancel" id="confirmCancelBtn">Cancel</button>
-            <button class="btn-modal btn-modal-confirm" id="confirmConfirmBtn">Run Operation</button>
+            <button class="btn-modal btn-modal-confirm" id="confirmConfirmBtn">Confirm &amp; Proceed</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ═════════════════════════════════════════════════════════
-    // RESPONSIVE NAV MENU DRAWER
-    // ═════════════════════════════════════════════════════════
-    const menuToggleBtn = document.getElementById('menuToggleBtn');
-    const navLinksList = document.getElementById('navLinksList');
-
-    if (menuToggleBtn && navLinksList) {
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            navLinksList.classList.toggle('show');
-        });
-
-        document.addEventListener('click', () => {
-            if (navLinksList.classList.contains('show')) {
-                navLinksList.classList.remove('show');
-            }
-        });
-
-        navLinksList.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    // ═════════════════════════════════════════════════════════
-    // SYSTEM CLOCK
-    // ═════════════════════════════════════════════════════════
     function updateClock() {
         const now = new Date();
         const clockEl = document.getElementById('adminClock');
@@ -954,31 +745,53 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ═════════════════════════════════════════════════════════
-    // DESTRUCTIVE COMMAND OVERLAYS (SAFE CONFIRM REPLACEMENT)
-    // ═════════════════════════════════════════════════════════
+    // Profile Edit Mode Controls
+    function enableProfileEdit() {
+        document.getElementById('adminUsername').disabled = false;
+        document.getElementById('adminEmail').disabled = false;
+        document.getElementById('adminName').disabled = false;
+        document.getElementById('adminPassword').disabled = false;
+
+        document.getElementById('editProfileBtn').style.display = 'none';
+        document.getElementById('profileActions').style.display = 'flex';
+    }
+
+    function disableProfileEdit() {
+        document.getElementById('adminUsername').disabled = true;
+        document.getElementById('adminEmail').disabled = true;
+        document.getElementById('adminName').disabled = true;
+        document.getElementById('adminPassword').disabled = true;
+
+        document.getElementById('editProfileBtn').style.display = 'inline-flex';
+        document.getElementById('profileActions').style.display = 'none';
+    }
+
+    // Nav Toggle
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const navLinksList = document.getElementById('navLinksList');
+    if (menuToggleBtn && navLinksList) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navLinksList.classList.toggle('show');
+        });
+        document.addEventListener('click', () => navLinksList.classList.remove('show'));
+    }
+
+    // Modal Confirmation Handlers for Danger Zone
     const confirmModal = document.getElementById('confirmModal');
     const modalTitle = document.getElementById('confirmModalTitle');
     const modalDesc = document.getElementById('confirmModalDesc');
     const cancelBtn = document.getElementById('confirmCancelBtn');
     const confirmBtn = document.getElementById('confirmConfirmBtn');
-    
     let pendingFormSubmission = null;
 
     document.querySelectorAll('.destructive-form').forEach(form => {
-        form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Stop raw submission immediately
-            
-            // Record target form references
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
             pendingFormSubmission = this;
-
-            // Extract custom contextual messaging
-            const titleText = this.getAttribute('data-title') || 'Run Destructive Process?';
-            const descText = this.getAttribute('data-desc') || 'Are you completely sure you want to run this? This process cannot be undone.';
-
             if (modalTitle && modalDesc && confirmModal) {
-                modalTitle.textContent = titleText;
-                modalDesc.textContent = descText;
+                modalTitle.textContent = this.getAttribute('data-title') || 'Execute Action?';
+                modalDesc.textContent = this.getAttribute('data-desc') || 'Are you sure you want to proceed?';
                 confirmModal.classList.add('open');
             }
         });
@@ -986,101 +799,17 @@
 
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
-            if (confirmModal) {
-                confirmModal.classList.remove('open');
-            }
-            pendingFormSubmission = null; // Clear queue
+            confirmModal.classList.remove('open');
+            pendingFormSubmission = null;
         });
     }
 
     if (confirmBtn) {
         confirmBtn.addEventListener('click', () => {
-            if (pendingFormSubmission) {
-                pendingFormSubmission.submit(); // Forward verified action securely
-            }
-            if (confirmModal) {
-                confirmModal.classList.remove('open');
-            }
+            if (pendingFormSubmission) pendingFormSubmission.submit();
+            confirmModal.classList.remove('open');
         });
     }
-
-    // Close overlays securely on ESC keyboard triggers
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && confirmModal && confirmModal.classList.contains('open')) {
-            confirmModal.classList.remove('open');
-            pendingFormSubmission = null;
-        }
-    });
-</script>
-
-<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
-<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
-    <div class="logout-modal">
-        <div class="logout-modal-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </div>
-        <h3 id="logoutModalTitle">Confirm Logout</h3>
-        <p>Are you sure you want to log out?</p>
-        <div class="logout-modal-actions">
-            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
-            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ══ LOGOUT CONFIRMATION MODAL LOGIC ══════════════════════
-    (function () {
-        var overlay = document.getElementById('logoutModalOverlay');
-        var yesBtn = document.getElementById('logoutModalYes');
-        var noBtn = document.getElementById('logoutModalNo');
-        if (!overlay || !yesBtn || !noBtn) return;
-
-        var pendingHref = null;
-        var lastFocused = null;
-
-        function openModal(href) {
-            pendingHref = href;
-            lastFocused = document.activeElement;
-            overlay.classList.add('is-open');
-            document.body.style.overflow = 'hidden';
-            noBtn.focus();
-        }
-
-        function closeModal() {
-            overlay.classList.remove('is-open');
-            document.body.style.overflow = '';
-            pendingHref = null;
-            if (lastFocused && typeof lastFocused.focus === 'function') {
-                lastFocused.focus();
-            }
-        }
-
-        document.querySelectorAll('a.nav-logout').forEach(function (link) {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                openModal(link.getAttribute('href'));
-            });
-        });
-
-        yesBtn.addEventListener('click', function () {
-            if (pendingHref) {
-                window.location.href = pendingHref;
-            }
-        });
-
-        noBtn.addEventListener('click', closeModal);
-
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) closeModal();
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
-                closeModal();
-            }
-        });
-    })();
 </script>
 </body>
 </html>

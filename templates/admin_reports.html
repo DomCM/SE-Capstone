@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Analytics — Eusebio Bliss Village Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-400:  #4a6db5;
+            --navy-200:  #b8c6e8;
+            --navy-100:  #dce4f5;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f7f8fc;
+            --border:    #e2e8f5;
+            --text-dark: #0b1735;
+            --text-mid:  #3a4d70;
+            --text-muted:#7a8fba;
+            --danger:    #c0392b;
+            --danger-bg: #fef2f1;
+            --success:   #1f8a5f;
+            --success-bg:#eaf7f0;
+            --amber:     #b07d2a;
+            --amber-bg:  #fef7e6;
+            
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-xs: 0 1px 2px rgba(11,23,53,0.04);
+            --shadow-sm: 0 1px 4px rgba(11,23,53,0.07), 0 1px 2px rgba(11,23,53,0.04);
+            --shadow-md: 0 8px 24px rgba(11,23,53,0.10), 0 2px 6px rgba(11,23,53,0.06);
+            --font-sans: 'Inter', sans-serif;
+            --font-serif:'Playfair Display', Georgia, serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--off-white);
+            color: var(--text-dark);
+            min-height: 100vh;
+            font-size: 14px; line-height: 1.5;
+            display: flex; flex-direction: column;
+        }
+
+        /* ══ NAVIGATION ═══════════════════════════════════════ */
+        nav {
+            position: sticky; top: 0; z-index: 200;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-xs); flex-shrink: 0;
+        }
+        .nav-inner {
+            max-width: 1320px; margin: 0 auto; padding: 0 28px; height: 64px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+        }
+        .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
+        .brand-logo-wrap {
+            width: 38px; height: 38px; background: var(--navy-900); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; color: #fff;
+        }
+        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); }
+        .brand-name em { font-style: italic; color: var(--navy-600); }
+        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+
+        .nav-clock {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--navy-900); border-radius: 999px; padding: 6px 16px; flex-shrink: 0;
+        }
+        .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
+        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; }
+
+        .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none; transition: all 0.15s;
+        }
+        .nav-links a svg { width: 14px; height: 14px; opacity: 0.7; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
+        .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; }
+        .nav-links a.active svg { opacity: 1; }
+        .nav-links a.nav-logout { margin-left: 6px; border: 1px solid var(--border); }
+        .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); }
+
+        /* ══ PAGE LAYOUT ══════════════════════════════════════ */
+        .page { max-width: 1320px; margin: 0 auto; padding: 32px 28px 64px; width: 100%; flex: 1 0 auto; }
+        
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
+        }
+        .page-title { font-family: var(--font-serif); font-size: 26px; font-weight: 700; color: var(--text-dark); }
+        .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+        /* ══ REPORT TYPES GRID ════════════════════════════════ */
+        .report-types-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px;
+        }
+        .report-type-card {
+            background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius-md);
+            padding: 20px; cursor: pointer; transition: all 0.15s ease; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .report-type-card:hover, .report-type-card.active {
+            border-color: var(--navy-900); box-shadow: var(--shadow-md); transform: translateY(-2px);
+        }
+        .report-type-card.active { background: var(--navy-50); }
+        .report-icon {
+            width: 40px; height: 40px; border-radius: 8px; background: var(--navy-900); color: #fff;
+            display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+        }
+        .report-card-title { font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 4px; }
+        .report-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+        /* ══ FILTER CONTROL BAR ═══════════════════════════════ */
+        .filter-card {
+            background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 20px 24px; margin-bottom: 28px; box-shadow: var(--shadow-xs);
+        }
+        .filter-form {
+            display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+        }
+        .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
+        .field label { font-size: 11.5px; font-weight: 700; color: var(--text-mid); text-transform: uppercase; letter-spacing: 0.04em; }
+        .field select, .field input {
+            background: var(--off-white); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            padding: 9px 12px; font-size: 13px; outline: none; font-family: var(--font-sans); width: 100%;
+        }
+
+        .btn-generate {
+            display: inline-flex; align-items: center; gap: 8px; background: var(--navy-900); color: #fff;
+            padding: 10px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+            border: none; cursor: pointer; transition: background 0.15s; height: 40px; white-space: nowrap;
+        }
+        .btn-generate:hover { background: var(--navy-700); }
+
+        /* ══ REPORT PREVIEW AREA (SCREEN VIEW) ════════════════ */
+        .report-document-container {
+            background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md); padding: 40px; margin-bottom: 32px; position: relative;
+        }
+
+        /* Formal Village Letterhead Header */
+        .village-letterhead {
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 2.5px solid var(--navy-900); padding-bottom: 20px; margin-bottom: 28px;
+        }
+        .letterhead-brand { display: flex; align-items: center; gap: 16px; }
+        .letterhead-logo {
+            width: 60px; height: 60px; background: var(--navy-900); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;
+        }
+        .letterhead-title h2 { font-family: var(--font-serif); font-size: 20px; font-weight: 800; color: var(--navy-900); text-transform: uppercase; letter-spacing: -0.01em; }
+        .letterhead-title p { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .letterhead-meta { text-align: right; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-mid); }
+        .letterhead-meta strong { color: var(--navy-900); }
+
+        .document-title-block { margin-bottom: 24px; text-align: center; }
+        .document-title-block h3 { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--navy-900); }
+        .document-title-block p { font-size: 12.5px; color: var(--text-muted); }
+
+        /* Report Tables & Data */
+        .report-summary-boxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+        .r-box { background: var(--off-white); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md); text-align: center; }
+        .r-val { font-family: var(--font-mono); font-size: 22px; font-weight: 800; color: var(--navy-900); }
+        .r-lbl { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+
+        table.report-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; font-size: 12.5px; }
+        table.report-table th { background: var(--navy-900); color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+        table.report-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text-dark); }
+        table.report-table tr:nth-child(even) { background: var(--off-white); }
+
+        .report-signatures {
+            display: flex; justify-content: space-between; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border);
+        }
+        .sig-box { text-align: center; width: 220px; }
+        .sig-line { width: 100%; height: 1px; background: var(--navy-900); margin-bottom: 6px; margin-top: 40px; }
+        .sig-name { font-size: 12px; font-weight: 700; color: var(--navy-900); }
+        .sig-title { font-size: 11px; color: var(--text-muted); }
+
+        /* FOOTER */
+        footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
+        .footer-inner { max-width: 1320px; margin: 0 auto; font-size: 12.5px; }
+
+        /* ══ PRINT ONLY STYLING (EUSEBIO BLISS PDF PREVIEW) ════ */
+        @media print {
+            nav, .filter-card, .report-types-grid, .page-header, footer, .btn-generate {
+                display: none !important;
+            }
+            body { background: #fff !important; color: #000 !important; }
+            .page { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+            .report-document-container {
+                border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important;
+            }
+            .village-letterhead { border-bottom: 2px solid #000 !important; }
+            table.report-table th { background: #0f172a !important; color: #fff !important; -webkit-print-color-adjust: exact; }
+        }
+
+        @media (max-width: 1024px) {
+            .report-types-grid { grid-template-columns: repeat(2, 1fr); }
+            .report-summary-boxes { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+            .report-types-grid { grid-template-columns: 1fr; }
+            .report-summary-boxes { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══ NAVIGATION ═══════════════════════════════════════════ -->
+<nav>
+    <div class="nav-inner">
+        <a class="nav-brand" href="/admin">
+            <div class="brand-logo-wrap">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+                <div class="brand-name">Home Detection <em>Security</em></div>
+                <div class="brand-sub">Admin Operations</div>
+            </div>
+        </a>
+
+        <div class="nav-clock">
+            <span class="nav-clock-dot"></span>
+            <span class="nav-clock-time" id="reportClock">--:--:--</span>
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a></li>
+            <li><a href="/admin/cctv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>CCTV Monitor</a></li>
+            <li><a href="/admin/reports" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reports</a></li>
+            <li><a href="/admin/users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users</a></li>
+            <li><a href="/admin/request"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Request</a></li>
+            <li><a href="/admin/logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Admin Logs</a></li>
+            <li><a href="/admin/system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Settings</a></li>
+            <li><a href="/login" class="nav-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ══ MAIN PAGE CONTENT ═════════════════════════════════════ -->
+<main class="page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Security Reports Center</h1>
+            <p class="page-subtitle">Generate official Eusebio Bliss Village security audit documentation & PDF reports</p>
+        </div>
+        <button class="btn-generate" onclick="window.print()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Formal PDF Report
+        </button>
+    </div>
+
+    <!-- 1. SELECT REPORT TYPE CARDS -->
+    <div class="report-types-grid">
+        <div class="report-type-card {% if selected_type == 'village' or not selected_type %}active{% endif %}" onclick="selectReportType('village', 'Village-Wide Security Report')">
+            <div>
+                <div class="report-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                </div>
+                <div class="report-card-title">Village-Wide Report</div>
+                <div class="report-card-desc">Comprehensive summary of whole community security and overall operations.</div>
+            </div>
+        </div>
+
+        <div class="report-type-card {% if selected_type == 'incident' %}active{% endif %}" onclick="selectReportType('incident', 'Security Incident Report')">
+            <div>
+                <div class="report-icon" style="background:var(--danger);">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="report-card-title">Incident Report</div>
+                <div class="report-card-desc">Detailed logs of detected motion breaches, unrecognized entries, and alerts.</div>
+            </div>
+        </div>
+
+        <div class="report-type-card {% if selected_type == 'frequency' %}active{% endif %}" onclick="selectReportType('frequency', 'Alert Frequency Analytics Report')">
+            <div>
+                <div class="report-icon" style="background:var(--amber);">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
+                <div class="report-card-title">Alert Frequency</div>
+                <div class="report-card-desc">Analytics on trigger rates per camera location, zone, and peak time periods.</div>
+            </div>
+        </div>
+
+        <div class="report-type-card {% if selected_type == 'surveillance' %}active{% endif %}" onclick="selectReportType('surveillance', 'Surveillance System Health Report')">
+            <div>
+                <div class="report-icon" style="background:var(--success);">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                </div>
+                <div class="report-card-title">Surveillance Data</div>
+                <div class="report-card-desc">CCTV camera stream uptime, storage utilization, and network hardware health.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. REPORT FILTERS FORM -->
+    <div class="filter-card">
+        <form action="/admin/reports" method="GET" class="filter-form">
+            <input type="hidden" id="typeInput" name="type" value="{{ selected_type or 'village' }}">
+            <div class="field">
+                <label for="timeFrame">Time Frame</label>
+                <select id="timeFrame" name="timeframe">
+                    <option value="24h" {% if timeframe == '24h' %}selected{% endif %}>Last 24 Hours</option>
+                    <option value="7d" {% if timeframe == '7d' or not timeframe %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30d" {% if timeframe == '30d' %}selected{% endif %}>Last 30 Days</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="cameraZone">Target Location / Zone</label>
+                <select id="cameraZone" name="zone">
+                    <option value="all" {% if zone == 'all' or not zone %}selected{% endif %}>All Village Cameras (Entire Zone)</option>
+                    <option value="gate1" {% if zone == 'gate1' %}selected{% endif %}>Gate 1 (Main Entrance)</option>
+                    <option value="north" {% if zone == 'north' %}selected{% endif %}>North Perimeter Fence</option>
+                    <option value="clubhouse" {% if zone == 'clubhouse' %}selected{% endif %}>Clubhouse & Amenities</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="severityLevel">Severity Level</label>
+                <select id="severityLevel" name="severity">
+                    <option value="all" {% if severity == 'all' or not severity %}selected{% endif %}>All Events & Triggers</option>
+                    <option value="critical" {% if severity == 'critical' %}selected{% endif %}>Critical / Unrecognized Only</option>
+                    <option value="normal" {% if severity == 'normal' %}selected{% endif %}>System Activity Logs</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-generate">
+                Update Report
+            </button>
+        </form>
+    </div>
+
+    <!-- 3. OFFICIAL EUSEBIO BLISS DOCUMENT PREVIEW (PDF TEMPLATE) -->
+    <div class="report-document-container" id="printableReport">
+        
+        <!-- OFFICIAL LETTERHEAD -->
+        <div class="village-letterhead">
+            <div class="letterhead-brand">
+                <div class="letterhead-logo">
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="letterhead-title">
+                    <h2>Eusebio Bliss Village</h2>
+                    <p>Homeowners Association Security Management Office — Pasig City</p>
+                </div>
+            </div>
+            <div class="letterhead-meta">
+                <div>Document ID: <strong>{{ doc_id or 'EBV-2026-0827' }}</strong></div>
+                <div>Date Generated: <strong>{{ date_generated or '2026-08-27' }}</strong></div>
+                <div>Classification: <strong>Official Security Audit</strong></div>
+            </div>
+        </div>
+
+        <!-- DOCUMENT TITLE -->
+        <div class="document-title-block">
+            <h3 id="reportHeadingTitle">{{ report_title or 'Village-Wide Security Summary Report' }}</h3>
+            <p>Automated Surveillance Analytics & Incident Audit Summary</p>
+        </div>
+
+        <!-- KPI DATA METRICS -->
+        <div class="report-summary-boxes">
+            <div class="r-box">
+                <div class="r-val">{{ total_triggers or 42 }}</div>
+                <div class="r-lbl">Total Triggers</div>
+            </div>
+            <div class="r-box">
+                <div class="r-val">{{ verified_residents or 38 }}</div>
+                <div class="r-lbl">Verified Residents</div>
+            </div>
+            <div class="r-box">
+                <div class="r-val" style="color:var(--danger);">{{ unrecognized_alerts or 4 }}</div>
+                <div class="r-lbl">Unrecognized Faces</div>
+            </div>
+            <div class="r-box">
+                <div class="r-val">{{ uptime_rate or '99.8%' }}</div>
+                <div class="r-lbl">System Uptime Rate</div>
+            </div>
+        </div>
+
+        <!-- DETAILED INCIDENT TABLE -->
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Camera Location</th>
+                    <th>Detection Event / Trigger Type</th>
+                    <th>Confidence Score</th>
+                    <th>Severity Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if incident_logs %}
+                    {% for log in incident_logs %}
+                    <tr>
+                        <td>{{ log.timestamp }}</td>
+                        <td>{{ log.location }}</td>
+                        <td>{{ log.event_type }}</td>
+                        <td>{{ log.confidence }}</td>
+                        <td>
+                            {% if log.severity == 'High' or log.severity == 'Critical' %}
+                                <strong style="color:var(--danger);">{{ log.severity }} Alert</strong>
+                            {% elif log.severity == 'Warning' %}
+                                <strong style="color:var(--amber);">{{ log.severity }} / Motion</strong>
+                            {% else %}
+                                <strong style="color:var(--success);">{{ log.severity }}</strong>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <!-- Dynamic Fallback Preview Row (Default UI) -->
+                    <tr>
+                        <td>2026-08-27 10:42:11 PM</td>
+                        <td>Gate 1 (Main Entrance)</td>
+                        <td>YOLOv8 Motion & Object Detected</td>
+                        <td>94.2%</td>
+                        <td><strong style="color:var(--amber);">Warning / Motion</strong></td>
+                    </tr>
+                    <tr>
+                        <td>2026-08-27 08:15:02 PM</td>
+                        <td>Clubhouse Lobby Entrance</td>
+                        <td>Facial Recognition Match — John Doe</td>
+                        <td>89.5%</td>
+                        <td><strong style="color:var(--success);">Resident Verified</strong></td>
+                    </tr>
+                    <tr>
+                        <td>2026-08-27 03:20:45 PM</td>
+                        <td>Perimeter Fence North</td>
+                        <td>Unrecognized Person Alert</td>
+                        <td>76.8%</td>
+                        <td><strong style="color:var(--danger);">High Severity Alert</strong></td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <!-- SIGNATURE BLOCK FOR FORMAL REPORT -->
+        <div class="report-signatures">
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-name">{{ admin_name or 'System Administrator' }}</div>
+                <div class="sig-title">Eusebio Bliss Security Command</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-name">{{ officer_name or 'HOA Board Security Officer' }}</div>
+                <div class="sig-title">Eusebio Bliss HOA Board</div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- ══ FOOTER ═══════════════════════════════════════════════ -->
+<footer>
+    <div class="footer-inner">
+        <span>&copy; 2026 Eusebio Bliss Village Homeowners Association, Inc. All rights reserved.</span>
+    </div>
+</footer>
+
+<script>
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('reportClock').textContent = `${h}:${m}:${s}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Dynamic Selection Handler
+    function selectReportType(typeKey, title) {
+        document.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        
+        document.getElementById('typeInput').value = typeKey;
+        document.getElementById('reportHeadingTitle').textContent = title;
+    }
+</script>
+</body>
+</html>

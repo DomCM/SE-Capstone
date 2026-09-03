@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management — Home Detection Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>User Management — Eusebio Bliss Village Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            /* ── Shared Palette Aligned with Admin Panels ── */
+            /* ── Core Palette ── */
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
             --navy-800:  #0d1b3e;
@@ -32,7 +32,7 @@
             --amber:     #b07d2a;
             --amber-bg:  #fef7e6;
             
-            /* ── Design Tokens ── */
+            /* ── Tokens ── */
             --radius-sm: 6px;
             --radius-md: 10px;
             --radius-lg: 16px;
@@ -51,20 +51,14 @@
             background: var(--off-white);
             color: var(--text-dark);
             min-height: 100vh;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 14px; line-height: 1.5;
             -webkit-font-smoothing: antialiased;
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
 
-        .main-wrapper {
-            flex: 1 0 auto;
-        }
+        .main-wrapper { flex: 1 0 auto; }
 
-        /* ══════════════════════════════════════
-           RESPONSIVE NAVIGATION (CCTV ALIGNED)
-        ══════════════════════════════════════ */
+        /* ══ NAVIGATION ═══════════════════════════════════════ */
         nav {
             position: sticky; top: 0; z-index: 200;
             background: rgba(255,255,255,0.92);
@@ -78,13 +72,11 @@
         }
         .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            padding: 2px; overflow: hidden; border: 1px solid var(--border);
+            width: 38px; height: 38px; background: var(--navy-900); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;
         }
-        .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
         .brand-text-block { line-height: 1.15; }
-        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
+        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); }
         .brand-name em { font-style: italic; color: var(--navy-600); }
         .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
@@ -94,9 +86,7 @@
         }
         .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s ease-in-out infinite; }
         @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
-        .nav-clock-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ef4444; }
-        .nav-clock-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.15); }
-        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; letter-spacing: 0.04em; }
+        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; }
 
         .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
         .nav-links a {
@@ -104,23 +94,9 @@
             font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
             transition: background 0.15s, color 0.15s; white-space: nowrap;
         }
-        .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
+        .nav-links a svg { width: 14px; height: 14px; opacity: 0.7; }
         .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
         .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
-        .nav-links a.active svg { opacity: 1; }
-        
-        .nav-links a.nav-cctv {
-            background: var(--danger-bg);
-            color: var(--danger);
-            border: 1px solid #f5c6c2;
-            font-weight: 600;
-        }
-        .nav-links a.nav-cctv:hover {
-            background: var(--danger);
-            color: var(--white);
-            border-color: var(--danger);
-        }
-        .nav-links a.nav-cctv svg { opacity: 1; }
 
         .nav-links a.nav-logout { margin-left: 6px; border: 1px solid var(--border); }
         .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
@@ -130,11 +106,8 @@
             color: var(--navy-900); width: 40px; height: 40px; border-radius: var(--radius-sm);
             align-items: center; justify-content: center; cursor: pointer;
         }
-        .menu-toggle svg { width: 20px; height: 20px; }
 
-        /* ══════════════════════════════════════
-           PAGE WORKSPACE & GRID STRUCTURES
-        ══════════════════════════════════════ */
+        /* ══ PAGE LAYOUT ══════════════════════════════════════ */
         .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; }
 
         .page-header {
@@ -143,141 +116,104 @@
         }
         .page-header-left { display: flex; align-items: center; gap: 16px; }
         .header-icon {
-            width: 50px; height: 50px;
-            background: var(--navy-900); border-radius: 13px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            box-shadow: 0 6px 16px rgba(11,23,53,0.25);
+            width: 50px; height: 50px; background: var(--navy-900); border-radius: 13px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            box-shadow: 0 6px 16px rgba(11,23,53,0.25); color: #fff;
         }
-        .header-icon svg { width: 22px; height: 22px; color: var(--white); }
-        .page-title {
-            font-family: var(--font-serif);
-            font-size: 26px; font-weight: 700;
-            color: var(--text-dark); letter-spacing: -0.02em; line-height: 1.1;
-        }
+        .page-title { font-family: var(--font-serif); font-size: 26px; font-weight: 700; color: var(--text-dark); }
         .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
 
-        /* Status badge tokens */
         .badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 6px 14px; border-radius: 999px;
-            font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+            border-radius: 999px; font-size: 11.5px; font-weight: 600;
         }
         .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid #9bd4b8; }
-        .badge-danger  { background: var(--danger-bg);  color: var(--danger);  border: 1px solid #f5a89e; }
-        .badge-amber   { background: var(--amber-bg);   color: var(--amber);   border: 1px solid #e8c87a; }
 
-        /* ══ FLASH ══ */
-        .flash {
-            display: flex; align-items: center; gap: 9px;
-            padding: 12px 16px;
-            border-radius: var(--radius-md);
-            margin-bottom: 18px;
-            font-size: 13.5px; font-weight: 500;
+        /* ══ SEARCH & FILTER BAR WITH EXPORT ══════════════════ */
+        .table-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 16px 20px; background: var(--off-white);
+            border-bottom: 1px solid var(--border); flex-wrap: wrap;
         }
-        .flash svg { width: 16px; height: 16px; flex-shrink: 0; }
-        .flash-danger  { background: var(--danger-bg);  border: 1px solid #f5a89e; color: var(--danger); }
-        .flash-success { background: var(--success-bg); border: 1px solid #9bd4b8; color: var(--success); }
+        .search-box { position: relative; flex: 1; max-width: 360px; min-width: 200px; }
+        .search-box input {
+            width: 100%; padding: 9px 12px 9px 38px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border); font-size: 13px; outline: none; background: var(--white);
+            font-family: var(--font-sans); transition: border-color 0.15s;
+        }
+        .search-box input:focus { border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100); }
+        .search-box svg {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; color: var(--text-muted);
+        }
 
-        /* ══ CARD HEADER ══ */
+        .btn-export-csv {
+            display: inline-flex; align-items: center; gap: 7px; background: var(--white);
+            border: 1px solid var(--border); color: var(--navy-900); padding: 8px 16px;
+            border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; font-family: var(--font-sans); box-shadow: var(--shadow-xs);
+        }
+        .btn-export-csv:hover { background: var(--navy-50); border-color: var(--navy-200); }
+
+        /* ══ CARD HEADER & ADD USER ═══════════════════════════ */
         .card-header {
-            background: var(--navy-900);
-            padding: 16px 22px;
-            display: flex; align-items: center; gap: 12px;
-            position: relative; overflow: hidden;
+            background: var(--navy-900); padding: 16px 22px;
+            display: flex; align-items: center; gap: 12px; position: relative; overflow: hidden;
         }
         .card-header::after {
-            content: '';
-            position: absolute; inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-            background-size: 28px 28px;
-            pointer-events: none;
+            content: ''; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 28px 28px; pointer-events: none;
         }
         .card-header-icon {
-            width: 34px; height: 34px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 9px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; position: relative; z-index: 1;
+            width: 34px; height: 34px; background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 9px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--navy-200);
         }
-        .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
-        .card-header-text { font-size: 14px; font-weight: 600; color: #fff; position: relative; z-index: 1; }
-        .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; position: relative; z-index: 1; }
+        .card-header-text { font-size: 14px; font-weight: 600; color: #fff; }
+        .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; }
 
-        /* ══ ADD USER CARD ══ */
         .add-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
-            margin-bottom: 24px;
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+            overflow: hidden; margin-bottom: 24px;
         }
         .add-card-body { padding: 22px; }
 
         .add-form { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
         .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
-        .field label { font-size: 11.5px; font-weight: 600; color: var(--text-mid); letter-spacing: 0.01em; }
+        .field label { font-size: 11.5px; font-weight: 600; color: var(--text-mid); }
         .field input, .field select {
-            background: var(--off-white);
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 10px 13px;
-            font-size: 13px;
-            font-family: var(--font-sans);
-            color: var(--text-dark);
-            outline: none;
-            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-            width: 100%;
+            background: var(--off-white); border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); padding: 10px 13px; font-size: 13px;
+            font-family: var(--font-sans); color: var(--text-dark); outline: none; width: 100%;
         }
-        .field input::placeholder { color: var(--text-muted); }
         .field input:focus, .field select:focus {
-            border-color: var(--navy-600);
-            box-shadow: 0 0 0 3px var(--navy-100);
-            background: var(--white);
+            border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100); background: var(--white);
         }
         .btn-add {
-            display: flex; align-items: center; gap: 7px;
-            background: var(--navy-800);
-            color: #fff;
-            border: none;
-            padding: 10px 22px;
-            border-radius: var(--radius-sm);
-            font-size: 13px; font-weight: 600;
-            font-family: var(--font-sans);
-            cursor: pointer;
-            height: 41px;
-            white-space: nowrap;
-            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-            box-shadow: 0 4px 14px rgba(11,23,53,0.22);
+            display: flex; align-items: center; gap: 7px; background: var(--navy-800);
+            color: #fff; border: none; padding: 10px 22px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600; cursor: pointer; height: 41px; white-space: nowrap;
         }
-        .btn-add:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
-        .btn-add svg { width: 14px; height: 14px; }
+        .btn-add:hover { background: var(--navy-700); }
 
-        /* ══ TABLE CARD ══ */
+        /* ══ TABLE & BUTTON STYLING ═══════════════════════════ */
         .table-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden;
         }
         .table-card::before {
-            content: '';
-            display: block; height: 3px;
+            content: ''; display: block; height: 3px;
             background: linear-gradient(90deg, var(--navy-900), var(--navy-600), var(--navy-400));
         }
 
         table { width: 100%; border-collapse: collapse; }
         thead { background: var(--off-white); }
         thead th {
-            padding: 12px 18px; text-align: left;
-            font-size: 11px; font-weight: 700;
+            padding: 12px 18px; text-align: left; font-size: 11px; font-weight: 700;
             color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
-            border-bottom: 1px solid var(--border); white-space: nowrap;
+            border-bottom: 1px solid var(--border);
         }
         tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
         tbody tr:last-child { border-bottom: none; }
@@ -287,11 +223,9 @@
         tbody td.username { font-weight: 600; color: var(--text-dark); display: flex; align-items: center; }
 
         .avatar {
-            width: 30px; height: 30px; border-radius: 50%;
-            background: var(--navy-100);
+            width: 30px; height: 30px; border-radius: 50%; background: var(--navy-100);
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 11.5px; font-weight: 700; color: var(--navy-800);
-            margin-right: 10px; vertical-align: middle; flex-shrink: 0;
+            font-size: 11.5px; font-weight: 700; color: var(--navy-800); margin-right: 10px; flex-shrink: 0;
         }
 
         .badge-admin  { background: var(--navy-900); color: #fff; }
@@ -301,178 +235,73 @@
 
         .action-group { display: flex; gap: 6px; flex-wrap: wrap; }
         .btn-sm {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 6px 12px; border-radius: var(--radius-sm);
-            font-size: 11.5px; font-weight: 600; font-family: var(--font-sans);
-            cursor: pointer; border: 1px solid var(--border);
-            background: transparent; color: var(--text-mid);
-            transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+            border-radius: var(--radius-sm); font-size: 11.5px; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border); background: var(--white);
+            color: var(--text-mid); transition: all 0.15s; box-shadow: var(--shadow-xs);
         }
-        .btn-sm:hover { background: var(--navy-50); border-color: var(--navy-200); color: var(--navy-800); }
-        .btn-sm svg { width: 12px; height: 12px; }
+        .btn-sm:hover { background: var(--navy-50); color: var(--navy-800); border-color: var(--navy-200); }
+        .btn-sm-danger { color: var(--danger); border-color: #f5c6c2; }
         .btn-sm-danger:hover { background: var(--danger-bg); border-color: #f5a89e; color: var(--danger); }
 
-        /* ══ EMPTY STATE ══ */
-        .empty-state { padding: 72px 24px; text-align: center; }
-        .empty-state svg { width: 40px; height: 40px; margin: 0 auto 14px; color: var(--navy-200); display: block; }
-        .empty-state p { font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-
-        /* ══ CUSTOM CONFIRMATION OVERLAY MODAL ══ */
+        /* ══ CUSTOM CONFIRMATION MODAL ════════════════════════ */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(6,13,31,0.78);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px;
+            position: fixed; inset: 0; background: rgba(6,13,31,0.75);
+            backdrop-filter: blur(6px); z-index: 1000; display: flex;
+            align-items: center; justify-content: center; padding: 24px;
+            opacity: 0; visibility: hidden; transition: all 0.2s ease;
         }
-        .modal-overlay.open { display: flex; }
+        .modal-overlay.open { opacity: 1; visibility: visible; }
         .modal-card {
             background: var(--white); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); overflow: hidden;
-            width: 100%; max-width: 420px; display: flex; flex-direction: column;
-            box-shadow: var(--shadow-lg);
-            animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border-radius: var(--radius-lg); overflow: hidden; width: 100%;
+            max-width: 420px; box-shadow: var(--shadow-lg); transform: translateY(10px);
+            transition: transform 0.2s ease;
         }
-        @keyframes modalFadeIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+        .modal-overlay.open .modal-card { transform: translateY(0); }
+        .modal-body { padding: 24px; text-align: center; }
+        .modal-icon {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--danger-bg);
+            color: var(--danger); display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
         }
-        .modal-body { padding: 24px; }
-        .modal-title { font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
-        .modal-desc { font-size: 13.5px; color: var(--text-mid); line-height: 1.5; }
+        .modal-title { font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; }
+        .modal-desc { font-size: 13px; color: var(--text-mid); line-height: 1.5; }
         .modal-actions {
-            display: flex; justify-content: flex-end; gap: 8px;
-            background: var(--off-white); padding: 12px 24px; border-top: 1px solid var(--border);
+            display: flex; gap: 10px; padding: 16px 24px; background: var(--off-white);
+            border-top: 1px solid var(--border);
         }
         .btn-modal {
-            padding: 8px 16px; border-radius: var(--radius-sm);
-            font-size: 12.5px; font-weight: 600; cursor: pointer;
-            border: 1px solid var(--border); font-family: var(--font-sans);
-            transition: background 0.1s, color 0.1s;
+            flex: 1; padding: 9px 14px; border-radius: var(--radius-sm); font-size: 13px;
+            font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
         }
-        .btn-modal-cancel { background: var(--white); color: var(--text-mid); }
+        .btn-modal-cancel { background: var(--white); border-color: var(--border); color: var(--text-mid); }
         .btn-modal-cancel:hover { background: var(--navy-50); }
-        .btn-modal-confirm { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-modal-confirm { background: var(--danger); color: #fff; }
         .btn-modal-confirm:hover { background: #a82e22; }
 
-        /* ══ SYSTEM TOAST MESSAGES ══ */
+        /* ══ TOAST NOTIFICATIONS ══════════════════════════════ */
         .toast-container {
-            position: fixed; bottom: 24px; right: 24px;
-            z-index: 1100; display: flex; flex-direction: column;
-            gap: 8px; max-width: 320px; width: calc(100% - 48px);
+            position: fixed; bottom: 24px; right: 24px; z-index: 1100;
+            display: flex; flex-direction: column; gap: 8px; max-width: 340px; width: calc(100% - 48px);
         }
         .toast {
-            background: var(--navy-900); color: #fff;
-            border: 1px solid rgba(255,255,255,0.1); padding: 12px 16px;
-            border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+            background: var(--navy-900); color: #fff; border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-md);
             display: flex; align-items: center; gap: 10px; font-size: 12.5px;
             animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .toast.toast-danger { background: #6b1d1d; border-color: #9c2e2e; }
         .toast.toast-success { background: #114b34; border-color: #1c714f; }
-        @keyframes slideIn {
-            from { transform: translateY(12px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* ══════════════════════════════════════
-           PREMIUM CORPORATE FOOTER (ALIGNED)
-        ══════════════════════════════════════ */
-        footer {
-            background: var(--navy-950);
-            color: var(--text-muted);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            padding: 20px 24px;
-            margin-top: auto;
-            flex-shrink: 0;
-            text-align: center;
-        }
-        .footer-inner {
-            max-width: 1280px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 12.5px;
-            flex-wrap: wrap;
-        }
-        .footer-brand {
-            font-family: var(--font-serif);
-            font-weight: 700;
-            color: #fff;
-        }
-        .footer-brand em {
-            font-style: italic;
-            color: var(--navy-400);
-        }
+        footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
+        .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; }
 
-        /* ══════════════════════════════════════
-           RESPONSIVE BREAKPOINTS (COLLAPSIBLE)
-        ══════════════════════════════════════ */
         @media (max-width: 1024px) {
-            .nav-inner {
-                padding: 0 20px; height: auto;
-                padding-top: 12px; padding-bottom: 12px;
-                flex-wrap: wrap; gap: 12px;
-            }
-            .nav-clock { order: 2; }
-            .menu-toggle { display: flex; order: 3; }
-            .nav-links {
-                display: none; width: 100%;
-                flex-direction: column; order: 4;
-                background: var(--off-white); padding: 8px;
-                border-radius: var(--radius-md); border: 1px solid var(--border);
-                margin-top: 8px; gap: 4px;
-            }
+            .menu-toggle { display: flex; }
+            .nav-links { display: none; width: 100%; flex-direction: column; background: var(--off-white); padding: 8px; margin-top: 8px; }
             .nav-links.show { display: flex; }
-            .nav-links li { width: 100%; }
-            .nav-links a { padding: 10px 14px; width: 100%; justify-content: flex-start; }
-            .nav-links a.nav-logout { margin-left: 0; margin-top: 4px; }
-
-            .page { padding: 24px 20px 60px; }
-            .page-header { gap: 12px; }
-        }
-
-        @media (max-width: 640px) {
-            .nav-inner { padding: 8px 14px; }
-            .brand-name { font-size: 13.5px; }
-            .brand-sub { font-size: 8.5px; }
-            .nav-clock { padding: 4px 10px; }
-            .nav-clock-time { font-size: 11px; }
-
-            .page { padding: 16px 12px 48px; }
-            .page-title { font-size: 22px; }
-            .page-subtitle { font-size: 12px; }
-
-            /* Mobile Block Tables Stacking */
-            .table-card { border-radius: 12px; }
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            tbody tr { padding: 14px 12px; border-bottom: 1px solid var(--border); }
-            tbody tr:last-child { border-bottom: none; }
-            tbody td { padding: 8px 0; border: none; width: 100%; display: flex; flex-direction: column; align-items: flex-start; }
-            
-            tbody td::before {
-                content: attr(data-label);
-                display: block;
-                font-size: 10.5px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                color: var(--text-muted);
-                margin-bottom: 4px;
-            }
-            
-            tbody td.username { display: flex; flex-direction: row; align-items: center; }
-            tbody td.username::before { display: block; width: 100%; content: attr(data-label); margin-bottom: 0; margin-right: 10px; flex: 1; }
-            tbody td.username .avatar { margin-right: 10px; }
-
-            .action-group { width: 100%; gap: 8px; }
-            .btn-sm { width: 100%; justify-content: center; }
-            .modal-overlay { padding: 12px; }
-        }
-
-        @media (max-width: 360px) {
-            .nav-clock { display: none; }
         }
     </style>
 </head>
@@ -481,164 +310,110 @@
 <div class="main-wrapper">
     <!-- ══ NAV ═══════════════════════════════════════════════════ -->
     <nav>
-    <div class="nav-inner">
-        <a class="nav-brand" href="/admin">
-            <div class="brand-logo-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-            </div>
-            <div class="brand-text-block">
-                <div class="brand-name">Home Detection <em>Security</em></div>
-                <div class="brand-sub">Admin Panel</div>
-            </div>
-        </a>
+        <div class="nav-inner">
+            <a class="nav-brand" href="/admin">
+                <div class="brand-logo-wrap">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="brand-text-block">
+                    <div class="brand-name">Home Detection <em>Security</em></div>
+                    <div class="brand-sub">Admin Panel</div>
+                </div>
+            </a>
 
-        <div class="nav-clock">
-            <span class="nav-clock-dot"></span>
-            <span class="nav-clock-label">Live</span>
-            <div class="nav-clock-sep"></div>
-            <span class="nav-clock-time" id="adminClock">--:--:--</span>
-        </div>
+            <div class="nav-clock">
+                <span class="nav-clock-dot"></span>
+                <span class="nav-clock-time" id="adminClock">--:--:--</span>
+            </div>
 
-        <ul class="nav-links" id="navLinksList">
-                <li>
-                    <a href="/admin">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                        </svg>
-                        Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/cctv" class="nav-cctv">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                        </svg>
-                        CCTV Monitor
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/users" class="active">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        Users
-                    </a>
-                </li>
-                 <li>
-                    <a href="/admin/request">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2"/>
-                            <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                        Request
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/logs">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                        Admin Logs
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/system">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2"/>
-                            <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                        Settings
-                    </a>
-                </li>
-                <li>
-                    <a href="/logout" class="nav-logout">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                        </svg>
-                        Logout
-                    </a>
-                </li>
+            <button class="menu-toggle" id="menuToggleBtn">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+
+            <ul class="nav-links" id="navLinksList">
+                <li><a href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a></li>
+                <li><a href="/admin/cctv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>CCTV Monitor</a></li>
+                <li><a href="/admin/reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reports</a></li>
+                <li><a href="/admin/users" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users</a></li>
+                <li><a href="/admin/request"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Request</a></li>
+                <li><a href="/admin/logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Admin Logs</a></li>
+                <li><a href="/admin/system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Settings</a></li>
+                <li><a href="/login" class="nav-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
             </ul>
-    </div>
-</nav>
+        </div>
+    </nav>
 
-    <!-- ══ PAGE CONTENT WORKSPACE ════════════════════════════════ -->
+    <!-- ══ PAGE WORKSPACE ════════════════════════════════════════ -->
     <main class="page">
         <div class="page-header">
             <div class="page-header-left">
                 <div class="header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 </div>
                 <div>
                     <h1 class="page-title">User Management</h1>
-                    <p class="page-subtitle">Create accounts, assign roles, and revoke access</p>
+                    <p class="page-subtitle">Create accounts, assign roles, and manage access permissions</p>
                 </div>
             </div>
             <span class="badge badge-success">● System Online</span>
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for category, message in messages %}
-            <div class="flash {{ 'flash-danger' if category == 'danger' else 'flash-success' }}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                {{ message }}
-            </div>
-            {% endfor %}{% endif %}
-        {% endwith %}
-
         <!-- Create User Card -->
         <div class="add-card">
             <div class="card-header">
                 <div class="card-header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                 </div>
                 <div>
                     <div class="card-header-text">Create a New User</div>
-                    <div class="card-header-sub">Users receive access to the security dashboard immediately after creation</div>
+                    <div class="card-header-sub">Users receive instant dashboard access after account creation</div>
                 </div>
             </div>
             <div class="add-card-body">
-                <form action="/admin/users/create" method="POST" class="add-form">
+                <form id="createUserForm" class="add-form" method="post" action="{{ url_for('admin_create_user') }}">
                     <div class="field">
-                        <label for="new-username">Username</label>
-                        <input id="new-username" type="text" name="username" placeholder="e.g. johndoe" required>
+                        <label for="username">Username</label>
+                        <input id="username" name="username" type="text" placeholder="e.g. johndoe" required>
                     </div>
                     <div class="field">
-                        <label for="new-email">Email Address</label>
-                        <input id="new-email" type="email" name="email" placeholder="user@example.com" required>
+                        <label for="email">Email Address</label>
+                        <input id="email" name="email" type="email" placeholder="user@example.com" required>
                     </div>
                     <div class="field">
-                        <label for="new-password">Temporary Password</label>
-                        <input id="new-password" type="password" name="password" placeholder="••••••••" required>
+                        <label for="password">Temporary Password</label>
+                        <input id="password" name="password" type="password" placeholder="••••••••" required>
                     </div>
                     <div class="field" style="max-width:160px;">
-                        <label for="new-role">Role</label>
-                        <select id="new-role" name="role">
+                        <label for="role">Role</label>
+                        <select id="role" name="role">
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
                     <button type="submit" class="btn-add">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Create User
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- Registered User Database Table -->
+        <!-- Registered User Table with Search Bar & Export CSV -->
         <div class="table-card">
+            <div class="table-toolbar">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="userSearchInput" placeholder="Search by name, email, or role..." onkeyup="filterUsers()">
+                </div>
+                
+                <button class="btn-export-csv" onclick="exportUsersCSV()">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Users List (CSV)
+                </button>
+            </div>
+
             <div style="overflow-x:auto;">
-                <table>
+                <table id="usersTable">
                     <thead>
                         <tr>
                             <th>User</th>
@@ -653,19 +428,19 @@
                     <tbody>
                         {% if users %}
                             {% for user in users %}
-                            <tr>
+                            <tr id="user-row-{{ user.id }}">
                                 <td class="username" data-label="User">
                                     <span class="avatar">{{ user.username[0] | upper }}</span>
-                                    {{ user.username }}
+                                    <span class="user-name-text">{{ user.username }}</span>
                                 </td>
                                 <td class="mono" data-label="Email">{{ user.email }}</td>
                                 <td data-label="Role">
-                                    <span class="badge {{ 'badge-admin' if user.role == 'admin' else 'badge-user' }}">
+                                    <span class="role-badge badge {{ 'badge-admin' if user.role == 'admin' else 'badge-user' }}">
                                         {{ user.role | capitalize }}
                                     </span>
                                 </td>
                                 <td data-label="Status">
-                                    <span class="badge {{ 'badge-banned' if user.banned else 'badge-active' }}">
+                                    <span class="status-badge badge {{ 'badge-banned' if user.banned else 'badge-active' }}">
                                         {{ 'Banned' if user.banned else 'Active' }}
                                     </span>
                                 </td>
@@ -673,42 +448,69 @@
                                 <td class="mono" data-label="Last Login">{{ user.last_login or '—' }}</td>
                                 <td data-label="Actions">
                                     <div class="action-group">
-                                        <form action="/admin/users/{{ user.id }}/toggle_role" method="POST" style="margin:0;">
-                                            <button type="submit" class="btn-sm">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                                                {{ 'Make User' if user.role == 'admin' else 'Make Admin' }}
-                                            </button>
-                                        </form>
-                                        <form action="/admin/users/{{ user.id }}/toggle_ban" method="POST" style="margin:0;">
-                                            <button type="submit" class="btn-sm btn-sm-danger">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                                                {{ 'Unban' if user.banned else 'Ban' }}
-                                            </button>
-                                        </form>
-                                        <form action="/admin/users/{{ user.id }}/delete" method="POST" class="delete-user-form" data-username="{{ user.username }}" style="margin:0;">
-                                            <button type="submit" class="btn-sm btn-sm-danger">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                                                Delete
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn-sm btn-toggle-role" data-user-id="{{ user.id }}" data-action="role">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                            <span class="role-btn-label">{{ 'Make User' if user.role == 'admin' else 'Make Admin' }}</span>
+                                        </button>
+
+                                        <button type="button" class="btn-sm btn-sm-danger btn-toggle-ban" data-user-id="{{ user.id }}" data-action="ban">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                            <span class="ban-btn-label">{{ 'Unban' if user.banned else 'Ban' }}</span>
+                                        </button>
+
+                                        <button type="button" class="btn-sm btn-sm-danger" data-user-id="{{ user.id }}" data-user-name="{{ user.username }}" data-action="delete">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                            Delete
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         {% else %}
-                        <!-- Static Preview Fallback (For offline compilation validation) -->
-                        <tr>
-                            <td class="username" data-label="User"><span class="avatar">A</span>admin</td>
-                            <td class="mono" data-label="Email">admin@homedetection.com</td>
-                            <td data-label="Role"><span class="badge badge-admin">Admin</span></td>
-                            <td data-label="Status"><span class="badge badge-active">Active</span></td>
-                            <td class="mono" data-label="Registered">2026-07-01</td>
-                            <td class="mono" data-label="Last Login">2026-07-12 18:22:10</td>
-                            <td data-label="Actions">
+                        <!-- Static Fallback Rows (Working Interactivity Enabled) -->
+                        <tr id="user-row-1">
+                            <td class="username"><span class="avatar">A</span><span class="user-name-text">admin</span></td>
+                            <td class="mono">admin@homedetection.com</td>
+                            <td><span class="role-badge badge badge-admin">Admin</span></td>
+                            <td><span class="status-badge badge badge-active">Active</span></td>
+                            <td class="mono">2026-07-01</td>
+                            <td class="mono">2026-08-27 00:15:20</td>
+                            <td>
                                 <div class="action-group">
-                                    <button class="btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Make User</button>
-                                    <button class="btn-sm btn-sm-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Ban</button>
-                                    <button class="btn-sm btn-sm-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete</button>
+                                    <button type="button" class="btn-sm btn-toggle-role" data-user-id="1" data-action="role">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <span class="role-btn-label">Make User</span>
+                                    </button>
+                                    <button type="button" class="btn-sm btn-sm-danger btn-toggle-ban" data-user-id="1" data-action="ban">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                        <span class="ban-btn-label">Ban</span>
+                                    </button>
+                                    <button type="button" class="btn-sm btn-sm-danger" data-user-id="1" data-user-name="admin" data-action="delete">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="user-row-2">
+                            <td class="username"><span class="avatar">J</span><span class="user-name-text">johndoe</span></td>
+                            <td class="mono">johndoe@eusebiobliss.ph</td>
+                            <td><span class="role-badge badge badge-user">User</span></td>
+                            <td><span class="status-badge badge badge-active">Active</span></td>
+                            <td class="mono">2026-08-10</td>
+                            <td class="mono">2026-08-26 14:20:00</td>
+                            <td>
+                                <div class="action-group">
+                                    <button type="button" class="btn-sm btn-toggle-role" data-user-id="2" data-action="role">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <span class="role-btn-label">Make Admin</span>
+                                    </button>
+                                    <button type="button" class="btn-sm btn-sm-danger btn-toggle-ban" data-user-id="2" data-action="ban">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                        <span class="ban-btn-label">Ban</span>
+                                    </button>
+                                    <button type="button" class="btn-sm btn-sm-danger" data-user-id="2" data-user-name="johndoe" data-action="delete">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -720,148 +522,180 @@
     </main>
 </div>
 
-<!-- ══ BRANDING CORPORATE FOOTER ════════════════════════════ -->
-<footer>
-    <div class="footer-inner">
-        <span class="footer-brand">Home Detection <em>Security</em></span>
-        <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
-    </div>
-</footer>
-
-<!-- ══ TOAST NOTIFICATIONS ══════════════════════════════════ -->
+<!-- ══ TOAST CONTAINERS ═════════════════════════════════════ -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- ══ CUSTOM DYNAMIC DELETE CONFIRMATION OVERLAY ═══════════ -->
-<div class="modal-overlay" id="confirmModal">
+<!-- ══ CONFIRM DELETE MODAL ═════════════════════════════════ -->
+<div class="modal-overlay" id="confirmDeleteModal">
     <div class="modal-card">
         <div class="modal-body">
+            <div class="modal-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </div>
             <h3 class="modal-title">Delete User Account?</h3>
-            <p class="modal-desc" id="confirmModalDesc">Are you sure you want to permanently delete this user account? This process is destructive and cannot be undone.</p>
+            <p class="modal-desc" id="confirmModalText">Are you sure you want to permanently delete this user account?</p>
         </div>
         <div class="modal-actions">
-            <button class="btn-modal btn-modal-cancel" id="confirmCancelBtn">Abort Action</button>
-            <button class="btn-modal btn-modal-confirm" id="confirmConfirmBtn">Confirm Delete</button>
+            <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-modal btn-modal-confirm" id="confirmDeleteBtn">Delete Account</button>
         </div>
     </div>
 </div>
 
+<footer>
+    <div class="footer-inner">
+        <span>&copy; 2026 Eusebio Bliss Village Homeowners Association, Inc. All rights reserved.</span>
+    </div>
+</footer>
+
 <script>
-    // ═════════════════════════════════════════════════════════
-    // SYSTEM CLOCK
-    // ═════════════════════════════════════════════════════════
     function updateClock() {
         const now = new Date();
         const h = String(now.getHours()).padStart(2,'0');
         const m = String(now.getMinutes()).padStart(2,'0');
         const s = String(now.getSeconds()).padStart(2,'0');
-        const clockEl = document.getElementById('adminClock');
-        if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
+        document.getElementById('adminClock').textContent = `${h}:${m}:${s}`;
     }
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ═════════════════════════════════════════════════════════
-    // MOBILE DRAWER NAVIGATION MENU
-    // ═════════════════════════════════════════════════════════
-    const menuToggleBtn = document.getElementById('menuToggleBtn');
-    const navLinksList = document.getElementById('navLinksList');
-
-    if (menuToggleBtn && navLinksList) {
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            navLinksList.classList.toggle('show');
-        });
-
-        // Click outside closes the collapsible dropdown drawer
-        document.addEventListener('click', () => {
-            if (navLinksList.classList.contains('show')) {
-                navLinksList.classList.remove('show');
-            }
-        });
-
-        navLinksList.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    // ═════════════════════════════════════════════════════════
-    // NON-BLOCKING DYNAMIC TOASTS (Replacement for alert)
-    // ═════════════════════════════════════════════════════════
-    function showToast(message, type = 'info') {
+    // 1. TOAST NOTIFICATION FUNCTION
+    function showToast(msg, type = 'success') {
         const container = document.getElementById('toastContainer');
-        if (!container) return;
-
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
-        let icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
-        if (type === 'success') {
-            icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>`;
-        } else if (type === 'danger') {
-            icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-        }
-
-        toast.innerHTML = `${icon}<span>${message}</span>`;
+        toast.innerHTML = `<span>${msg}</span>`;
         container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
-            setTimeout(() => {
-                toast.remove();
-            }, 200);
-        }, 4000);
+        setTimeout(() => toast.remove(), 3500);
     }
 
-    // ═════════════════════════════════════════════════════════
-    // INTERCEPT DESTRUCTIVE ACTIONS USING THE DYNAMIC DIALOG
-    // ═════════════════════════════════════════════════════════
-    const confirmModal = document.getElementById('confirmModal');
-    const modalDesc = document.getElementById('confirmModalDesc');
-    const cancelBtn = document.getElementById('confirmCancelBtn');
-    const confirmBtn = document.getElementById('confirmConfirmBtn');
-    
-    let pendingFormSubmission = null;
+    let targetUserIdToDelete = null;
+    let targetUserNameToDelete = null;
 
-    document.querySelectorAll('.delete-user-form').forEach(form => {
-        form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Suspend standard POST action
-            pendingFormSubmission = this; // Queue submission
+    function toggleRole(button) {
+        const userId = button.dataset.userId;
+        fetch(`/admin/users/${userId}/toggle_role`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to update user role');
+            }
+            return response.text();
+        }).then(() => {
+            window.location.reload();
+        }).catch(() => {
+            showToast('Unable to update user role.', 'danger');
+        });
+    }
 
-            const targetUsername = this.getAttribute('data-username') || 'this user';
-            if (modalDesc) {
-                modalDesc.textContent = `Are you sure you want to permanently delete the profile data and dashboard access privileges for "${targetUsername}"? This action is destructive and cannot be undone.`;
+    function toggleBan(button) {
+        const userId = button.dataset.userId;
+        fetch(`/admin/users/${userId}/toggle_ban`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to update ban status');
             }
-            if (confirmModal) {
-                confirmModal.classList.add('open');
+            return response.text();
+        }).then(() => {
+            window.location.reload();
+        }).catch(() => {
+            showToast('Unable to update ban status.', 'danger');
+        });
+    }
+
+    function promptDeleteUser(userId, username) {
+        targetUserIdToDelete = userId;
+        targetUserNameToDelete = username;
+        document.getElementById('confirmModalText').textContent = `Are you sure you want to permanently delete account "${username}"?`;
+        document.getElementById('confirmDeleteModal').classList.add('open');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('confirmDeleteModal').classList.remove('open');
+        targetUserIdToDelete = null;
+        targetUserNameToDelete = null;
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (!targetUserIdToDelete) {
+            closeDeleteModal();
+            return;
+        }
+
+        fetch(`/admin/users/${targetUserIdToDelete}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to delete user');
             }
+            return response.text();
+        }).then(() => {
+            const row = document.querySelector(`[data-user-id="${targetUserIdToDelete}"]`)?.closest('tr');
+            if (row) row.remove();
+            showToast(`User ${targetUserNameToDelete} deleted.`, 'danger');
+            closeDeleteModal();
+            setTimeout(() => window.location.reload(), 600);
+        }).catch(() => {
+            showToast('Unable to delete user.', 'danger');
+            closeDeleteModal();
         });
     });
 
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            if (confirmModal) confirmModal.classList.remove('open');
-            pendingFormSubmission = null;
-            showToast('Delete sequence aborted.', 'info');
-        });
-    }
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('[data-action]');
+        if (!button) return;
 
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', () => {
-            if (confirmModal) confirmModal.classList.remove('open');
-            if (pendingFormSubmission) {
-                pendingFormSubmission.submit(); // Forward submission to python route backend
-            }
-        });
-    }
-
-    // Keyboard ESC integration for accessible dialog close
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && confirmModal && confirmModal.classList.contains('open')) {
-            confirmModal.classList.remove('open');
-            pendingFormSubmission = null;
+        const action = button.dataset.action;
+        if (action === 'role') {
+            toggleRole(button);
+        } else if (action === 'ban') {
+            toggleBan(button);
+        } else if (action === 'delete') {
+            const userId = button.dataset.userId;
+            const userName = button.dataset.userName || 'this user';
+            promptDeleteUser(userId, userName);
         }
     });
-</script>
 
+    function filterUsers() {
+        const input = document.getElementById('userSearchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#usersTable tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(input) ? '' : 'none';
+        });
+    }
+
+    function exportUsersCSV() {
+        const table = document.getElementById('usersTable');
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll('td, th');
+            for (let j = 0; j < cols.length - 1; j++) {
+                let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').trim();
+                row.push('"' + data + '"');
+            }
+            csv.push(row.join(','));
+        }
+
+        const csvFile = new Blob([csv.join('\n')], { type: 'text/csv' });
+        const downloadLink = document.createElement('a');
+        downloadLink.download = 'Eusebio_Bliss_Users_List.csv';
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+</script>
 </body>
 </html>

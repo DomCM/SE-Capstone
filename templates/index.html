@@ -102,7 +102,7 @@
         .brand-name em { font-style: italic; color: var(--navy-600); }
         .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
-        /* Live clock pill — center of nav (matches admin pages) */
+        /* Live clock pill */
         .nav-clock {
             display: flex;
             align-items: center;
@@ -161,40 +161,6 @@
         .nav-logout { margin-left: 10px; border: 1px solid var(--border) !important; }
         .nav-logout:hover { background: var(--danger-bg) !important; color: var(--danger) !important; border-color: #f5a89e !important; }
 
-        @media (max-width: 1180px) {
-            .page { padding: 30px 24px 64px; }
-            .page-header { gap: 14px; }
-        }
-
-        @media (max-width: 1024px) {
-            .nav-inner { padding: 0 20px; gap: 14px; flex-wrap: wrap; height: auto; padding-top: 12px; padding-bottom: 12px; }
-            .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; }
-            .page { padding: 24px 20px 56px; }
-            .page-header { flex-direction: column; align-items: flex-start; }
-            .header-right { width: 100%; }
-        }
-
-        @media (max-width: 900px) {
-            .nav-links { flex-wrap: nowrap; justify-content: center; gap: 1px; }
-            .nav-links li { width: auto; }
-            .nav-links a { padding: 7px 8px; font-size: 11px; gap: 4px; }
-            .nav-links a svg { width: 13px; height: 13px; }
-        }
-
-        @media (max-width: 430px) {
-            .nav-inner { padding: 10px 14px; }
-            .nav-brand { width: 100%; justify-content: center; }
-            .nav-clock { width: 100%; justify-content: center; }
-            .nav-links { gap: 2px; }
-            .nav-links a { padding: 6px 6px; font-size: 10px; gap: 3px; }
-            .nav-links a svg { width: 12px; height: 12px; }
-            .page { padding: 18px 14px 48px; }
-            .page-title { font-size: 22px; }
-            .page-subtitle { font-size: 12.5px; }
-            .add-camera-card { border-radius: 12px; }
-            .card-body { padding: 16px 16px 18px; }
-        }
-
         /* ══ PAGE ═════════════════════════════════════════════ */
         .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
 
@@ -243,6 +209,9 @@
             font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
         }
         .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid #9bd4b8; }
+        .badge-amber   { background: var(--amber-bg); color: var(--amber); border: 1px solid #e8c87a; }
+        .badge-danger  { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5a89e; }
+        .badge-navy    { background: var(--navy-100); color: var(--navy-700); border: 1px solid var(--navy-200); }
 
         /* ══ FLASH ════════════════════════════════════════════ */
         .flash {
@@ -269,9 +238,10 @@
         .card-header {
             background: var(--navy-900);
             padding: 16px 24px;
-            display: flex; align-items: center; gap: 12px;
+            display: flex; align-items: center; justify-content: space-between;
             position: relative;
             overflow: hidden;
+            gap: 12px;
         }
         .card-header::after {
             content: '';
@@ -282,6 +252,8 @@
             pointer-events: none;
         }
 
+        .card-header-main { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+
         .card-header-icon {
             width: 34px; height: 34px;
             background: rgba(255,255,255,0.1);
@@ -289,12 +261,11 @@
             border-radius: 9px;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
-            position: relative; z-index: 1;
         }
         .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
 
-        .card-header-text { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.01em; position: relative; z-index: 1; }
-        .card-header-sub  { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; position: relative; z-index: 1; }
+        .card-header-text { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.01em; }
+        .card-header-sub  { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; }
 
         .card-body { padding: 22px 24px 20px; }
 
@@ -306,7 +277,7 @@
 
         .field label { font-size: 11.5px; font-weight: 600; color: var(--text-mid); letter-spacing: 0.02em; }
 
-        .field input {
+        .field input, .field select {
             background: var(--off-white);
             border: 1.5px solid var(--border);
             border-radius: var(--radius-sm);
@@ -319,7 +290,7 @@
             width: 100%;
         }
         .field input::placeholder { color: var(--text-muted); }
-        .field input:focus {
+        .field input:focus, .field select:focus {
             border-color: var(--navy-600);
             box-shadow: 0 0 0 3px var(--navy-100);
             background: var(--white);
@@ -359,11 +330,11 @@
         .form-note svg { width: 14px; height: 14px; color: var(--amber); flex-shrink: 0; margin-top: 1px; }
 
         /* ══ SECTION HEADER ═══════════════════════════════════ */
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; margin-top: 36px; }
 
         .section-title {
             font-family: var(--font-serif);
-            font-size: 17px; font-weight: 700; color: var(--text-dark);
+            font-size: 18px; font-weight: 700; color: var(--text-dark);
             display: flex; align-items: center; gap: 10px;
         }
         .section-title::before {
@@ -470,7 +441,7 @@
         .btn-remove svg { width: 12px; height: 12px; }
         .btn-remove:hover { background: var(--danger-bg); border-color: #f5a89e; color: var(--danger); }
 
-        /* ── Video ── */
+        /* Video */
         .cam-video { position: relative; aspect-ratio: 16 / 9; background: var(--navy-950); overflow: hidden; }
         .cam-video img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
@@ -487,7 +458,7 @@
         }
         .cam-video-badge .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s ease-in-out infinite; }
 
-        /* ── Camera footer ── */
+        /* Camera footer */
         .cam-footer {
             padding: 11px 17px;
             display: flex; align-items: center; justify-content: space-between;
@@ -513,11 +484,108 @@
             letter-spacing: 0.03em;
         }
 
+        /* ══ STATS ANALYTICS GRID (REPORT VIEWING) ═══════════ */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-xs);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-card-icon {
+            width: 44px; height: 44px;
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .stat-card-icon svg { width: 20px; height: 20px; }
+        .stat-card-icon.navy { background: var(--navy-50); color: var(--navy-600); }
+        .stat-card-icon.amber { background: var(--amber-bg); color: var(--amber); }
+        .stat-card-icon.danger { background: var(--danger-bg); color: var(--danger); }
+        .stat-card-icon.success { background: var(--success-bg); color: var(--success); }
+
+        .stat-card-val { font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--text-dark); line-height: 1.1; }
+        .stat-card-lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+        /* ══ DATA TABLES ══════════════════════════════════════ */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .custom-table th {
+            background: var(--off-white);
+            color: var(--text-mid);
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            font-size: 12px;
+            letter-spacing: 0.01em;
+        }
+
+        .custom-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dark);
+            vertical-align: middle;
+        }
+
+        .custom-table tr:last-child td { border-bottom: none; }
+        .custom-table tr:hover td { background: rgba(240, 244, 253, 0.4); }
+
+        .btn-action-sm {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: var(--white);
+            color: var(--navy-700);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .btn-action-sm svg { width: 13px; height: 13px; }
+        .btn-action-sm:hover {
+            background: var(--navy-50);
+            border-color: var(--navy-200);
+            color: var(--navy-900);
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
         /* ══ EMPTY STATE ══════════════════════════════════════ */
         .empty-state {
             grid-column: 1 / -1;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 76px 24px;
+            padding: 56px 24px;
             background: var(--white);
             border: 1.5px dashed var(--border);
             border-radius: var(--radius-lg);
@@ -539,17 +607,11 @@
         .empty-body { font-size: 13.5px; color: var(--text-muted); max-width: 320px; line-height: 1.6; }
 
         /* ══ SCROLLBAR ════════════════════════════════════════ */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--off-white); }
         ::-webkit-scrollbar-thumb { background: var(--navy-200); border-radius: 3px; }
 
-        @media (max-width: 900px) {
-            .nav-links .link-label { display: inline; }
-        }
-
-        /* ══════════════════════════════════════
-           SIMPLIFIED CORPORATE FOOTER
-        ══════════════════════════════════════ */
+        /* ══ FOOTER ═══════════════════════════════════════════ */
         footer {
             background: var(--navy-950);
             color: var(--text-muted);
@@ -579,7 +641,7 @@
             color: var(--navy-400);
         }
 
-        /* ══ LOGOUT CONFIRMATION MODAL ═══════════════════════ */
+        /* ══ LOGOUT MODAL ═════════════════════════════════════ */
         .logout-modal-overlay {
             position: fixed;
             inset: 0;
@@ -594,13 +656,9 @@
             visibility: hidden;
             transition: opacity 0.25s ease, visibility 0.25s ease;
         }
-        .logout-modal-overlay.is-open {
-            opacity: 1;
-            visibility: visible;
-        }
+        .logout-modal-overlay.is-open { opacity: 1; visibility: visible; }
         .logout-modal {
-            width: 100%;
-            max-width: 380px;
+            width: 100%; max-width: 380px;
             background: var(--white);
             border-radius: var(--radius-lg);
             box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
@@ -610,68 +668,41 @@
             opacity: 0;
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
         }
-        .logout-modal-overlay.is-open .logout-modal {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
+        .logout-modal-overlay.is-open .logout-modal { transform: translateY(0) scale(1); opacity: 1; }
         .logout-modal-icon {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 16px;
+            width: 52px; height: 52px; margin: 0 auto 16px;
             border-radius: 50%;
-            background: var(--danger-bg);
-            color: var(--danger);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: var(--danger-bg); color: var(--danger);
+            display: flex; align-items: center; justify-content: center;
         }
         .logout-modal-icon svg { width: 24px; height: 24px; }
-        .logout-modal h3 {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-        .logout-modal p {
-            font-size: 14px;
-            color: var(--text-mid);
-            line-height: 1.6;
-            margin-bottom: 24px;
-        }
-        .logout-modal-actions {
-            display: flex;
-            gap: 10px;
-        }
+        .logout-modal h3 { font-size: 17px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+        .logout-modal p { font-size: 14px; color: var(--text-mid); line-height: 1.6; margin-bottom: 24px; }
+        .logout-modal-actions { display: flex; gap: 10px; }
         .logout-modal-btn {
-            flex: 1;
-            padding: 11px 16px;
+            flex: 1; padding: 11px 16px;
             border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
+            font-size: 14px; font-weight: 600;
+            font-family: inherit; cursor: pointer;
+            border: 1px solid transparent; transition: all 0.2s ease;
         }
-        .logout-modal-btn-no {
-            background: var(--off-white);
-            border-color: var(--border);
-            color: var(--text-mid);
-        }
-        .logout-modal-btn-no:hover {
-            background: var(--border);
-        }
-        .logout-modal-btn-yes {
-            background: var(--danger);
-            color: var(--white);
-            box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28);
-        }
-        .logout-modal-btn-yes:hover {
-            background: #a5301f;
-            transform: translateY(-1px);
-        }
-        .logout-modal-btn:active { transform: translateY(0); }
+        .logout-modal-btn-no { background: var(--off-white); border-color: var(--border); color: var(--text-mid); }
+        .logout-modal-btn-no:hover { background: var(--border); }
+        .logout-modal-btn-yes { background: var(--danger); color: var(--white); box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28); }
+        .logout-modal-btn-yes:hover { background: #a5301f; transform: translateY(-1px); }
 
+        @media (max-width: 1180px) { .page { padding: 30px 24px 64px; } }
+        @media (max-width: 1024px) {
+            .nav-inner { padding: 12px 20px; gap: 14px; flex-wrap: wrap; height: auto; }
+            .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; }
+            .page { padding: 24px 20px 56px; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .header-right { width: 100%; }
+        }
+        @media (max-width: 900px) {
+            .nav-links { flex-wrap: nowrap; justify-content: center; gap: 1px; }
+            .nav-links a { padding: 7px 8px; font-size: 11px; gap: 4px; }
+        }
         @media (max-width: 480px) {
             .logout-modal { padding: 22px 18px; }
             .logout-modal-actions { flex-direction: column-reverse; }
@@ -720,12 +751,6 @@
                 </a>
             </li>
             <li>
-                <a href="/recordings">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                    <span class="link-label">Recordings</span>
-                </a>
-            </li>
-              <li>
                 <a href="/settings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span class="link-label">Settings</span>
@@ -751,8 +776,8 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
             </div>
             <div>
-                <h1 class="page-title">Camera Dashboard</h1>
-                <p class="page-subtitle">Monitor all your cameras live — secured &amp; encrypted</p>
+                <h1 class="page-title">Homeowner Dashboard</h1>
+                <p class="page-subtitle">Manage cameras, view incident analytics, and track footage requests</p>
             </div>
         </div>
         <div class="header-right">
@@ -783,12 +808,14 @@
     <!-- Add Camera Card -->
     <div class="add-camera-card">
         <div class="card-header">
-            <div class="card-header-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div>
-            <div>
-                <div class="card-header-text">Add a Network Camera</div>
-                <div class="card-header-sub">Connect any RTSP or HTTP camera stream installed at your home</div>
+            <div class="card-header-main">
+                <div class="card-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </div>
+                <div>
+                    <div class="card-header-text">Add a Network Camera</div>
+                    <div class="card-header-sub">Connect any RTSP or HTTP camera stream installed at your home</div>
+                </div>
             </div>
         </div>
         <div class="card-body">
@@ -813,7 +840,7 @@
         </div>
     </div>
 
-    <!-- Section header -->
+    <!-- Section header: Camera Feeds -->
     <div class="section-header">
         <span class="section-title">Your Camera Feeds</span>
         <span class="camera-count">
@@ -877,9 +904,205 @@
         {% endfor %}
     </div>
 
+
+    <!-- ═════════════════════════════════════════════════════════
+         1. REPORT VIEWING SECTION
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+        <span class="section-title">Surveillance Reports &amp; Analytics</span>
+        <button onclick="window.print()" class="btn-action-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Generate / Print Summary
+        </button>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="analytics-grid">
+        <div class="stat-card">
+            <div class="stat-card-icon navy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="stat-card-val">24</div>
+                <div class="stat-card-lbl">Incidents Recorded (This Month)</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-icon amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="stat-card-val">12 / wk</div>
+                <div class="stat-card-lbl">Avg. Alert Frequency</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-icon danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+                <div class="stat-card-val">2</div>
+                <div class="stat-card-lbl">High Severity Alerts</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-icon success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+                <div class="stat-card-val">99.8%</div>
+                <div class="stat-card-lbl">System Uptime Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Viewing Table Container -->
+    <div class="add-camera-card" style="margin-bottom: 28px;">
+        <div class="card-header">
+            <div class="card-header-main">
+                <div class="card-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
+                <div>
+                    <div class="card-header-text">Recorded Incidents &amp; Surveillance Data</div>
+                    <div class="card-header-sub">Detailed overview of system alerts, motion triggers, and surveillance history</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <select class="field" style="width: 150px; margin:0;" id="reportFilter" onchange="filterReports()">
+                    <option value="all">All Incidents</option>
+                    <option value="motion">Motion Detected</option>
+                    <option value="intrusion">Intrusion Alert</option>
+                    <option value="offline">Camera Disconnect</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="custom-table" id="reportsTable">
+                <thead>
+                    <tr>
+                        <th>Incident ID</th>
+                        <th>Camera Location</th>
+                        <th>Incident Type</th>
+                        <th>Timestamp</th>
+                        <th>Severity</th>
+                        <th>Action Required</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-type="intrusion">
+                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-089</td>
+                        <td>Front Door (CAM-01)</td>
+                        <td>Intrusion Detection</td>
+                        <td>2026-08-26 14:22:10</td>
+                        <td><span class="badge badge-danger">High</span></td>
+                        <td><a href="/events" class="btn-action-sm">View Footage</a></td>
+                    </tr>
+                    <tr data-type="motion">
+                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-088</td>
+                        <td>Backyard Garden (CAM-02)</td>
+                        <td>Motion Triggered</td>
+                        <td>2026-08-26 10:15:02</td>
+                        <td><span class="badge badge-amber">Medium</span></td>
+                        <td><a href="/events" class="btn-action-sm">View Footage</a></td>
+                    </tr>
+                    <tr data-type="motion">
+                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-084</td>
+                        <td>Garage Gate (CAM-03)</td>
+                        <td>Unrecognized Vehicle</td>
+                        <td>2026-08-25 21:04:45</td>
+                        <td><span class="badge badge-amber">Medium</span></td>
+                        <td><a href="/events" class="btn-action-sm">View Footage</a></td>
+                    </tr>
+                    <tr data-type="offline">
+                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-079</td>
+                        <td>Side Alleyway (CAM-04)</td>
+                        <td>Camera Signal Offline</td>
+                        <td>2026-08-24 03:12:00</td>
+                        <td><span class="badge badge-navy">Low</span></td>
+                        <td><a href="/settings" class="btn-action-sm">Check Connection</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════
+         2. REQUEST STATUS VIEWING SECTION
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-header">
+        <span class="section-title">Recording Request Status</span>
+        <button class="btn-action-sm" onclick="alert('Feature to request new recording export is open. Please contact admin if urgent.')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Request
+        </button>
+    </div>
+
+    <div class="add-camera-card">
+        <div class="card-header">
+            <div class="card-header-main">
+                <div class="card-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                    <div class="card-header-text">Submitted Recording Requests</div>
+                    <div class="card-header-sub">Track real-time status of your official footage export and security clip requests</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Camera Source</th>
+                        <th>Requested Time Range</th>
+                        <th>Date Submitted</th>
+                        <th>Status</th>
+                        <th>Details / Download</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-weight: 600;">REQ-88321</td>
+                        <td>Front Door (CAM-01)</td>
+                        <td>2026-08-26 (14:00 - 15:00)</td>
+                        <td>2026-08-26 14:35</td>
+                        <td><span class="badge badge-success">● Approved</span></td>
+                        <td><a href="#" onclick="alert('Downloading export package...'); return false;" class="btn-action-sm">Download Clip</a></td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-weight: 600;">REQ-88290</td>
+                        <td>Garage Gate (CAM-03)</td>
+                        <td>2026-08-25 (20:30 - 21:30)</td>
+                        <td>2026-08-25 21:15</td>
+                        <td><span class="badge badge-amber">● In Review</span></td>
+                        <td><span style="font-size:12px; color:var(--text-muted);">Processing...</span></td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-weight: 600;">REQ-88102</td>
+                        <td>Backyard Garden (CAM-02)</td>
+                        <td>2026-08-20 (00:00 - 06:00)</td>
+                        <td>2026-08-20 08:10</td>
+                        <td><span class="badge badge-navy">● Completed</span></td>
+                        <td><a href="#" onclick="alert('Downloading export package...'); return false;" class="btn-action-sm">Download Clip</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </main>
 
-<!-- ══ FOOTER (MATCHING CCTV) ═══════════════════════════════ -->
+<!-- ══ FOOTER ═══════════════════════════════════════════════ -->
 <footer>
     <div class="footer-inner">
         <span class="footer-brand">Home Detection <em>Security</em></span>
@@ -888,7 +1111,7 @@
 </footer>
 
 <script>
-    // Live clock (24-hour, matches admin pages)
+    // Live clock
     function updateClock() {
         const now = new Date();
         const h = String(now.getHours()).padStart(2,'0');
@@ -927,7 +1150,22 @@
             }
         } catch (err) { console.error("Recording toggle failed", err); }
     }
+
+    // Filter reports table
+    function filterReports() {
+        const filterValue = document.getElementById('reportFilter').value;
+        const rows = document.querySelectorAll('#reportsTable tbody tr');
+        
+        rows.forEach(row => {
+            if (filterValue === 'all' || row.getAttribute('data-type') === filterValue) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
 </script>
+
 <!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
 <div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
     <div class="logout-modal">
@@ -944,7 +1182,7 @@
 </div>
 
 <script>
-    // ══ LOGOUT CONFIRMATION MODAL LOGIC ══════════════════════
+    // LOGOUT CONFIRMATION MODAL LOGIC
     (function () {
         var overlay = document.getElementById('logoutModalOverlay');
         var yesBtn = document.getElementById('logoutModalYes');
@@ -998,7 +1236,4 @@
     })();
 </script>
 </body>
-</html>
-
-
-
+</html>     
