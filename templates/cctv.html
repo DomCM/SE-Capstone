@@ -598,7 +598,7 @@
                 </a>
             </li>
             <li>
-                <a href="/login" class="nav-logout">
+                <a href="/logout" class="nav-logout">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                         <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -677,7 +677,7 @@
                 </div>
                 <div class="cam-status {{ 'status-recording' if cam.is_recording else 'status-live' if cam.status == 'online' else 'status-offline' }}">
                     <div class="cam-status-dot"></div>
-                    {{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}
+                    <span class="cam-status-label">{{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}</span>
                 </div>
             </div>
             <div class="cam-hud-bottom">
@@ -689,54 +689,13 @@
         </div>
         {% endfor %}
 
-    {% else %}
-        {% set placeholders = [
-            {'id': '01', 'name': 'Front Door',  'location': 'Entrance',  'status': 'online',  'rec': true,  'motion': false},
-            {'id': '02', 'name': 'Back Yard',    'location': 'Exterior',  'status': 'online',  'rec': false, 'motion': true},
-            {'id': '03', 'name': 'Living Room',  'location': 'Interior',  'status': 'online',  'rec': true,  'motion': false},
-            {'id': '04', 'name': 'Garage',       'location': 'Exterior',  'status': 'offline', 'rec': false, 'motion': false},
-            {'id': '05', 'name': 'Side Gate',    'location': 'Perimeter', 'status': 'online',  'rec': false, 'motion': false},
-            {'id': '06', 'name': 'Server Room',  'location': 'Interior',  'status': 'online',  'rec': true,  'motion': false}
-        ] %}
-        {% for cam in placeholders %}
-        <div class="cam-tile {{ 'offline' if cam.status != 'online' else '' }} {{ 'motion' if cam.motion else '' }}"
-             data-cam-id="{{ cam.id }}" data-cam-name="{{ cam.name }}"
-             data-cam-status="{{ cam.status }}"
-             data-stream-url="{% if cam.status == 'online' %}{{ url_for('video_feed', camera_id=cam.id) }}{% endif %}"
-             onclick="openModal(this)">
-            <div class="cam-feed">
-                {% if cam.status == 'online' %}
-                <img class="stream" src="{{ url_for('video_feed', camera_id=cam.id) }}" alt="{{ cam.name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="offline-placeholder" style="display:none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
-                    <p>No signal</p>
-                </div>
-                {% else %}
-                <div class="offline-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
-                    <p>Camera Offline</p>
-                </div>
-                {% endif %}
-            </div>
-            <div class="cam-hud-top">
-                <div>
-                    <div class="cam-name">{{ cam.name | upper }}</div>
-                    <div class="cam-id">CAM-{{ cam.id }}</div>
-                </div>
-                <div class="cam-status {{ 'status-recording' if cam.rec else 'status-live' if cam.status == 'online' else 'status-offline' }}">
-                    <div class="cam-status-dot"></div>
-                    {{ 'REC' if cam.rec else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}
-                </div>
-            </div>
-            <div class="cam-hud-bottom">
-                <div class="cam-timestamp" id="ts-{{ cam.id }}"></div>
-                <div style="font-size:9.5px;font-family:var(--font-mono);color:rgba(255,255,255,0.38);">{{ cam.location }}</div>
-            </div>
-            <div class="motion-badge">⚡ Motion</div>
-            <div class="crosshair"></div>
+    {% else %}        
+        <div class="no-cameras">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/>
+            </svg>
+            <p>No cameras available</p>
         </div>
-        {% endfor %}
     {% endif %}
 
 </div>
@@ -949,6 +908,46 @@
         currentCamId = null;
     }
 
+    function updateCameraStatus(statusData) {
+        const statuses = statusData.cameras || {};
+        document.querySelectorAll('.cam-tile').forEach(tile => {
+            const camera = statuses[tile.dataset.camId];
+            if (!camera) return;
+            const connected = camera.connected;
+            const status = connected ? 'online' : 'offline';
+            const changed = tile.dataset.camStatus !== status;
+            tile.dataset.camStatus = status;
+            tile.classList.toggle('offline', !connected);
+
+            const statusEl = tile.querySelector('.cam-status');
+            if (statusEl) {
+                statusEl.className = 'cam-status ' + (camera.recording ? 'status-recording' : connected ? 'status-live' : 'status-offline');
+                statusEl.querySelector('.cam-status-label').textContent = camera.recording ? 'REC' : connected ? 'LIVE' : 'OFFLINE';
+            }
+            if (changed) {
+                const feed = tile.querySelector('.cam-feed');
+                if (connected) {
+                    feed.innerHTML = `<img class="stream" src="${tile.dataset.streamUrl}" alt="${tile.dataset.camName} feed">`;
+                } else {
+                    feed.innerHTML = '<div class="offline-placeholder"><p>Camera Offline</p></div>';
+                }
+            }
+        });
+        const count = document.getElementById('onlineCount');
+        if (count) count.textContent = statusData.connected_count;
+    }
+
+    async function refreshCameraStatus() {
+        try {
+            const response = await fetch('/api/camera-status', { cache: 'no-store' });
+            if (response.ok) updateCameraStatus(await response.json());
+        } catch (error) {
+            // Keep the last known state when the status request is interrupted.
+        }
+    }
+    refreshCameraStatus();
+    setInterval(refreshCameraStatus, 3000);
+
     document.addEventListener('keydown', e => { 
         if (e.key === 'Escape') closeModal(); 
     });
@@ -981,10 +980,11 @@
     if (modalToggleRec) {
         modalToggleRec.addEventListener('click', function() {
             if (!currentCamId) return;
-            fetch(`/admin/cameras/${currentCamId}/toggle_record`, { method: 'POST' })
+            fetch(`/toggle_recording/${currentCamId}`, { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
-                    const isRec = data.recording;
+                    if (!data.success) throw new Error(data.error || 'Recording toggle failed');
+                    const isRec = data.message.includes('Started');
                     this.innerHTML = `
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
                             <circle cx="12" cy="12" r="10"/>

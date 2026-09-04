@@ -310,7 +310,7 @@
                     <p class="page-subtitle">Real-time surveillance status, security incident metrics, and quick operations</p>
                 </div>
             </div>
-            <span class="badge badge-success">● System Operational</span>
+            <span class="badge badge-success">● Dashboard Operational</span>
         </div>
 
         <!-- KPI SUMMARY STATS -->
@@ -326,9 +326,9 @@
             <div class="stat-card">
                 <div class="stat-icon si-success"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
                 <div class="stat-info">
-                    <div class="stat-value">{{ active_cameras or '—' }}</div>
+                    <div class="stat-value" id="activeCameraFeeds">{{ active_cameras or '—' }}</div>
                     <div class="stat-label">Active Camera Feeds</div>
-                    <div class="stat-delta">100% video stream health</div>
+                    <div class="stat-delta"><span id="cameraCoverageDelta">{{ camera_coverage }}</span>% of {{ total_cameras }} feeds online</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -339,14 +339,14 @@
                     <div class="stat-delta">{{ events_today or '0' }} alerts in last 24h</div>
                 </div>
             </div>
-            <div class="stat-card">
+            <!--<div class="stat-card">
                 <div class="stat-icon si-danger"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
                 <div class="stat-info">
                     <div class="stat-value">{{ total_recordings or '—' }}</div>
                     <div class="stat-label">Saved CCTV Clips</div>
                     <div class="stat-delta">{{ storage_used or '—' }} storage space used</div>
                 </div>
-            </div>
+            </div>-->
         </div>
 
         <!-- MAIN CONTENT LAYOUT GRID -->
@@ -368,34 +368,30 @@
                     <div class="card-body">
                         <div class="metrics-row">
                             <div class="metric-card">
-                                <div class="metric-val">2</div>
+                                <div class="metric-val">{{ alert_count_today }}</div>
                                 <div class="metric-desc">Alerts Today</div>
                             </div>
                             <div class="metric-card">
-                                <div class="metric-val">Gate 1</div>
+                                <div class="metric-val">{{ highest_alert_zone }}</div>
                                 <div class="metric-desc">Highest Zone</div>
                             </div>
                             <div class="metric-card">
-                                <div class="metric-val">10 PM</div>
+                                <div class="metric-val">{{ peak_alert_time }}</div>
                                 <div class="metric-desc">Peak Alert Time</div>
                             </div>
                         </div>
 
+                        {% for zone in alert_zones %}
                         <div class="progress-item">
                             <div class="progress-labels">
-                                <span>Gate 1 (Main Entrance) Alert Ratio</span>
-                                <span>65%</span>
+                                <span>{{ zone.name }} Alert Ratio</span>
+                                <span>{{ zone.ratio }}%</span>
                             </div>
-                            <div class="progress-track"><div class="progress-fill" style="width: 65%;"></div></div>
+                            <div class="progress-track"><div class="progress-fill" style="width: {{ zone.ratio }}%;"></div></div>
                         </div>
-
-                        <div class="progress-item">
-                            <div class="progress-labels">
-                                <span>Perimeter Fence North</span>
-                                <span>35%</span>
-                            </div>
-                            <div class="progress-track"><div class="progress-fill" style="width: 35%;"></div></div>
-                        </div>
+                        {% else %}
+                        <div class="progress-item">No alert zones recorded in the last 24 hours.</div>
+                        {% endfor %}
 
                         <a href="/admin/reports" class="btn-text-link">
                             View Detailed Alert Frequency Reports Page &rarr;
@@ -418,17 +414,17 @@
                         <div class="progress-item" style="margin-top:0;">
                             <div class="progress-labels">
                                 <span>Village Camera Network Coverage</span>
-                                <span style="color:var(--success);">100% Online</span>
+                                <span style="color:var(--success);"><span id="cameraCoverageLabel">{{ camera_coverage }}</span>% Online</span>
                             </div>
-                            <div class="progress-track"><div class="progress-fill" style="width: 100%; background:var(--success);"></div></div>
+                            <div class="progress-track"><div class="progress-fill" id="cameraCoverageBar" style="width: {{ camera_coverage }}%; background:var(--success);"></div></div>
                         </div>
 
                         <div class="progress-item">
                             <div class="progress-labels">
-                                <span>Server Uptime Efficiency Rate</span>
-                                <span>99.8%</span>
+                                <span>Configured Camera Feeds</span>
+                                <span>{{ total_cameras }}</span>
                             </div>
-                            <div class="progress-track"><div class="progress-fill" style="width: 99.8%;"></div></div>
+                            <div class="progress-track"><div class="progress-fill" style="width: {{ 100 if total_cameras else 0 }}%;"></div></div>
                         </div>
 
                         <a href="/admin/reports" class="btn-text-link">
@@ -449,36 +445,20 @@
                         </div>
                     </div>
                     <div class="logs-list">
+                        {% for activity in recent_activity %}
                         <div class="log-row">
                             <div class="log-left">
-                                <span class="log-badge amber"></span>
+                                <span class="log-badge {{ activity.type }}"></span>
                                 <div>
-                                    <div class="log-title">Motion Detected — Gate 1 (Main Entrance)</div>
-                                    <div class="log-sub">YOLOv8 Object Detection Triggered</div>
+                                    <div class="log-title">{{ activity.title }}</div>
+                                    <div class="log-sub">{{ activity.detail }}</div>
                                 </div>
                             </div>
-                            <span class="log-time">10:42 PM</span>
+                            <span class="log-time">{{ activity.time }}</span>
                         </div>
-                        <div class="log-row">
-                            <div class="log-left">
-                                <span class="log-badge success"></span>
-                                <div>
-                                    <div class="log-title">Recognized Resident — John Doe</div>
-                                    <div class="log-sub">Facial Recognition Match (Confidence: 89%)</div>
-                                </div>
-                            </div>
-                            <span class="log-time">08:15 PM</span>
-                        </div>
-                        <div class="log-row">
-                            <div class="log-left">
-                                <span class="log-badge"></span>
-                                <div>
-                                    <div class="log-title">Admin Account Login</div>
-                                    <div class="log-sub">Logged in via IP 192.168.1.15</div>
-                                </div>
-                            </div>
-                            <span class="log-time">06:30 PM</span>
-                        </div>
+                        {% else %}
+                        <div class="log-row"><span class="log-sub">No activity has been recorded.</span></div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -489,7 +469,7 @@
                 <div class="pending-banner">
                     <div class="pending-header">
                         <span class="pending-badge">Pending Action</span>
-                        <div class="pending-count-large">{{ pending_requests_count or '3' }}</div>
+                        <div class="pending-count-large">{{ pending_requests_count }}</div>
                     </div>
                     <div class="pending-text">Recording Clip Requests</div>
                     <div class="pending-sub">Homeowners submitted CCTV recording requests</div>
@@ -538,7 +518,8 @@
                             </div>
                         </a>
 
-                        <button type="button" class="action-item-btn" onclick="if(confirm('Are you sure you want to clear system event history?')) alert('Event logs cleared successfully.');">
+                        <form action="/admin/clear_events" method="post" onsubmit="return confirm('Are you sure you want to clear system event history?');">
+                        <button type="submit" class="action-item-btn">
                             <div class="action-icon-box danger-style">
                                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                             </div>
@@ -547,6 +528,7 @@
                                 <div class="action-text-desc">Purge temporary alert history</div>
                             </div>
                         </button>
+                        </form>
                     </div>
                 </div>
 
@@ -560,7 +542,7 @@
 <footer>
     <div class="footer-inner">
         <span class="footer-brand">Home Detection <em>Security</em></span>
-        <div style="margin-top: 4px;">&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</div>
+        <div style="margin-top: 4px;">&copy; {{ current_year }} Home Detection Security Systems Inc. All rights reserved.</div>
     </div>
 </footer>
 
@@ -574,6 +556,25 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
+
+    async function refreshCameraStatus() {
+        try {
+            const response = await fetch('/api/camera-status', { cache: 'no-store' });
+            if (!response.ok) return;
+            const status = await response.json();
+            const total = status.total_count || 0;
+            const connected = status.connected_count || 0;
+            const coverage = total ? Math.round(connected / total * 100) : 0;
+            document.getElementById('activeCameraFeeds').textContent = connected;
+            document.getElementById('cameraCoverageDelta').textContent = coverage;
+            document.getElementById('cameraCoverageLabel').textContent = coverage;
+            document.getElementById('cameraCoverageBar').style.width = `${coverage}%`;
+        } catch (error) {
+            // Keep the last known dashboard values when the status request is interrupted.
+        }
+    }
+    refreshCameraStatus();
+    setInterval(refreshCameraStatus, 3000);
 </script>
 </body>
 </html>

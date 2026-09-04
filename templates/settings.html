@@ -324,7 +324,7 @@
             <li><a href="/cctv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg><span>CCTV Monitor</span></a></li>
             <li><a href="/events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Event Log</span></a></li>
             <li><a href="/settings" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></a></li>
-            <li><a href="/login" class="nav-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Logout</span></a></li>
+              <li><a href="/logout" class="nav-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1 2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Logout</span></a></li>
         </ul>
     </div>
 </nav>
@@ -363,38 +363,15 @@
         </div>
 
         <div class="section-body">
-            <form id="profileForm" action="/update_profile" method="POST" enctype="multipart/form-data">
-                <div class="profile-upload-container">
-                    <div class="profile-avatar-preview">
-                        <span id="avatarInitials">JD</span>
-                        <img src="" alt="Profile Picture" id="avatarPreviewImg" style="display:none;">
-                    </div>
-                    <div class="profile-avatar-actions">
-                        <label class="field-label">Profile Picture</label>
-                        <input type="file" name="profile_avatar" id="avatarInput" accept=".jpg,.jpeg,.png" disabled>
-                        <p class="field-sublabel">Supported formats: JPG, PNG (Max 5MB)</p>
-                    </div>
-                </div>
-
+            <form id="profileForm" action="{{ url_for('update_profile') }}" method="POST">
                 <div class="grid-2" style="margin-bottom: 18px;">
                     <div class="field-group">
-                        <label class="field-label">Full Name</label>
-                        <input type="text" name="full_name" id="prof_name" value="John Doe" disabled required>
+                        <label class="field-label" for="prof_username">Username</label>
+                        <input type="text" name="username" id="prof_username" value="{{ current_user.username }}" disabled required>
                     </div>
                     <div class="field-group">
                         <label class="field-label">Email Address</label>
-                        <input type="email" name="email" id="prof_email" value="homeowner@bliss.com" disabled required>
-                    </div>
-                </div>
-
-                <div class="grid-2" style="margin-bottom: 18px;">
-                    <div class="field-group">
-                        <label class="field-label">Phone Number</label>
-                        <input type="text" name="phone_number" id="prof_phone" value="+63 912 345 6789" disabled>
-                    </div>
-                    <div class="field-group">
-                        <label class="field-label">Unit / Address</label>
-                        <input type="text" name="house_address" id="prof_address" value="Block 12 Lot 4, Bliss Village 1" disabled>
+                        <input type="email" name="email" id="prof_email" value="{{ current_user.email }}" disabled required>
                     </div>
                 </div>
 
@@ -410,7 +387,7 @@
 
     <!-- 2. DETECTION LOGIC FORM (BUTTON INCLUDED INSIDE THE BOX) -->
     <div class="section-card">
-        <div class="section-header">
+                <div class="section-header">
             <span class="section-title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 Detection Logic
@@ -434,7 +411,7 @@
                         <div class="toggle-desc">Identifies known individuals from your database</div>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" name="face_rec_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
+                        <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
@@ -473,44 +450,7 @@
         </div>
     </div>
 
-    <!-- 3. REQUEST RECORDING SECTION -->
-    <div class="section-card">
-        <div class="section-header">
-            <span class="section-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                Request Recording
-            </span>
-        </div>
-        <div class="section-body">
-            <p class="field-sublabel" style="margin-top:-4px; margin-bottom:18px;">Ask an administrator to pull a specific camera recording. Fill in as much detail as you can.</p>
-            <form method="POST" action="{{ url_for('request_recording') }}">
-                <div class="grid-2" style="margin-bottom: 18px;">
-                    <div class="field-group" style="margin-bottom:0">
-                        <label class="field-label">Date</label>
-                        <input type="date" name="request_date" required>
-                    </div>
-                    <div class="field-group" style="margin-bottom:0">
-                        <label class="field-label">Approximate Time</label>
-                        <input type="time" name="request_time" required>
-                    </div>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Location</label>
-                    <input type="text" name="request_location" placeholder="e.g. Front Door, Back Yard, Garage" required>
-                </div>
-
-                <div class="field-group">
-                    <label class="field-label">Reason</label>
-                    <textarea name="request_reason" rows="4" placeholder="Briefly describe why you're requesting this recording..." required></textarea>
-                </div>
-
-                <button type="submit" class="btn-save">Submit Request</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- 4. MANAGE KNOWN FACES SECTION -->
+    <!-- 3. MANAGE KNOWN FACES SECTION -->
     <div class="section-card">
         <div class="section-header">
             <span class="section-title">
@@ -638,25 +578,6 @@
         profileForm.submit();
     });
 
-    // Avatar File Preview
-    const avatarInput = document.getElementById('avatarInput');
-    const avatarPreviewImg = document.getElementById('avatarPreviewImg');
-    const avatarInitials = document.getElementById('avatarInitials');
-
-    if (avatarInput) {
-        avatarInput.addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (evt) {
-                    avatarPreviewImg.src = evt.target.result;
-                    avatarPreviewImg.style.display = 'block';
-                    if (avatarInitials) avatarInitials.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
 </script>
 
 </body>

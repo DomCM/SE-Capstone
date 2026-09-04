@@ -532,7 +532,6 @@
         <div class="field" style="max-width: 220px;">
             <label for="cam-visibility">Public Visibility</label>
             <select id="cam-visibility" name="is_public">
-                <option value="false">🔒 Private (Admin Only)</option>
                 <option value="true">🌐 Public (All Homeowners)</option>
             </select>
         </div>
@@ -587,8 +586,8 @@
                     </form>
 
                     <div class="cam-status {{ 'status-recording' if cam.is_recording else 'status-live' if cam.status == 'online' else 'status-offline' }}">
-                        <div class="cam-status-dot"></div>                        
-                        {{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}
+                        <div class="cam-status-dot"></div>
+                        <span class="cam-status-label">{{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}</span>
                     </div>                    
                 </div>
             </div>
@@ -825,6 +824,46 @@
         document.getElementById('modalStream').src = '';
         currentCamId = null;
     }
+
+    function updateCameraStatus(statusData) {
+        const statuses = statusData.cameras || {};
+        document.querySelectorAll('.cam-tile').forEach(tile => {
+            const camera = statuses[tile.dataset.camId];
+            if (!camera) return;
+            const connected = camera.connected;
+            const status = connected ? 'online' : 'offline';
+            const changed = tile.dataset.camStatus !== status;
+            tile.dataset.camStatus = status;
+            tile.classList.toggle('offline', !connected);
+
+            const statusEl = tile.querySelector('.cam-status');
+            if (statusEl) {
+                statusEl.className = 'cam-status ' + (camera.recording ? 'status-recording' : connected ? 'status-live' : 'status-offline');
+                statusEl.querySelector('.cam-status-label').textContent = camera.recording ? 'REC' : connected ? 'LIVE' : 'OFFLINE';
+            }
+            if (changed) {
+                const feed = tile.querySelector('.cam-feed');
+                if (connected) {
+                    feed.innerHTML = `<img class="stream" src="${tile.dataset.streamUrl}" alt="${tile.dataset.camName} feed">`;
+                } else {
+                    feed.innerHTML = '<div class="offline-placeholder"><p>Camera Offline</p></div>';
+                }
+            }
+        });
+        const count = document.getElementById('onlineCount');
+        if (count) count.textContent = statusData.connected_count;
+    }
+
+    async function refreshCameraStatus() {
+        try {
+            const response = await fetch('/api/camera-status', { cache: 'no-store' });
+            if (response.ok) updateCameraStatus(await response.json());
+        } catch (error) {
+            // Keep the last known state when the status request is interrupted.
+        }
+    }
+    refreshCameraStatus();
+    setInterval(refreshCameraStatus, 3000);
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 

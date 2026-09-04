@@ -757,7 +757,7 @@
                 </a>
             </li>
             <li>
-                <a href="/login" class="nav-logout">
+                <a href="/logout" class="nav-logout">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span class="link-label">Logout</span>
                 </a>
@@ -923,7 +923,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </div>
             <div>
-                <div class="stat-card-val">24</div>
+                <div class="stat-card-val">{{ incidents_this_month }}</div>
                 <div class="stat-card-lbl">Incidents Recorded (This Month)</div>
             </div>
         </div>
@@ -933,8 +933,8 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div>
-                <div class="stat-card-val">12 / wk</div>
-                <div class="stat-card-lbl">Avg. Alert Frequency</div>
+                <div class="stat-card-val">{{ alerts_this_week }}</div>
+                <div class="stat-card-lbl">Alerts (Last 7 Days)</div>
             </div>
         </div>
 
@@ -943,7 +943,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
             <div>
-                <div class="stat-card-val">2</div>
+                <div class="stat-card-val">{{ high_severity_alerts }}</div>
                 <div class="stat-card-lbl">High Severity Alerts</div>
             </div>
         </div>
@@ -953,7 +953,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
             <div>
-                <div class="stat-card-val">99.8%</div>
+                <div class="stat-card-val">N/A</div>
                 <div class="stat-card-lbl">System Uptime Rate</div>
             </div>
         </div>
@@ -996,37 +996,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr data-type="intrusion">
-                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-089</td>
-                        <td>Front Door (CAM-01)</td>
-                        <td>Intrusion Detection</td>
-                        <td>2026-08-26 14:22:10</td>
-                        <td><span class="badge badge-danger">High</span></td>
-                        <td><a href="/events" class="btn-action-sm">View Footage</a></td>
-                    </tr>
-                    <tr data-type="motion">
-                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-088</td>
-                        <td>Backyard Garden (CAM-02)</td>
-                        <td>Motion Triggered</td>
-                        <td>2026-08-26 10:15:02</td>
-                        <td><span class="badge badge-amber">Medium</span></td>
-                        <td><a href="/events" class="btn-action-sm">View Footage</a></td>
-                    </tr>
-                    <tr data-type="motion">
-                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-084</td>
-                        <td>Garage Gate (CAM-03)</td>
-                        <td>Unrecognized Vehicle</td>
-                        <td>2026-08-25 21:04:45</td>
-                        <td><span class="badge badge-amber">Medium</span></td>
-                        <td><a href="/events" class="btn-action-sm">View Footage</a></td>
-                    </tr>
-                    <tr data-type="offline">
-                        <td style="font-family: var(--font-mono); font-weight: 600;">INC-2026-079</td>
-                        <td>Side Alleyway (CAM-04)</td>
-                        <td>Camera Signal Offline</td>
-                        <td>2026-08-24 03:12:00</td>
-                        <td><span class="badge badge-navy">Low</span></td>
-                        <td><a href="/settings" class="btn-action-sm">Check Connection</a></td>
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:28px; color:var(--text-muted);">No surveillance incidents recorded.</td>
                     </tr>
                 </tbody>
             </table>
@@ -1039,10 +1010,32 @@
     ══════════════════════════════════════════════════════════ -->
     <div class="section-header">
         <span class="section-title">Recording Request Status</span>
-        <button class="btn-action-sm" onclick="alert('Feature to request new recording export is open. Please contact admin if urgent.')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Request
-        </button>
+    </div>
+
+    <div class="add-camera-card">
+        <form action="/recording_requests" method="POST">
+            <div class="card-header-text">Request a video clip</div>
+            <div class="form-grid">
+                <label>Camera
+                    <select name="camera_id" required>
+                        <option value="">Select camera</option>
+                        {% for camera in cameras %}
+                        <option value="{{ camera.id }}">{{ camera.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Date needed
+                    <input type="date" name="date_needed" required>
+                </label>
+                <label>Time range
+                    <input type="text" name="time_range" placeholder="09:00 - 10:00" required>
+                </label>
+                <label>Reason
+                    <input type="text" name="reason" maxlength="1000" required>
+                </label>
+            </div>
+            <button type="submit">Submit recording request</button>
+        </form>
     </div>
 
     <div class="add-camera-card">
@@ -1071,30 +1064,28 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% for recording_request in recording_requests %}
                     <tr>
-                        <td style="font-family: var(--font-mono); font-weight: 600;">REQ-88321</td>
-                        <td>Front Door (CAM-01)</td>
-                        <td>2026-08-26 (14:00 - 15:00)</td>
-                        <td>2026-08-26 14:35</td>
-                        <td><span class="badge badge-success">● Approved</span></td>
-                        <td><a href="#" onclick="alert('Downloading export package...'); return false;" class="btn-action-sm">Download Clip</a></td>
+                        <td>#{{ recording_request.id }}</td>
+                        <td>{{ recording_request.camera.name }}</td>
+                        <td>{{ recording_request.date_needed }}<br>{{ recording_request.time_range }}</td>
+                        <td>{{ recording_request.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ recording_request.status | capitalize }}</td>
+                        <td>
+                            {% if recording_request.status == 'fulfilled' %}
+                            <a href="{{ url_for('download_recording_request', request_id=recording_request.id) }}">Download</a>
+                            {% elif recording_request.status == 'rejected' %}
+                            {{ recording_request.rejection_reason }}
+                            {% else %}
+                            Awaiting admin review
+                            {% endif %}
+                        </td>
                     </tr>
+                    {% else %}
                     <tr>
-                        <td style="font-family: var(--font-mono); font-weight: 600;">REQ-88290</td>
-                        <td>Garage Gate (CAM-03)</td>
-                        <td>2026-08-25 (20:30 - 21:30)</td>
-                        <td>2026-08-25 21:15</td>
-                        <td><span class="badge badge-amber">● In Review</span></td>
-                        <td><span style="font-size:12px; color:var(--text-muted);">Processing...</span></td>
+                        <td colspan="6" style="text-align:center; padding:28px; color:var(--text-muted);">No recording requests submitted.</td>
                     </tr>
-                    <tr>
-                        <td style="font-family: var(--font-mono); font-weight: 600;">REQ-88102</td>
-                        <td>Backyard Garden (CAM-02)</td>
-                        <td>2026-08-20 (00:00 - 06:00)</td>
-                        <td>2026-08-20 08:10</td>
-                        <td><span class="badge badge-navy">● Completed</span></td>
-                        <td><a href="#" onclick="alert('Downloading export package...'); return false;" class="btn-action-sm">Download Clip</a></td>
-                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
