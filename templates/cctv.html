@@ -523,6 +523,27 @@
             .logout-modal { padding: 22px 18px; }
             .logout-modal-actions { flex-direction: column-reverse; }
         }
+        .no-cameras {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            text-align: center;
+            gap: 12px;
+        }
+        .no-cameras svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.5;
+        }
+        .no-cameras p {
+            font-size: 13px;
+            font-family: var(--font-mono);
+            letter-spacing: 0.04em;
+        }
     </style>
 </head>
 <body>

@@ -1064,7 +1064,9 @@ def index():
     if is_admin_user(current_user):
         return redirect(url_for('admin_dashboard'))
     
-    user_cameras = Camera.query.filter_by(user_id=current_user.id).all()
+    user_cameras = Camera.query.filter(
+        or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
+    ).order_by(Camera.id).all()
     month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     week_start = datetime.utcnow() - timedelta(days=7)
     incidents_this_month = EventLog.query.filter(
@@ -1100,7 +1102,10 @@ def create_recording_request():
     date_needed = request.form.get('date_needed', '').strip()
     time_range = request.form.get('time_range', '').strip()
     reason = request.form.get('reason', '').strip()
-    camera = Camera.query.filter_by(id=camera_id, user_id=current_user.id).first()
+    camera = Camera.query.filter(
+        Camera.id == camera_id,
+        or_(Camera.user_id == current_user.id, Camera.is_public.is_(True)),
+    ).first()
 
     if not camera or not date_needed or not time_range or not reason:
         flash('Camera, date, time range, and reason are required.', 'danger')
