@@ -13,3 +13,4 @@ pyotp
 qrcode
 cryptography
 python-dotenv
+setuptools==57.4

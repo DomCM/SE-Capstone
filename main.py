@@ -1575,10 +1575,7 @@ def admin_system_save():
     db.session.commit()
     record_audit_event(current_user.id, 'settings', 'Updated system settings', 'Admin', get_client_ip())
 
-    with stream_lock:
-        if current_user.id in active_user_streams:
-            for mgr in active_user_streams[current_user.id].values():
-                mgr.update_settings(settings)
+    refresh_stream_settings(settings)
 
     flash('System settings updated.', 'success')
     return redirect(url_for('admin_system'))
@@ -1761,6 +1758,17 @@ def release_stream(user_id, camera_id, source_key, manager):
             manager.release()
 
 
+def refresh_stream_settings(settings, user_id=None):
+    """Apply settings to active workers, optionally limited to one owner."""
+    with stream_lock:
+        managers = {
+            manager for manager in active_physical_streams.values()
+            if user_id is None or manager.user_id == user_id
+        }
+        for manager in managers:
+            manager.update_settings(settings)
+
+
 def gen_frames(user_id, camera):
     """Subscribe to the shared source worker and stream its output only when updated."""
     source_key, manager = acquire_stream(user_id, camera)
@@ -1803,10 +1811,7 @@ def settings():
         db.session.commit()
         flash("Settings Updated", "success")
         
-        with stream_lock:
-            if current_user.id in active_user_streams:
-                for mgr in active_user_streams[current_user.id].values():
-                    mgr.update_settings(user_settings)
+        refresh_stream_settings(user_settings, current_user.id)
         
         return redirect(url_for('settings'))
         
