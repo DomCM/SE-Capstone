@@ -70,12 +70,15 @@ class OtpChallenge(db.Model):
 class EventLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    camera_id = db.Column(db.Integer, db.ForeignKey('camera.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.now)
     source_name = db.Column(db.String(100))
     event_type = db.Column(db.String(50))
     description = db.Column(db.String(500))
+    confidence = db.Column(db.Float, nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
     user = db.relationship('User', backref='event_logs', lazy=True)
+    camera = db.relationship('Camera', backref='event_logs', lazy=True)
 
     @property
     def username(self):

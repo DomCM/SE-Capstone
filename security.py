@@ -155,6 +155,13 @@ def ensure_database_schema():
         if 'is_public' not in camera_columns:
             db.session.execute(text('ALTER TABLE camera ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT 0'))
             db.session.commit()
+        event_log_columns = {column['name'] for column in inspector.get_columns('event_log')}
+        if 'camera_id' not in event_log_columns:
+            db.session.execute(text('ALTER TABLE event_log ADD COLUMN camera_id INTEGER'))
+            db.session.commit()
+        if 'confidence' not in event_log_columns:
+            db.session.execute(text('ALTER TABLE event_log ADD COLUMN confidence FLOAT'))
+            db.session.commit()
 
 
 def create_admin_user(username, email, password):

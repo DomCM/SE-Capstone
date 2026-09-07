@@ -1,5 +1,13 @@
 cd .venv/scripts
 call activate.bat
 cd ../..
-py main.py --create-admin --username "adminDomCM" --email "macuana_arnolddominic@plpasig.edu.ph" --password "testPassword123654"
+
+set /p USERNAME=Please enter the admin username:
+
+set /p EMAIL=Please enter the admin email:
+
+set /p PASSWORD=Please enter the admin password:
+
+py main.py --create-admin --username "%USERNAME%" --email "%EMAIL%" --password "%PASSWORD%"
 PAUSE
+

@@ -356,7 +356,7 @@
             </div>
             <div class="letterhead-meta">
                 <div>Document ID: <strong>{{ doc_id or 'EBV-2026-0827' }}</strong></div>
-                <div>Date Generated: <strong>{{ date_generated or '2026-08-27' }}</strong></div>
+                <div>Date Generated: <strong>{{ date_generated }}</strong></div>
                 <div>Classification: <strong>Official Security Audit</strong></div>
             </div>
         </div>
@@ -370,19 +370,19 @@
         <!-- KPI DATA METRICS -->
         <div class="report-summary-boxes">
             <div class="r-box">
-                <div class="r-val">{{ total_triggers or 42 }}</div>
+                <div class="r-val">{{ total_triggers }}</div>
                 <div class="r-lbl">Total Triggers</div>
             </div>
             <div class="r-box">
-                <div class="r-val">{{ verified_residents or 38 }}</div>
+                <div class="r-val">{{ verified_residents }}</div>
                 <div class="r-lbl">Verified Residents</div>
             </div>
             <div class="r-box">
-                <div class="r-val" style="color:var(--danger);">{{ unrecognized_alerts or 4 }}</div>
+                <div class="r-val" style="color:var(--danger);">{{ unrecognized_alerts }}</div>
                 <div class="r-lbl">Unrecognized Faces</div>
             </div>
             <div class="r-box">
-                <div class="r-val">{{ uptime_rate or '99.8%' }}</div>
+                <div class="r-val">{{ uptime_rate }}</div>
                 <div class="r-lbl">System Uptime Rate</div>
             </div>
         </div>
@@ -418,27 +418,8 @@
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <!-- Dynamic Fallback Preview Row (Default UI) -->
                     <tr>
-                        <td>2026-08-27 10:42:11 PM</td>
-                        <td>Gate 1 (Main Entrance)</td>
-                        <td>YOLOv8 Motion & Object Detected</td>
-                        <td>94.2%</td>
-                        <td><strong style="color:var(--amber);">Warning / Motion</strong></td>
-                    </tr>
-                    <tr>
-                        <td>2026-08-27 08:15:02 PM</td>
-                        <td>Clubhouse Lobby Entrance</td>
-                        <td>Facial Recognition Match — John Doe</td>
-                        <td>89.5%</td>
-                        <td><strong style="color:var(--success);">Resident Verified</strong></td>
-                    </tr>
-                    <tr>
-                        <td>2026-08-27 03:20:45 PM</td>
-                        <td>Perimeter Fence North</td>
-                        <td>Unrecognized Person Alert</td>
-                        <td>76.8%</td>
-                        <td><strong style="color:var(--danger);">High Severity Alert</strong></td>
+                        <td colspan="5" style="text-align:center;color:var(--text-muted);">No security events matched the selected filters.</td>
                     </tr>
                 {% endif %}
             </tbody>

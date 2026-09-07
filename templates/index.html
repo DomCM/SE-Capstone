@@ -1013,29 +1013,43 @@
     </div>
 
     <div class="add-camera-card">
-        <form action="/recording_requests" method="POST">
-            <div class="card-header-text">Request a video clip</div>
-            <div class="form-grid">
-                <label>Camera
-                    <select name="camera_id" required>
+        <div class="card-header">
+            <div class="card-header-main">
+                <div class="card-header-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                    <div class="card-header-text">Request a Video Clip</div>
+                    <div class="card-header-sub">Submit a request to extract recorded footage</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form action="/recording_requests" method="POST" class="add-form">
+                <div class="field">
+                    <label for="req-cam">Camera</label>
+                    <select id="req-cam" name="camera_id" required>
                         <option value="">Select camera</option>
                         {% for camera in cameras %}
                         <option value="{{ camera.id }}">{{ camera.name }}</option>
                         {% endfor %}
                     </select>
-                </label>
-                <label>Date needed
-                    <input type="date" name="date_needed" required>
-                </label>
-                <label>Time range
-                    <input type="text" name="time_range" placeholder="09:00 - 10:00" required>
-                </label>
-                <label>Reason
-                    <input type="text" name="reason" maxlength="1000" required>
-                </label>
-            </div>
-            <button type="submit">Submit recording request</button>
-        </form>
+                </div>
+                <div class="field">
+                    <label for="req-date">Date Needed</label>
+                    <input id="req-date" type="date" name="date_needed" required>
+                </div>
+                <div class="field">
+                    <label for="req-time">Time Range</label>
+                    <input id="req-time" type="text" name="time_range" placeholder="09:00 - 10:00" required>
+                </div>
+                <div class="field">
+                    <label for="req-reason">Reason</label>
+                    <input id="req-reason" type="text" name="reason" placeholder="State reason for request" maxlength="1000" required>
+                </div>
+                <button type="submit" class="btn-add">Submit Request</button>
+            </form>
+        </div>
     </div>
 
     <div class="add-camera-card">

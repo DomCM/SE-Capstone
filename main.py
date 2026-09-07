@@ -181,6 +181,7 @@ from security import (
     clear_audit_events_for_user, ensure_database_schema, create_admin_user,
     AUDIT_EVENT_TYPES,
 )
+from reports import build_report
 
 
 def allowed_file(filename):
@@ -309,9 +310,10 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
 
 #video
 class VideoStreamManager:
-    def __init__(self, user_id, camera_id, source, settings):
+    def __init__(self, user_id, camera_id, source, settings, camera_name=None):
         self.user_id = user_id
         self.camera_id = camera_id
+        self.camera_name = camera_name or f'Cam {camera_id}'
         self.video_source = source
         self.cap = None
         self.last_connection_attempt = 0
@@ -646,7 +648,7 @@ class VideoStreamManager:
                     is_crit = name in active_classes
                     if is_crit:
                         critical_detected = True
-                        detected_crit_names.append(name)
+                        detected_crit_names.append((name, confidence))
                     
                     self.yolo_detections.append((x1, y1, x2, y2, name, is_crit))
                     if is_human_detection_name(name):
@@ -718,8 +720,11 @@ class VideoStreamManager:
 
         # Handle Alerts
         if critical_detected and not self.fire_alert_active:
-            msg = f"Detected: {', '.join(set(detected_crit_names))}"
-            self.log_db_event("CRITICAL ALERT", msg)
+            detected_names = list(dict.fromkeys(name for name, _ in detected_crit_names))
+            highest_confidence = max((confidence for _, confidence in detected_crit_names), default=None)
+            event_type = f"CRITICAL ALERT: {', '.join(detected_names)}"
+            msg = f"Detected: {', '.join(detected_names)}"
+            self.log_db_event(event_type, msg, highest_confidence)
             class SettingsObj:
                 pass
             settings_obj = SettingsObj()
@@ -752,7 +757,7 @@ class VideoStreamManager:
             self.recording_writer.release()
             self.recording_writer = None
 
-    def log_db_event(self, event_type, desc):
+    def log_db_event(self, event_type, desc, confidence=None):
         dedupe_key = (event_type, (desc or '')[:180])
         now = time.monotonic()
         last_logged = self._recent_event_cache.get(dedupe_key)
@@ -762,7 +767,14 @@ class VideoStreamManager:
 
         with app.app_context():
             try:
-                log = EventLog(user_id=self.user_id, source_name=f"Cam {self.camera_id}", event_type=event_type, description=desc)
+                log = EventLog(
+                    user_id=self.user_id,
+                    camera_id=self.camera_id,
+                    source_name=self.camera_name,
+                    event_type=event_type,
+                    description=desc,
+                    confidence=confidence,
+                )
                 db.session.add(log)
                 db.session.commit()
             finally:
@@ -1413,7 +1425,14 @@ def admin_logs():
 @app.route('/admin/reports')
 @admin_required
 def admin_reports():
-    return render_template('admin_reports.html')
+    report_context = build_report(
+        EventLog,
+        report_type=request.args.get('type', 'village'),
+        timeframe=request.args.get('timeframe', '7d'),
+        zone=request.args.get('zone', 'all'),
+        severity=request.args.get('severity', 'all'),
+    )
+    return render_template('admin_reports.html', **report_context)
 
 
 @app.route('/admin/request')
@@ -1711,7 +1730,7 @@ def acquire_stream(user_id, camera):
         if manager is None or manager.stream_stop_event.is_set():
             with app.app_context():
                 user_settings = Settings.query.filter_by(user_id=user_id).first()
-            manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings)
+            manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings, camera.name)
             manager.scope_key = source_key
             active_physical_streams[source_key] = manager
             manager.start()
