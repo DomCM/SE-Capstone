@@ -77,6 +77,7 @@ BASE_RECORDINGS_DIR = "users_data"
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 VIDEO_EXTENSIONS = {'mp4', 'avi', 'mkv', 'mov', 'webm'}
+CROWD_PERSON_THRESHOLD = 3
 
 security.configure(app, db, (User, Camera, Settings, OtpChallenge, EventLog, RecordingRequest), BASE_RECORDINGS_DIR)
 
@@ -94,6 +95,7 @@ face_cache = {}
 MAX_DETECTION_POOL_WORKERS = max(1, min(2, cpu_count() or 1))
 PROCESSING_INTERVAL_SECONDS = 0.1
 detection_pool = None
+face_recognition_lock = threading.Lock()
 
 
 def is_human_detection_name(name):
@@ -119,6 +121,16 @@ def calculate_overlap_ratio(box_a, box_b):
     area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
     union_area = max(1, area_a + area_b - intersection_area)
     return intersection_area / union_area
+
+
+def deduplicate_human_boxes(human_boxes, overlap_threshold=0.5):
+    """Merge overlapping person detections from multiple YOLO models."""
+    unique_boxes = []
+    for detection in sorted(human_boxes, key=lambda item: item[4], reverse=True):
+        if not any(calculate_overlap_ratio(detection[:4], existing[:4]) >= overlap_threshold
+                   for existing in unique_boxes):
+            unique_boxes.append(detection)
+    return unique_boxes
 
 
 def should_run_face_recognition(frame_count, process_interval, has_active_tracker, tracker_lost):
@@ -232,12 +244,13 @@ def detect_faces_in_chunk(cropped_image, bbox, scale_factor, upsample_amount, kn
         cropped_image = cv2.resize(cropped_image, (0, 0), fx=scale_factor, fy=scale_factor)
 
     rgb_cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB)
-    chunk_face_locations = face_recognition.face_locations(
-        rgb_cropped_image,
-        model="hog",
-        number_of_times_to_upsample=upsample_amount,
-    )
-    chunk_face_encodings = face_recognition.face_encodings(rgb_cropped_image, chunk_face_locations, num_jitters=0)
+    with face_recognition_lock:
+        chunk_face_locations = face_recognition.face_locations(
+            rgb_cropped_image,
+            model="hog",
+            number_of_times_to_upsample=upsample_amount,
+        )
+        chunk_face_encodings = face_recognition.face_encodings(rgb_cropped_image, chunk_face_locations, num_jitters=0)
 
     results = []
     scale_up = 1.0 / scale_factor
@@ -337,6 +350,7 @@ class VideoStreamManager:
         
         self.frame_count = 0
         self.fire_alert_active = False
+        self.crowd_alert_active = False
         self.face_detections = []
         self.yolo_detections = []
         self.recording_writer = None
@@ -458,6 +472,18 @@ class VideoStreamManager:
             self.tracker_lost = True
 
         return updated_bboxes
+
+    def _finalize_processed_frame(self, annotated_frame):
+        """Apply output work shared by detector and tracker frames."""
+        if self.is_recording:
+            if not self.recording_writer:
+                self.start_recording(annotated_frame)
+            self.recording_writer.write(annotated_frame)
+        elif self.recording_writer:
+            self.stop_recording()
+
+        self.frame_count += 1
+        return annotated_frame
 
     def _open_stream(self):
         """Lazily open the video stream with error handling, TCP forcing, and keyframe flushing."""
@@ -598,34 +624,29 @@ class VideoStreamManager:
         if self.user_id not in face_cache:
              self.known_encodings, self.known_names = get_user_face_data(self.user_id)
 
-        # 1. KCF TRACKING FOR INTERMEDIATE FRAMES
+        # 1. KCF TRACKING FOR SHORT-LIVED ROI CONTINUATION
         if self.tracker_active:
             tracked_boxes = self._update_trackers(frame)
             
-            if tracked_boxes:
+            if tracked_boxes and self.tracker_frame_count < process_interval:
                 for x1, y1, x2, y2 in tracked_boxes:
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
                 
                 for (top, right, bottom, left), name in self.face_detections:
                     color = (0, 165, 255) if name == "Unknown" else (255, 255, 0)
                     cv2.rectangle(annotated_frame, (left, top), (right, bottom), color, 2)
-                    cv2.putText(annotated_frame, f"Verified: {name}", (left, bottom+20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                    cv2.putText(annotated_frame, f"Last verified: {name}", (left, bottom+20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
                 
                 cv2.putText(annotated_frame, f"Tracking Active ({len(tracked_boxes)} Persons)", (20, 40), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
-                if self.tracker_frame_count >= process_interval:
-                    self._reset_tracker()
-
-                self.frame_count += 1
-                return annotated_frame
+                return self._finalize_processed_frame(annotated_frame)
             else:
                 self._reset_tracker()
 
         # 2. FRAME SKIPPING FOR DETECTIONS
         if self.frame_count % process_interval != 0:
-            self.frame_count += 1
-            return annotated_frame
+            return self._finalize_processed_frame(annotated_frame)
 
         # 3. FULL COMPUTER VISION SCAN PASS
         critical_detected = False
@@ -637,7 +658,7 @@ class VideoStreamManager:
         if self.settings_cache.get('yolo_enabled', True) and yolo_model:
             obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
             with torch.no_grad():
-                results = yolo_model.predict(frame, imgsz=320, conf=obj_conf, verbose=False)
+                results = yolo_model.predict(frame, imgsz=1088, conf=obj_conf, verbose=False)
             for r in results:
                 for box in r.boxes:
                     cls_id = int(box.cls[0].item())
@@ -658,7 +679,7 @@ class VideoStreamManager:
         if self.settings_cache.get('yolo_object_enabled', True) and yolo_model_object:
             obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
             with torch.no_grad():
-                results = yolo_model_object.predict(frame, imgsz=320, conf=obj_conf, verbose=False)
+                results = yolo_model_object.predict(frame, imgsz=1088, conf=obj_conf, verbose=False)
             for r in results:
                 for box in r.boxes:
                     name = r.names.get(int(box.cls[0].item()))
@@ -669,6 +690,8 @@ class VideoStreamManager:
                         human_boxes.append((x1, y1, x2, y2, confidence))
 
         # Draw YOLO detections
+        human_boxes = deduplicate_human_boxes(human_boxes)
+
         for (x1, y1, x2, y2, name, is_crit) in self.yolo_detections:
             color = (0, 0, 255) if is_crit else (0, 255, 0)
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
@@ -734,16 +757,15 @@ class VideoStreamManager:
         
         self.fire_alert_active = critical_detected
 
-        # Record stream frames
-        if self.is_recording:
-            if not self.recording_writer:
-                self.start_recording(annotated_frame)
-            self.recording_writer.write(annotated_frame)
-        elif self.recording_writer:
-            self.stop_recording()
+        crowd_detected = len(human_boxes) > CROWD_PERSON_THRESHOLD
+        if crowd_detected and not self.crowd_alert_active:
+            crowd_description = f"Crowd detected: {len(human_boxes)} people in camera view."
+            crowd_confidence = max((box[4] for box in human_boxes), default=None)
+            self.log_db_event('CROWD DETECTED', crowd_description, crowd_confidence)
 
-        self.frame_count += 1
-        return annotated_frame
+        self.crowd_alert_active = crowd_detected
+
+        return self._finalize_processed_frame(annotated_frame)
 
     def start_recording(self, frame):
         user_rec_dir = os.path.join(BASE_RECORDINGS_DIR, str(self.user_id), "recordings")

@@ -8,6 +8,15 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ══ LOCKED PAGE FRAME — identical sa lahat ng homeowner pages ═══════
+           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
+        html {
+            height: 100%;
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+        }
+
+
         :root {
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
@@ -101,6 +110,7 @@
         .brand-name em { font-style: italic; color: var(--navy-600); }
         .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
+        /* Live clock pill */
         .nav-clock {
             display: flex;
             align-items: center;
@@ -165,9 +175,9 @@
         }
 
         @media (max-width: 1024px) {
-            /* iPad 11-inch layout */
-            .nav-inner { padding: 0 20px; gap: 14px; flex-wrap: wrap; height: auto; padding-top: 12px; padding-bottom: 12px; }
+            .nav-inner { padding: 12px 20px; gap: 14px; flex-wrap: wrap; height: auto; }
             .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; }
+            /* iPad 11-inch layout */
             .page { padding: 24px 20px 56px; }
             .page-header { flex-direction: column; align-items: flex-start; }
             .btn-danger { width: 100%; justify-content: center; }
@@ -492,10 +502,8 @@
             </li>
             <li>
                 <a href="/cctv">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                    CCTV Monitor
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    <span class="link-label">CCTV Monitor</span>
                 </a>
             </li>
             <li>
@@ -504,7 +512,7 @@
                     <span class="link-label">Event Log</span>
                 </a>
             </li>
-            <li class="hide-sm">
+            <li>
                 <a href="/settings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span class="link-label">Settings</span>

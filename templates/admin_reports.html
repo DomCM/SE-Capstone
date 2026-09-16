@@ -9,6 +9,15 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ══ LOCKED PAGE FRAME — identical sa lahat ng admin pages ═══════════
+           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
+        html {
+            height: 100%;
+            overflow-y: scroll;        /* laging naka-reserve ang scrollbar space */
+            scrollbar-gutter: stable;
+        }
+
+
         :root {
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
@@ -52,49 +61,67 @@
             display: flex; flex-direction: column;
         }
 
-        /* ══ NAVIGATION ═══════════════════════════════════════ */
+        /* ══════════════════════════════════════
+           RESPONSIVE NAVIGATION
+        ══════════════════════════════════════ */
         nav {
             position: sticky; top: 0; z-index: 200;
             background: rgba(255,255,255,0.92);
             backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
             border-bottom: 1px solid var(--border);
             box-shadow: var(--shadow-xs); flex-shrink: 0;
+            width: 100%;
         }
         .nav-inner {
-            max-width: 1320px; margin: 0 auto; padding: 0 28px; height: 64px;
+            max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 64px;
             display: flex; align-items: center; justify-content: space-between; gap: 20px;
         }
         .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px; background: var(--navy-900); border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; color: #fff;
+            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            padding: 2px; overflow: hidden; border: 1px solid var(--border);
         }
-        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); }
+        .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .brand-text-block { line-height: 1.15; }
+        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
         .brand-name em { font-style: italic; color: var(--navy-600); }
-        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
         .nav-clock {
             display: flex; align-items: center; gap: 8px;
             background: var(--navy-900); border-radius: 999px; padding: 6px 16px; flex-shrink: 0;
         }
-        .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s infinite; }
+        .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s ease-in-out infinite; }
         @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
-        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; }
+        .nav-clock-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ef4444; }
+        .nav-clock-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.15); }
+        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; letter-spacing: 0.04em; }
 
         .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
         .nav-links a {
             display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
-            font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none; transition: all 0.15s;
+            font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
+            transition: background 0.15s, color 0.15s; white-space: nowrap; box-sizing: border-box;
+            border: 1px solid transparent;   /* pantay ang laki ng bawat link */
         }
-        .nav-links a svg { width: 14px; height: 14px; opacity: 0.7; }
+        .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
         .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
-        .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; }
+        .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
         .nav-links a.active svg { opacity: 1; }
-        .nav-links a.nav-logout { margin-left: 6px; border: 1px solid var(--border); }
-        .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); }
+        .nav-links a.nav-logout { margin-left: 6px; border-color: var(--border); }
+        .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
+
+        .menu-toggle {
+            display: none; background: transparent; border: 1px solid var(--border);
+            color: var(--navy-900); width: 40px; height: 40px; border-radius: var(--radius-sm);
+            align-items: center; justify-content: center; cursor: pointer;
+        }
+        .menu-toggle svg { width: 20px; height: 20px; }
+
 
         /* ══ PAGE LAYOUT ══════════════════════════════════════ */
-        .page { max-width: 1320px; margin: 0 auto; padding: 32px 28px 64px; width: 100%; flex: 1 0 auto; }
+        .page { max-width: 1280px; margin: 0 auto; padding: 32px 28px 64px; width: 100%; flex: 1 0 auto; }
         
         .page-header {
             display: flex; align-items: center; justify-content: space-between;
@@ -190,7 +217,7 @@
 
         /* FOOTER */
         footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
-        .footer-inner { max-width: 1320px; margin: 0 auto; font-size: 12.5px; }
+        .footer-inner { max-width: 1280px; margin: 0 auto; font-size: 12.5px; }
 
         /* ══ PRINT ONLY STYLING (EUSEBIO BLISS PDF PREVIEW) ════ */
         @media print {
@@ -207,6 +234,20 @@
         }
 
         @media (max-width: 1024px) {
+            .nav-inner {
+                padding: 0 20px; height: auto;
+                padding-top: 12px; padding-bottom: 12px;
+                flex-wrap: wrap; gap: 12px;
+            }
+            .menu-toggle { display: flex; order: 3; }
+            .nav-links {
+                display: none; width: 100%;
+                flex-direction: column; order: 4;
+                background: var(--off-white); padding: 8px;
+                border-radius: var(--radius-md); border: 1px solid var(--border);
+                margin-top: 8px; gap: 4px;
+            }
+            .nav-links.show { display: flex; }
             .report-types-grid { grid-template-columns: repeat(2, 1fr); }
             .report-summary-boxes { grid-template-columns: repeat(2, 1fr); }
         }
@@ -218,33 +259,83 @@
 </head>
 <body>
 
-<!-- ══ NAVIGATION ═══════════════════════════════════════════ -->
+<!-- ══ NAV ═══════════════════════════════════════════════════ -->
 <nav>
     <div class="nav-inner">
+        <!-- Brand -->
         <a class="nav-brand" href="/admin">
             <div class="brand-logo-wrap">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo">
             </div>
-            <div>
+            <div class="brand-text-block">
                 <div class="brand-name">Home Detection <em>Security</em></div>
-                <div class="brand-sub">Admin Operations</div>
+                <div class="brand-sub">Admin Panel</div>
             </div>
         </a>
 
+        <!-- Live clock -->
         <div class="nav-clock">
             <span class="nav-clock-dot"></span>
-            <span class="nav-clock-time" id="reportClock">--:--:--</span>
+            <span class="nav-clock-label">Live</span>
+            <div class="nav-clock-sep"></div>
+            <span class="nav-clock-time" id="adminClock">--:--:--</span>
         </div>
 
-        <ul class="nav-links">
-            <li><a href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a></li>
-            <li><a href="/admin/cctv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>CCTV Monitor</a></li>
-            <li><a href="/admin/reports" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reports</a></li>
-            <li><a href="/admin/users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users</a></li>
-            <li><a href="/admin/request"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Request</a></li>
-            <li><a href="/admin/logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Admin Logs</a></li>
-            <li><a href="/admin/system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Settings</a></li>
-            <li><a href="/login" class="nav-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+        <button class="menu-toggle" id="menuToggleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <!-- Dynamic Nav Links with Reports Included -->
+        <ul class="nav-links" id="navLinksList">
+            <li>
+                <a href="/admin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="/admin/cctv">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    CCTV Monitor
+                </a>
+            </li>
+            <!-- 🌐 ADDED REPORTS LINK -->
+            <li>
+                <a href="/admin/reports" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Reports
+                </a>
+            </li>
+            <li>
+                <a href="/admin/users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    Users
+                </a>
+            </li>
+            <li>
+                <a href="/admin/request">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Request
+                </a>
+            </li>
+            <li>
+                <a href="/admin/logs">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Admin Logs
+                </a>
+            </li>
+            <li>
+                <a href="/admin/system">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Settings
+                </a>
+            </li>
+            <li>
+                <a href="/logout" class="nav-logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
+                </a>
+            </li>
         </ul>
     </div>
 </nav>
@@ -455,10 +546,20 @@
         const h = String(now.getHours()).padStart(2, '0');
         const m = String(now.getMinutes()).padStart(2, '0');
         const s = String(now.getSeconds()).padStart(2, '0');
-        document.getElementById('reportClock').textContent = `${h}:${m}:${s}`;
+        document.getElementById('adminClock').textContent = `${h}:${m}:${s}`;
     }
     updateClock();
     setInterval(updateClock, 1000);
+
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const navLinksList = document.getElementById('navLinksList');
+    if (menuToggleBtn && navLinksList) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navLinksList.classList.toggle('show');
+        });
+        document.addEventListener('click', () => navLinksList.classList.remove('show'));
+    }
 
     // Dynamic Selection Handler
     function selectReportType(typeKey, title) {

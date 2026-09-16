@@ -8,6 +8,14 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ══ LOCKED PAGE FRAME — identical sa lahat ng admin pages ═══════════
+           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
+        html {
+            height: 100%;
+            overflow-y: scroll;        /* laging may scrollbar space na naka-reserve */
+            scrollbar-gutter: stable;  /* modern browsers */
+        }
+
         :root {
             /* ── Core Palette ── */
             --navy-950:  #060d1f;
@@ -45,7 +53,6 @@
             --font-mono: 'JetBrains Mono', monospace;
         }
 
-        html, body { height: 100%; }
         body {
             font-family: var(--font-sans);
             background: var(--off-white);
@@ -65,6 +72,7 @@
             backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
             border-bottom: 1px solid var(--border);
             box-shadow: var(--shadow-xs); flex-shrink: 0;
+            width: 100%;
         }
         .nav-inner {
             max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 64px;
@@ -96,13 +104,14 @@
         .nav-links a {
             display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
             font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
-            transition: background 0.15s, color 0.15s; white-space: nowrap;
+            transition: background 0.15s, color 0.15s; white-space: nowrap; box-sizing: border-box;
+            border: 1px solid transparent;   /* pantay ang laki ng bawat link */
         }
         .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
         .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
         .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
         .nav-links a.active svg { opacity: 1; }
-        .nav-links a.nav-logout { margin-left: 6px; border: 1px solid var(--border); }
+        .nav-links a.nav-logout { margin-left: 6px; border-color: var(--border); }
         .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
 
         .menu-toggle {
@@ -258,16 +267,9 @@
             flex-shrink: 0;
             text-align: center;
         }
-        .footer-inner {
-            max-width: 1280px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 12.5px;
-            flex-wrap: wrap;
-        }
+        .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12.5px; }
+        .footer-brand { font-family: var(--font-serif); font-size: 14px; font-weight: 700; color: var(--navy-100); }
+        .footer-brand em { font-style: italic; color: var(--navy-400); }
 
         @media (max-width: 1024px) {
             .nav-inner {
@@ -293,7 +295,7 @@
 <nav>
     <div class="nav-inner">
         <!-- Brand -->
-        <a class="nav-brand" href="admin_dashboard.html">
+        <a class="nav-brand" href="/admin">
             <div class="brand-logo-wrap">
                 <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo">
             </div>
@@ -448,7 +450,8 @@
 
 <footer>
     <div class="footer-inner">
-        <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
+        <span class="footer-brand">Home Detection <em>Security</em></span>
+        <div>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</div>
     </div>
 </footer>
 

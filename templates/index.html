@@ -9,6 +9,15 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ══ LOCKED PAGE FRAME — identical sa lahat ng homeowner pages ═══════
+           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
+        html {
+            height: 100%;
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+        }
+
+
         :root {
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
@@ -160,6 +169,7 @@
 
         .nav-logout { margin-left: 10px; border: 1px solid var(--border) !important; }
         .nav-logout:hover { background: var(--danger-bg) !important; color: var(--danger) !important; border-color: #f5a89e !important; }
+
 
         /* ══ PAGE ═════════════════════════════════════════════ */
         .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
@@ -1241,4 +1251,4 @@
     })();
 </script>
 </body>
-</html>     
+</html>

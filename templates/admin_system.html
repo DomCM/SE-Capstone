@@ -8,6 +8,15 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ══ LOCKED PAGE FRAME — identical sa lahat ng admin pages ═══════════
+           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
+        html {
+            height: 100%;
+            overflow-y: scroll;        /* laging naka-reserve ang scrollbar space */
+            scrollbar-gutter: stable;
+        }
+
+
         :root {
             /* ── Core Palette ── */
             --navy-950:  #060d1f;
@@ -45,7 +54,6 @@
             --font-mono: 'JetBrains Mono', monospace;
         }
 
-        html, body { height: 100%; }
         body {
             font-family: var(--font-sans);
             background: var(--off-white);
@@ -65,6 +73,7 @@
             backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
             border-bottom: 1px solid var(--border);
             box-shadow: var(--shadow-xs); flex-shrink: 0;
+            width: 100%;
         }
         .nav-inner {
             max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 64px;
@@ -96,13 +105,14 @@
         .nav-links a {
             display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
             font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
-            transition: background 0.15s, color 0.15s; white-space: nowrap;
+            transition: background 0.15s, color 0.15s; white-space: nowrap; box-sizing: border-box;
+            border: 1px solid transparent;   /* pantay ang laki ng bawat link */
         }
         .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
         .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
         .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
         .nav-links a.active svg { opacity: 1; }
-        .nav-links a.nav-logout { margin-left: 6px; border: 1px solid var(--border); }
+        .nav-links a.nav-logout { margin-left: 6px; border-color: var(--border); }
         .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
 
         .menu-toggle {
@@ -112,10 +122,8 @@
         }
         .menu-toggle svg { width: 20px; height: 20px; }
 
-        /* ══════════════════════════════════════
-           PAGE CONTENT LAYOUT
         ══════════════════════════════════════ */
-        .page { max-width: 860px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
+        .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; flex: 1 0 auto; }
 
         .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
         .header-icon {
@@ -340,12 +348,18 @@
         .btn-modal-confirm { background: var(--danger); color: #fff; border-color: var(--danger); }
 
         @media (max-width: 1024px) {
-            .nav-inner { padding: 12px 20px; flex-wrap: wrap; gap: 12px; height: auto; }
+            .nav-inner {
+                padding: 0 20px; height: auto;
+                padding-top: 12px; padding-bottom: 12px;
+                flex-wrap: wrap; gap: 12px;
+            }
             .menu-toggle { display: flex; order: 3; }
             .nav-links {
-                display: none; width: 100%; flex-direction: column; order: 4;
-                background: var(--off-white); padding: 8px; border-radius: var(--radius-md);
-                border: 1px solid var(--border); margin-top: 8px; gap: 4px;
+                display: none; width: 100%;
+                flex-direction: column; order: 4;
+                background: var(--off-white); padding: 8px;
+                border-radius: var(--radius-md); border: 1px solid var(--border);
+                margin-top: 8px; gap: 4px;
             }
             .nav-links.show { display: flex; }
         }
@@ -353,12 +367,13 @@
 </head>
 <body>
 
-<!-- ══ NAV BAR ═══════════════════════════════════════════════ -->
+<!-- ══ NAV ═══════════════════════════════════════════════════ -->
 <nav>
     <div class="nav-inner">
+        <!-- Brand -->
         <a class="nav-brand" href="/admin">
             <div class="brand-logo-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo">
             </div>
             <div class="brand-text-block">
                 <div class="brand-name">Home Detection <em>Security</em></div>
@@ -366,6 +381,7 @@
             </div>
         </a>
 
+        <!-- Live clock -->
         <div class="nav-clock">
             <span class="nav-clock-dot"></span>
             <span class="nav-clock-label">Live</span>
@@ -377,6 +393,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
 
+        <!-- Dynamic Nav Links with Reports Included -->
         <ul class="nav-links" id="navLinksList">
             <li>
                 <a href="/admin">
@@ -390,6 +407,7 @@
                     CCTV Monitor
                 </a>
             </li>
+            <!-- 🌐 ADDED REPORTS LINK -->
             <li>
                 <a href="/admin/reports">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -432,6 +450,7 @@
 
 <!-- ══ PAGE CONTENT ══════════════════════════════════════════ -->
 <main class="page">
+<div style="max-width: 860px; margin: 0 auto;">
 
     <div class="page-header">
         <div class="header-icon">
@@ -711,6 +730,7 @@
         </div>
     </div>
 
+</div>
 </main>
 
 <footer>
