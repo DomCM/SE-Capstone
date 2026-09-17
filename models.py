@@ -33,6 +33,7 @@ class Camera(db.Model):
     source = db.Column(db.String(500), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     is_public = db.Column(db.Boolean, default=False)
+    virtual_lines = db.Column(db.Text, default='[]')
 
 
 class Settings(db.Model):

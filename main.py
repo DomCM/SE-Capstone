@@ -18,6 +18,7 @@ import json
 import hashlib
 import secrets
 import gc
+import math
 import torch
 from urllib.parse import urlsplit, urlunsplit
 from multiprocessing import Pool, cpu_count
@@ -105,6 +106,123 @@ def is_human_detection_name(name):
         return False
     normalized = str(name).strip().lower()
     return normalized in {"person", "people", "persons", "human", "humans"}
+
+
+VEHICLE_CLASS_NAMES = {
+    "car", "cars", "truck", "trucks", "bus", "buses", "motorcycle", "motorbike", "motorcycles",
+    "motorbikes", "van", "vans", "pickup", "pickups", "vehicle", "vehicles"
+}
+
+
+def is_vehicle_class_name(name):
+    """Return True for a vehicle class used by the YOLO detector."""
+    if not name:
+        return False
+    normalized = str(name).strip().lower()
+    return normalized in VEHICLE_CLASS_NAMES
+
+
+def normalize_virtual_lines(raw_lines):
+    """Parse serialized virtual-line data stored per camera."""
+    if not raw_lines:
+        return []
+    try:
+        payload = json.loads(raw_lines)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(payload, list):
+        return []
+
+    def coerce_point(point):
+        if isinstance(point, (list, tuple)) and len(point) >= 2:
+            return float(point[0]), float(point[1])
+        if isinstance(point, dict):
+            if 'x' in point and 'y' in point:
+                return float(point['x']), float(point['y'])
+            if 0 in point and 1 in point:
+                return float(point[0]), float(point[1])
+        return None
+
+    valid_lines = []
+    for index, item in enumerate(payload):
+        if not isinstance(item, dict):
+            continue
+        points = item.get('points') or []
+        if len(points) < 2:
+            continue
+
+        start = coerce_point(points[0])
+        end = coerce_point(points[1])
+        if start is None or end is None:
+            continue
+
+        valid_lines.append({
+            'id': item.get('id', f'line-{index + 1}'),
+            'name': item.get('name', f'Line {index + 1}'),
+            'points': [start, end],
+            'color': item.get('color', '#fbbf24'),
+        })
+    return valid_lines
+
+
+def get_camera_virtual_lines(camera_id):
+    """Fetch the virtual lines for a camera from the database."""
+    if not camera_id:
+        return []
+    with app.app_context():
+        camera = Camera.query.get(camera_id)
+        if camera is None:
+            return []
+        return normalize_virtual_lines(camera.virtual_lines)
+
+
+def save_camera_virtual_lines(camera_id, lines):
+    """Persist virtual lines for a camera as JSON."""
+    if not camera_id:
+        return False
+    with app.app_context():
+        camera = Camera.query.get(camera_id)
+        if camera is None:
+            return False
+        camera.virtual_lines = json.dumps(lines or [])
+        db.session.commit()
+        return True
+
+
+def detect_virtual_line_crossing(previous_center, current_center, line):
+    """Return the crossing direction when an object crosses the line. Returns None if no crossing occurred."""
+    if previous_center is None or current_center is None or not line or len(line) < 2:
+        return None
+
+    start = np.asarray(line[0], dtype=float)
+    end = np.asarray(line[1], dtype=float)
+    previous = np.asarray(previous_center, dtype=float)
+    current = np.asarray(current_center, dtype=float)
+
+    previous_side = np.cross(end - start, previous - start)
+    current_side = np.cross(end - start, current - start)
+
+    if previous_side == 0 or current_side == 0:
+        return None
+    if previous_side * current_side < 0:
+        if previous_side < 0 and current_side > 0:
+            return 'positive'
+        if previous_side > 0 and current_side < 0:
+            return 'negative'
+    return None
+
+
+def resolve_virtual_line_points(points, frame_width, frame_height):
+    """Convert normalized line points into absolute frame coordinates when needed."""
+    if not points:
+        return []
+    resolved = []
+    for x, y in points:
+        if 0.0 <= float(x) <= 1.0 and 0.0 <= float(y) <= 1.0:
+            resolved.append((float(x) * frame_width, float(y) * frame_height))
+        else:
+            resolved.append((float(x), float(y)))
+    return resolved
 
 
 def calculate_overlap_ratio(box_a, box_b):
@@ -367,6 +485,7 @@ class VideoStreamManager:
         self.debug_tracker = False
         self._recent_event_cache = {}
         self._last_full_scan_time = 0.0
+        self.vehicle_tracks = []
 
     def start(self):
         """Start processing so the worker can establish the source connection."""
@@ -474,6 +593,98 @@ class VideoStreamManager:
 
         return updated_bboxes
 
+    def _draw_virtual_lines(self, annotated_frame, virtual_lines):
+        """Render configured virtual lines on the current frame for operator awareness."""
+        frame_h, frame_w = annotated_frame.shape[:2]
+        for line in virtual_lines or []:
+            try:
+                points = resolve_virtual_line_points(line.get('points') or [], frame_w, frame_h)
+                if len(points) < 2:
+                    continue
+                start = (int(points[0][0]), int(points[0][1]))
+                end = (int(points[1][0]), int(points[1][1]))
+                cv2.line(annotated_frame, start, end, (0, 255, 255), 3)
+                cv2.putText(annotated_frame, line.get('name', 'Lane'), (start[0] + 8, max(16, start[1] - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 2)
+            except Exception:
+                continue
+
+    def _update_virtual_line_events(self, detections, virtual_lines):
+        """Check vehicle centers against configured virtual crossing lines."""
+        if not virtual_lines or not detections:
+            return
+
+        current_objects = []
+        for x1, y1, x2, y2, name, confidence in detections:
+            if not is_vehicle_class_name(name):
+                continue
+            current_objects.append({
+                'name': name,
+                'center': ((x1 + x2) / 2.0, (y1 + y2) / 2.0),
+                'confidence': float(confidence) if confidence is not None else 0.0,
+            })
+
+        if not current_objects:
+            return
+
+        now = time.monotonic()
+        for track in self.vehicle_tracks:
+            track['assigned'] = False
+
+        for vehicle in current_objects:
+            best_track = None
+            best_distance = float('inf')
+            for track in self.vehicle_tracks:
+                if track.get('assigned'):
+                    continue
+                distance = math.hypot(
+                    vehicle['center'][0] - track['center'][0],
+                    vehicle['center'][1] - track['center'][1],
+                )
+                if distance < best_distance:
+                    best_track = track
+                    best_distance = distance
+
+            if best_track is not None:
+                previous_center = best_track['center']
+                best_track['center'] = vehicle['center']
+                best_track['last_seen'] = now
+                best_track['assigned'] = True
+                best_track['name'] = vehicle['name']
+                for line in virtual_lines:
+                    line_points = resolve_virtual_line_points(line.get('points') or [], self.current_frame.shape[1], self.current_frame.shape[0])
+                    direction = detect_virtual_line_crossing(previous_center, vehicle['center'], line_points)
+                    if direction and now - best_track.get('last_line_event_time', 0.0) > 5:
+                        best_track['last_line_event_time'] = now
+                        self.log_db_event(
+                            f"VEHICLE {direction.upper()} CROSSING",
+                            f"{vehicle['name']} crossed virtual line '{line.get('name', 'Lane')}'",
+                            vehicle['confidence'],
+                            event_category='vision',
+                            detector='vehicle',
+                            severity='medium',
+                            event_metadata={
+                                'camera_zone': self.camera_name.lower().replace(' ', '_'),
+                                'class': vehicle['name'],
+                                'line_name': line.get('name', 'Lane'),
+                                'direction': direction,
+                                'line_points': line_points,
+                            },
+                        )
+            else:
+                self.vehicle_tracks.append({
+                    'center': vehicle['center'],
+                    'last_seen': now,
+                    'last_line_event_time': 0.0,
+                    'assigned': True,
+                    'name': vehicle['name'],
+                })
+
+        self.vehicle_tracks = [
+            track for track in self.vehicle_tracks
+            if now - track.get('last_seen', now) <= 8.0
+        ]
+
     def _finalize_processed_frame(self, annotated_frame):
         """Apply output work shared by detector and tracker frames."""
         if self.is_recording:
@@ -546,14 +757,13 @@ class VideoStreamManager:
                 break
 
     def is_connected(self):
-        """Return true only while the source has delivered a recent frame."""
+        """Return true while the source reports recent activity, without treating short lags as a permanent disconnect."""
         cap = self.cap
-        return (
-            cap is not None
-            and cap.isOpened()
-            and self.last_frame_at > 0
-            and time.monotonic() - self.last_frame_at <= STREAM_HEALTH_TIMEOUT_SECONDS
-        )
+        if cap is None or not cap.isOpened():
+            return False
+        if self.current_frame is not None and self.current_frame.size > 0:
+            return True
+        return self.last_frame_at > 0 and time.monotonic() - self.last_frame_at <= STREAM_HEALTH_TIMEOUT_SECONDS * 2
 
     def _processing_worker(self):
         """Process the source independently of whether a page is currently open."""
@@ -606,11 +816,11 @@ class VideoStreamManager:
                 self.cap = None
                 return None
 
-            if not self.is_connected():
-                return None
-
             with self.frame_lock:
                 frame = self.current_frame
+
+            if frame is None and not self.is_connected():
+                return None
 
             if frame is None:
                 return None
@@ -672,7 +882,7 @@ class VideoStreamManager:
                         critical_detected = True
                         detected_crit_names.append((name, confidence))
                     
-                    self.yolo_detections.append((x1, y1, x2, y2, name, is_crit))
+                    self.yolo_detections.append((x1, y1, x2, y2, name, is_crit, confidence))
                     if is_human_detection_name(name):
                         human_boxes.append((x1, y1, x2, y2, confidence))
 
@@ -686,17 +896,33 @@ class VideoStreamManager:
                     name = r.names.get(int(box.cls[0].item()))
                     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                     confidence = float(box.conf[0].item()) if getattr(box, 'conf', None) is not None and len(box.conf) > 0 else obj_conf
-                    self.yolo_detections.append((x1, y1, x2, y2, name, False))
+                    self.yolo_detections.append((x1, y1, x2, y2, name, False, confidence))
                     if is_human_detection_name(name):
                         human_boxes.append((x1, y1, x2, y2, confidence))
 
         # Draw YOLO detections
         human_boxes = deduplicate_human_boxes(human_boxes)
 
-        for (x1, y1, x2, y2, name, is_crit) in self.yolo_detections:
+        for detection in self.yolo_detections:
+            x1, y1, x2, y2, name, is_crit, confidence = detection
             color = (0, 0, 255) if is_crit else (0, 255, 0)
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
             cv2.putText(annotated_frame, name, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        try:
+            virtual_lines = get_camera_virtual_lines(self.camera_id)
+        except Exception:
+            virtual_lines = []
+        self._draw_virtual_lines(annotated_frame, virtual_lines)
+        vehicle_detections = [
+            (x1, y1, x2, y2, name, confidence)
+            for x1, y1, x2, y2, name, is_crit, confidence in self.yolo_detections
+            if is_vehicle_class_name(name)
+        ]
+        try:
+            self._update_virtual_line_events(vehicle_detections, virtual_lines)
+        except Exception:
+            pass
 
         # Parallel Face Recognition on Human ROIs
         if human_boxes and self.settings_cache.get('face_recognition_enabled', True):
@@ -1587,6 +1813,62 @@ def upload_recording_request(request_id):
         db.session.commit()
         flash('Recording request fulfilled.', 'success')
     return redirect(url_for('admin_request'))
+
+
+@app.route('/api/camera/<int:camera_id>/virtual_lines', methods=['GET', 'POST'])
+@login_required
+def camera_virtual_lines(camera_id):
+    camera = Camera.query.get_or_404(camera_id)
+    if camera.user_id != current_user.id and not is_admin_user(current_user):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if request.method == 'GET':
+        return jsonify({'camera_id': camera.id, 'lines': normalize_virtual_lines(camera.virtual_lines)})
+
+    payload = request.get_json(silent=True) or {}
+    lines = payload.get('lines') or []
+    if not isinstance(lines, list):
+        return jsonify({'error': 'Invalid line payload'}), 400
+
+    normalized = []
+    for index, line in enumerate(lines):
+        if not isinstance(line, dict):
+            continue
+        points = line.get('points') or []
+        if len(points) < 2:
+            continue
+        normalized.append({
+            'id': line.get('id', f'line-{index + 1}'),
+            'name': line.get('name', f'Line {index + 1}'),
+            'color': line.get('color', '#facc15'),
+            'points': points,
+        })
+
+    camera.virtual_lines = json.dumps(normalized)
+    db.session.commit()
+    return jsonify({'success': True, 'lines': normalized})
+
+
+@app.route('/api/camera/<int:camera_id>/snapshot')
+@login_required
+def camera_snapshot(camera_id):
+    camera = Camera.query.get_or_404(camera_id)
+    if camera.user_id != current_user.id and not is_admin_user(current_user):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    stream_user_id = camera.user_id if camera.is_public else current_user.id
+    source_key, manager = acquire_stream(stream_user_id, camera)
+    try:
+        frame = manager.process_frame()
+        if frame is None:
+            return jsonify({'error': 'No snapshot available yet'}), 503
+        success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+        if not success:
+            return jsonify({'error': 'Unable to encode snapshot'}), 500
+        encoded_b64 = base64.b64encode(encoded.tobytes()).decode('utf-8')
+        return jsonify({'success': True, 'image': f'data:image/jpeg;base64,{encoded_b64}'})
+    finally:
+        release_stream(stream_user_id, camera.id, source_key, manager)
 
 
 @app.route('/admin/clear_events', methods=['POST'])

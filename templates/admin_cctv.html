@@ -369,7 +369,7 @@
         .modal-box {
             background: var(--white); border: 1px solid var(--border);
             border-radius: var(--radius-lg); overflow: hidden;
-            width: 100%; max-width: 1100px; display: flex; flex-direction: column;
+            width: min(1100px, calc(100vw - 32px)); display: flex; flex-direction: column;
             max-height: 90vh; box-shadow: var(--shadow-lg);
         }
         .modal-header {
@@ -391,9 +391,36 @@
             transition: all 0.12s; position: relative; z-index: 1;
         }
         .modal-close:hover { background: rgba(192,57,43,0.25); color: #f87171; border-color: rgba(192,57,43,0.4); }
-        .modal-feed { background: var(--navy-950); flex: 1; }
-        .modal-feed img { width: 100%; height: 100%; object-fit: contain; display: block; max-height: calc(90vh - 126px); }
-        
+        .modal-feed {
+            background: var(--navy-950);
+            flex: 1;
+            position: relative;
+            min-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .modal-feed img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            max-height: calc(90vh - 126px);
+        }
+        #modalLineCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            max-height: calc(90vh - 126px);
+            display: block;
+            background: transparent;
+            cursor: crosshair;
+            z-index: 2;
+            pointer-events: auto;
+        }
+
         .modal-footer {
             border-top: 1px solid var(--border); padding: 11px 20px;
             display: flex; align-items: center; justify-content: space-between; background: var(--off-white); flex-wrap: wrap; gap: 10px;
@@ -407,6 +434,7 @@
             padding: 7px 14px; border-radius: var(--radius-sm);
             font-size: 12.5px; font-weight: 600; font-family: var(--font-sans);
             cursor: pointer; transition: all 0.15s; text-decoration: none; box-shadow: var(--shadow-xs);
+            white-space: nowrap;
         }
         .btn-modal svg { width: 13px; height: 13px; }
         .btn-modal:hover { background: var(--navy-50); color: var(--navy-800); border-color: var(--navy-200); }
@@ -457,6 +485,33 @@
         .logout-modal-btn-no:hover { background: var(--border); }
         .logout-modal-btn-yes { background: var(--danger); color: var(--white); box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28); }
         .logout-modal-btn-yes:hover { background: #a5301f; transform: translateY(-1px); }
+
+        @media (max-width: 760px) {
+            .modal-overlay {
+                padding: 12px;
+            }
+            .modal-box {
+                width: min(100%, calc(100vw - 24px));
+                max-height: 96vh;
+            }
+            .modal-footer {
+                align-items: stretch;
+                justify-content: center;
+            }
+            .modal-info {
+                width: 100%;
+            }
+            .modal-actions {
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .btn-modal {
+                justify-content: center;
+                width: 100%;
+                min-width: 0;
+            }
+        }
 
         footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
         .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; }
@@ -706,6 +761,7 @@
         </div>
         <div class="modal-feed">
             <img id="modalStream" src="" alt="Camera feed" onerror="this.style.display='none';">
+            <canvas id="modalLineCanvas" width="1280" height="720"></canvas>
         </div>
         <div class="modal-footer">
             <div class="modal-info" id="modalInfo">—</div>
@@ -714,6 +770,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
                     View Recordings
                 </a>
+                <button id="modalVirtualLinesBtn" class="btn-modal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17L9 11L13 15L21 7"/><path d="M21 7H15M21 7V13"/></svg>
+                    Edit Lines
+                </button>
                 <button onclick="snapshotCam()" class="btn-modal primary">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     Snapshot
@@ -885,12 +945,21 @@
         pill.className = 'cam-status ' + (status === 'online' ? 'status-live' : 'status-offline');
         document.getElementById('modalStatusText').textContent = status === 'online' ? 'LIVE' : 'OFFLINE';
         
+        loadCameraVirtualLines(currentCamId);
         document.getElementById('camModal').classList.add('open');
     }
 
     function closeModal() {
         document.getElementById('camModal').classList.remove('open');
         document.getElementById('modalStream').src = '';
+        if (modalLineCanvas) {
+            const ctx = modalLineCanvas.getContext('2d');
+            ctx.clearRect(0, 0, modalLineCanvas.width, modalLineCanvas.height);
+        }
+        modalLineDraft = [];
+        modalVirtualLines = [];
+        modalLineEditorActive = false;
+        setModalEditorState(false);
         currentCamId = null;
     }
 
@@ -936,8 +1005,154 @@
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    function snapshotCam() {
-        showToast('Snapshot captured & downloaded.', 'success');
+    let modalVirtualLines = [];
+    let modalLineDraft = [];
+    let modalLineEditorActive = false;
+    const modalLineCanvas = document.getElementById('modalLineCanvas');
+
+    function getCanvasPoint(event) {
+        const rect = modalLineCanvas.getBoundingClientRect();
+        const displayWidth = Math.max(1, rect.width || modalLineCanvas.clientWidth || modalLineCanvas.width);
+        const displayHeight = Math.max(1, rect.height || modalLineCanvas.clientHeight || modalLineCanvas.height);
+        return {
+            x: Math.max(0, Math.min(displayWidth, event.clientX - rect.left)),
+            y: Math.max(0, Math.min(displayHeight, event.clientY - rect.top)),
+        };
+    }
+
+    function drawVirtualLines() {
+        if (!modalLineCanvas) return;
+        const ctx = modalLineCanvas.getContext('2d');
+        const width = modalLineCanvas.clientWidth || modalLineCanvas.width;
+        const height = modalLineCanvas.clientHeight || modalLineCanvas.height;
+        ctx.clearRect(0, 0, width, height);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#facc15';
+        ctx.fillStyle = '#facc15';
+        ctx.font = '14px sans-serif';
+
+        modalVirtualLines.forEach((line) => {
+            if (!line.points || line.points.length < 2) return;
+            const start = Array.isArray(line.points[0]) ? { x: line.points[0][0], y: line.points[0][1] } : line.points[0];
+            const end = Array.isArray(line.points[1]) ? { x: line.points[1][0], y: line.points[1][1] } : line.points[1];
+            const sx = Number(start.x) * width;
+            const sy = Number(start.y) * height;
+            const ex = Number(end.x) * width;
+            const ey = Number(end.y) * height;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.fillText(line.name || 'Lane', sx + 7, Math.max(14, sy - 8));
+        });
+
+        if (modalLineDraft.length === 1) {
+            const point = modalLineDraft[0];
+            ctx.beginPath();
+            ctx.arc(point.x * width, point.y * height, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (modalLineDraft.length === 2) {
+            const [start, end] = modalLineDraft;
+            ctx.beginPath();
+            ctx.moveTo(start.x * width, start.y * height);
+            ctx.lineTo(end.x * width, end.y * height);
+            ctx.stroke();
+        }
+    }
+
+    function setModalEditorState(enabled) {
+        modalLineEditorActive = enabled;
+        const btn = document.getElementById('modalVirtualLinesBtn');
+        if (btn) {
+            btn.classList.toggle('primary', enabled);
+            btn.textContent = enabled ? 'Done Drawing' : 'Edit Lines';
+        }
+        if (!enabled) modalLineDraft = [];
+        drawVirtualLines();
+    }
+
+    function renderVirtualLines(lines) {
+        modalVirtualLines = Array.isArray(lines) ? lines : [];
+        drawVirtualLines();
+    }
+
+    async function loadCameraVirtualLines(cameraId) {
+        if (!cameraId) return;
+        try {
+            const response = await fetch(`/api/camera/${cameraId}/virtual_lines`, { cache: 'no-store' });
+            if (!response.ok) return;
+            const data = await response.json();
+            renderVirtualLines(data.lines || []);
+        } catch (error) {
+            console.warn('Failed to load virtual lines', error);
+        }
+    }
+
+    async function saveCameraVirtualLines(cameraId, lines) {
+        if (!cameraId) return;
+        try {
+            const response = await fetch(`/api/camera/${cameraId}/virtual_lines`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lines: lines || [] })
+            });
+            if (!response.ok) {
+                throw new Error('unable to save');
+            }
+            const data = await response.json();
+            renderVirtualLines(data.lines || []);
+            showToast('Virtual lines saved.', 'success');
+        } catch (error) {
+            showToast('Unable to save virtual lines.', 'danger');
+        }
+    }
+
+    if (modalLineCanvas) {
+        modalLineCanvas.addEventListener('click', async (event) => {
+            if (!modalLineEditorActive || !currentCamId) return;
+            const relative = getCanvasPoint(event);
+            const normalized = {
+                x: relative.x / (modalLineCanvas.clientWidth || modalLineCanvas.width),
+                y: relative.y / (modalLineCanvas.clientHeight || modalLineCanvas.height),
+            };
+            modalLineDraft.push(normalized);
+            if (modalLineDraft.length > 2) modalLineDraft = modalLineDraft.slice(-2);
+            drawVirtualLines();
+            if (modalLineDraft.length === 2) {
+                const nextLine = {
+                    id: `line-${Date.now()}`,
+                    name: `Line ${modalVirtualLines.length + 1}`,
+                    color: '#facc15',
+                    points: modalLineDraft
+                };
+                const updated = [...modalVirtualLines, nextLine];
+                modalLineDraft = [];
+                await saveCameraVirtualLines(currentCamId, updated);
+            }
+        });
+    }
+
+    document.getElementById('modalVirtualLinesBtn')?.addEventListener('click', () => {
+        setModalEditorState(!modalLineEditorActive);
+    });
+
+    async function snapshotCam() {
+        if (!currentCamId) {
+            showToast('Choose a camera first.', 'info');
+            return;
+        }
+        try {
+            const response = await fetch(`/api/camera/${currentCamId}/snapshot`, { cache: 'no-store' });
+            const data = await response.json();
+            if (!response.ok || !data.image) throw new Error(data.error || 'snapshot failed');
+            document.getElementById('modalStream').src = data.image;
+            await loadCameraVirtualLines(currentCamId);
+            showToast('Snapshot captured and loaded.', 'success');
+        } catch (error) {
+            showToast('Snapshot unavailable right now.', 'danger');
+        }
     }
 
     document.getElementById('modalToggleRec')?.addEventListener('click', function() {

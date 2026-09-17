@@ -155,6 +155,9 @@ def ensure_database_schema():
         if 'is_public' not in camera_columns:
             db.session.execute(text('ALTER TABLE camera ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT 0'))
             db.session.commit()
+        if 'virtual_lines' not in camera_columns:
+            db.session.execute(text('ALTER TABLE camera ADD COLUMN virtual_lines TEXT NOT NULL DEFAULT "[]"'))
+            db.session.commit()
         event_log_columns = {column['name'] for column in inspector.get_columns('event_log')}
         if 'camera_id' not in event_log_columns:
             db.session.execute(text('ALTER TABLE event_log ADD COLUMN camera_id INTEGER'))
