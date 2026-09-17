@@ -20,17 +20,46 @@ def _severity(event_type):
     return 'Normal'
 
 
-def _matches_zone(source_name, zone):
+def _event_severity(event):
+    value = getattr(event, 'severity', None)
+    if value:
+        normalized = str(value).lower()
+        if normalized in {'critical', 'high'}:
+            return 'High'
+        if normalized in {'warning', 'medium'}:
+            return 'Warning'
+        if normalized in {'low', 'normal'}:
+            return 'Normal'
+    return _severity(getattr(event, 'event_type', None))
+
+
+def _metadata_zone(event):
+    event_metadata = getattr(event, 'event_metadata', None) or ''
+    if not event_metadata:
+        return None
+    try:
+        import json
+        payload = json.loads(event_metadata)
+        if isinstance(payload, dict):
+            return payload.get('camera_zone') or payload.get('zone')
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
+def _matches_zone(source_name, zone, event=None):
     if not zone or zone == 'all':
         return True
 
-    source = (source_name or '').lower()
+    candidate = (source_name or '').lower()
+    metadata_zone = (_metadata_zone(event) or '').lower() if event else ''
+    zone_text = f"{candidate} {metadata_zone}".strip()
     zone_aliases = {
         'gate1': ('gate 1', 'gate1', 'cam 1'),
         'north': ('north', 'cam 2'),
         'clubhouse': ('clubhouse', 'amenities', 'cam 3'),
     }
-    return any(alias in source for alias in zone_aliases.get(zone, (zone.lower(),)))
+    return any(alias in zone_text for alias in zone_aliases.get(zone, (zone.lower(),)))
 
 
 def _matches_severity(event_severity, severity):
@@ -60,8 +89,8 @@ def build_report(event_log_model, report_type='village', timeframe='7d', zone='a
 
     report_events = []
     for event in events:
-        event_severity = _severity(event.event_type)
-        if not _matches_zone(event.source_name, zone) or not _matches_severity(event_severity, severity):
+        event_severity = _event_severity(event)
+        if not _matches_zone(event.source_name, zone, event) or not _matches_severity(event_severity, severity):
             continue
         event_label = event.event_type or 'Unspecified event'
         if event_label.upper() == 'CRITICAL ALERT' and event.description:

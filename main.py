@@ -14,6 +14,7 @@ import sys
 import glob
 import shutil
 import base64
+import json
 import hashlib
 import secrets
 import gc
@@ -725,9 +726,25 @@ class VideoStreamManager:
                         self.face_detections.append(((t, r, b, l), name))
 
                         if name == "Unknown":
-                            self.log_db_event("UNKNOWN FACE", "Unidentified person detected in an ROI.")
+                            self.log_db_event(
+                                "UNKNOWN FACE",
+                                "Unidentified person detected in an ROI.",
+                                confidence=face_conf,
+                                event_category='vision',
+                                detector='face',
+                                severity='high',
+                                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'class': 'person'}
+                            )
                         else:
-                            self.log_db_event("RECOGNIZED", f"Identified {name}")
+                            self.log_db_event(
+                                "RECOGNIZED",
+                                f"Identified {name}",
+                                confidence=face_conf,
+                                event_category='vision',
+                                detector='face',
+                                severity='normal',
+                                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'class': 'person', 'person_name': name}
+                            )
 
             except Exception as e:
                 print(f"Parallel Face Recognition Error: {e}")
@@ -747,7 +764,15 @@ class VideoStreamManager:
             highest_confidence = max((confidence for _, confidence in detected_crit_names), default=None)
             event_type = f"CRITICAL ALERT: {', '.join(detected_names)}"
             msg = f"Detected: {', '.join(detected_names)}"
-            self.log_db_event(event_type, msg, highest_confidence)
+            self.log_db_event(
+                event_type,
+                msg,
+                highest_confidence,
+                event_category='vision',
+                detector='yolo',
+                severity='critical',
+                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'classes': detected_names}
+            )
             class SettingsObj:
                 pass
             settings_obj = SettingsObj()
@@ -761,7 +786,15 @@ class VideoStreamManager:
         if crowd_detected and not self.crowd_alert_active:
             crowd_description = f"Crowd detected: {len(human_boxes)} people in camera view."
             crowd_confidence = max((box[4] for box in human_boxes), default=None)
-            self.log_db_event('CROWD DETECTED', crowd_description, crowd_confidence)
+            self.log_db_event(
+                'CROWD DETECTED',
+                crowd_description,
+                crowd_confidence,
+                event_category='vision',
+                detector='yolo',
+                severity='medium',
+                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'person_count': len(human_boxes)}
+            )
 
         self.crowd_alert_active = crowd_detected
 
@@ -779,13 +812,25 @@ class VideoStreamManager:
             self.recording_writer.release()
             self.recording_writer = None
 
-    def log_db_event(self, event_type, desc, confidence=None):
+    def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None):
         dedupe_key = (event_type, (desc or '')[:180])
         now = time.monotonic()
         last_logged = self._recent_event_cache.get(dedupe_key)
         if last_logged and now - last_logged < 15:
             return
         self._recent_event_cache[dedupe_key] = now
+
+        if not severity:
+            normalized = (event_type or '').lower()
+            if any(keyword in normalized for keyword in ('critical', 'unknown', 'alert', 'fire', 'smoke')):
+                severity = 'high'
+            elif any(keyword in normalized for keyword in ('crowd', 'motion', 'person', 'face')):
+                severity = 'medium'
+            else:
+                severity = 'normal'
+
+        if event_metadata is None:
+            event_metadata = {'camera_zone': self.camera_name.lower().replace(' ', '_')}
 
         with app.app_context():
             try:
@@ -796,6 +841,10 @@ class VideoStreamManager:
                     event_type=event_type,
                     description=desc,
                     confidence=confidence,
+                    event_category=event_category,
+                    detector=detector,
+                    severity=severity,
+                    event_metadata=json.dumps(event_metadata) if isinstance(event_metadata, dict) else event_metadata,
                 )
                 db.session.add(log)
                 db.session.commit()
