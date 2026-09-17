@@ -17,6 +17,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
     totp_secret = db.Column(db.String(500), nullable=True)
     totp_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    archived_at = db.Column(db.DateTime, nullable=True)
 
     @property
     def banned(self):
@@ -71,7 +72,7 @@ class OtpChallenge(db.Model):
 
 class EventLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     camera_id = db.Column(db.Integer, db.ForeignKey('camera.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.now)
     source_name = db.Column(db.String(100))
@@ -83,6 +84,8 @@ class EventLog(db.Model):
     severity = db.Column(db.String(30), nullable=True, default='normal')
     event_metadata = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
+    actor_name = db.Column(db.String(150), nullable=True)
+    actor_email = db.Column(db.String(150), nullable=True)
     user = db.relationship('User', backref='event_logs', lazy=True)
     camera = db.relationship('Camera', backref='event_logs', lazy=True)
 
@@ -90,7 +93,7 @@ class EventLog(db.Model):
     def username(self):
         if self.user:
             return self.user.username or self.user.email or 'Unknown User'
-        return 'Unknown User'
+        return self.actor_name or self.actor_email or 'Deleted User'
 
     @property
     def action_type(self):

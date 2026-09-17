@@ -514,14 +514,19 @@
                                     </span>
                                 </td>
                                 <td data-label="Status">
-                                    <span class="status-badge badge {{ 'badge-banned' if user.banned else 'badge-active' }}">
-                                        {{ 'Banned' if user.banned else 'Active' }}
+                                    <span class="status-badge badge {{ 'badge-banned' if user.banned or user.archived_at else 'badge-active' }}">
+                                        {{ 'Archived' if user.archived_at else ('Banned' if user.banned else 'Active') }}
                                     </span>
                                 </td>
                                 <td class="mono" data-label="Registered">{{ user.created_at }}</td>
                                 <td class="mono" data-label="Last Login">{{ user.last_login or '—' }}</td>
                                 <td data-label="Actions">
                                     <div class="action-group">
+                                        {% if user.archived_at %}
+                                        <button type="button" class="btn-sm btn-restore-user" data-user-id="{{ user.id }}" data-action="restore">
+                                            Restore
+                                        </button>
+                                        {% else %}
                                         <button type="button" class="btn-sm btn-toggle-role" data-user-id="{{ user.id }}" data-action="role">
                                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                                             <span class="role-btn-label">{{ 'Make User' if user.role == 'admin' else 'Make Admin' }}</span>
@@ -534,8 +539,9 @@
 
                                         <button type="button" class="btn-sm btn-sm-danger" data-user-id="{{ user.id }}" data-user-name="{{ user.username }}" data-action="delete">
                                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                                            Delete
+                                            Archive
                                         </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -606,15 +612,15 @@
             <div class="modal-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
             </div>
-            <h3 class="modal-title">Delete User Account?</h3>
-            <p class="modal-desc" id="confirmModalText">Are you sure you want to permanently delete this user account?</p>
+            <h3 class="modal-title">Archive User Account?</h3>
+            <p class="modal-desc" id="confirmModalText">Are you sure you want to archive this user account?</p>
         </div>
         <div class="modal-actions">
             <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
-            <button class="btn-modal btn-modal-confirm" id="confirmDeleteBtn">Delete Account</button>
+            <button class="btn-modal btn-modal-confirm" id="confirmDeleteBtn">Archive Account</button>
         </div>
     </div>
-
+</div>
 
 <footer>
     <div class="footer-inner">
@@ -685,7 +691,7 @@
     function promptDeleteUser(userId, username) {
         targetUserIdToDelete = userId;
         targetUserNameToDelete = username;
-        document.getElementById('confirmModalText').textContent = `Are you sure you want to permanently delete account "${username}"?`;
+        document.getElementById('confirmModalText').textContent = `Are you sure you want to archive account "${username}"? The account and its history will be retained.`;
         document.getElementById('confirmDeleteModal').classList.add('open');
     }
 
@@ -707,17 +713,17 @@
             body: new URLSearchParams({})
         }).then(response => {
             if (!response.ok) {
-                throw new Error('Failed to delete user');
+                throw new Error('Failed to archive user');
             }
             return response.text();
         }).then(() => {
             const row = document.querySelector(`[data-user-id="${targetUserIdToDelete}"]`)?.closest('tr');
             if (row) row.remove();
-            showToast(`User ${targetUserNameToDelete} deleted.`, 'danger');
+            showToast(`User ${targetUserNameToDelete} archived.`, 'success');
             closeDeleteModal();
             setTimeout(() => window.location.reload(), 600);
         }).catch(() => {
-            showToast('Unable to delete user.', 'danger');
+            showToast('Unable to archive user.', 'danger');
             closeDeleteModal();
         });
     });
@@ -735,6 +741,15 @@
             const userId = button.dataset.userId;
             const userName = button.dataset.userName || 'this user';
             promptDeleteUser(userId, userName);
+        } else if (action === 'restore') {
+            fetch(`/admin/users/${button.dataset.userId}/restore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({})
+            }).then(response => {
+                if (!response.ok) throw new Error('Failed to restore user');
+                window.location.reload();
+            }).catch(() => showToast('Unable to restore user.', 'danger'));
         }
     });
 

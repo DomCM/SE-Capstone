@@ -17,7 +17,11 @@ app = None
 db = None
 User = Camera = Settings = OtpChallenge = EventLog = RecordingRequest = None
 BASE_RECORDINGS_DIR = 'users_data'
-AUDIT_EVENT_TYPES = {'login', 'logout', 'create', 'delete', 'settings'}
+AUDIT_EVENT_TYPES = {
+    'login', 'logout', 'create', 'delete', 'settings', 'update',
+    'approve', 'deny', 'fulfill', 'add', 'remove', 'clear', 'reset',
+    'factory_reset', 'export', 'archive', 'restore',
+}
 
 
 def configure(application, database, models, recordings_dir='users_data'):
@@ -43,9 +47,12 @@ def is_admin_user(user_or_email):
         if email in admin_emails:
             return True
         user = User.query.filter_by(email=email).first()
-        return bool(user and get_user_role(user) == 'admin')
+        return bool(user and user.archived_at is None and get_user_role(user) == 'admin')
     email = getattr(user_or_email, 'email', '').strip().lower()
-    return email in admin_emails or get_user_role(user_or_email) == 'admin'
+    return (
+        getattr(user_or_email, 'archived_at', None) is None
+        and (email in admin_emails or get_user_role(user_or_email) == 'admin')
+    )
 
 
 def get_client_ip():
@@ -64,8 +71,16 @@ def record_audit_event(user_id, event_type, description, source_name='System', i
     safe_description = (description or '').strip() or f'{normalized_type.title()} action recorded'
     try:
         with app.app_context():
-            entry = EventLog(user_id=user_id, source_name=source_name or 'System', event_type=normalized_type,
-                             description=safe_description[:500], ip_address=ip_address or get_client_ip())
+            entry = EventLog(
+                user_id=user_id,
+                source_name=source_name or 'System',
+                event_type=normalized_type,
+                event_category='audit',
+                description=safe_description[:500],
+                ip_address=ip_address or get_client_ip(),
+                actor_name=getattr(db.session.get(User, user_id), 'username', None),
+                actor_email=getattr(db.session.get(User, user_id), 'email', None),
+            )
             db.session.add(entry)
             db.session.commit()
             return entry
@@ -145,11 +160,12 @@ def create_login_email_otp(user):
     return code
 
 
-def clear_audit_events_for_user(user_id=None):
+def clear_vision_events_for_user(user_id=None):
+    """Remove computer-vision events without ever touching the audit trail."""
     query = EventLog.query
     if user_id is not None:
         query = query.filter_by(user_id=user_id)
-    return query.filter(EventLog.event_type.in_(list(AUDIT_EVENT_TYPES))).delete(synchronize_session=False)
+    return query.filter(~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES))).delete(synchronize_session=False)
 
 
 def ensure_database_schema():
@@ -157,7 +173,12 @@ def ensure_database_schema():
         db.create_all()
         inspector = inspect(db.engine)
         user_columns = {column['name'] for column in inspector.get_columns('user')}
-        for name, definition in [('role', "VARCHAR(20) NOT NULL DEFAULT 'user'"), ('totp_secret', 'VARCHAR(500)'), ('totp_enabled', 'BOOLEAN NOT NULL DEFAULT 0')]:
+        for name, definition in [
+            ('role', "VARCHAR(20) NOT NULL DEFAULT 'user'"),
+            ('totp_secret', 'VARCHAR(500)'),
+            ('totp_enabled', 'BOOLEAN NOT NULL DEFAULT 0'),
+            ('archived_at', 'DATETIME'),
+        ]:
             if name not in user_columns:
                 db.session.execute(text(f'ALTER TABLE user ADD COLUMN {name} {definition}'))
                 db.session.commit()
@@ -177,6 +198,52 @@ def ensure_database_schema():
             db.session.commit()
         if 'confidence' not in event_log_columns:
             db.session.execute(text('ALTER TABLE event_log ADD COLUMN confidence FLOAT'))
+            db.session.commit()
+        if 'actor_name' not in event_log_columns:
+            db.session.execute(text('ALTER TABLE event_log ADD COLUMN actor_name VARCHAR(150)'))
+            db.session.commit()
+        if 'actor_email' not in event_log_columns:
+            db.session.execute(text('ALTER TABLE event_log ADD COLUMN actor_email VARCHAR(150)'))
+            db.session.commit()
+        event_log_user_column = next(
+            column for column in inspector.get_columns('event_log') if column['name'] == 'user_id'
+        )
+        if not event_log_user_column.get('nullable', True) and db.engine.dialect.name == 'sqlite':
+            db.session.execute(text('PRAGMA foreign_keys=OFF'))
+            db.session.execute(text('ALTER TABLE event_log RENAME TO event_log_legacy'))
+            db.session.execute(text('''
+                CREATE TABLE event_log (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    camera_id INTEGER,
+                    timestamp DATETIME,
+                    source_name VARCHAR(100),
+                    event_type VARCHAR(50),
+                    description VARCHAR(500),
+                    confidence FLOAT,
+                    event_category VARCHAR(30),
+                    detector VARCHAR(30),
+                    severity VARCHAR(30),
+                    event_metadata TEXT,
+                    ip_address VARCHAR(45),
+                    actor_name VARCHAR(150),
+                    actor_email VARCHAR(150),
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(camera_id) REFERENCES camera (id)
+                )
+            '''))
+            db.session.execute(text('''
+                INSERT INTO event_log
+                    (id, user_id, camera_id, timestamp, source_name, event_type,
+                     description, confidence, event_category, detector, severity,
+                     event_metadata, ip_address, actor_name, actor_email)
+                SELECT id, user_id, camera_id, timestamp, source_name, event_type,
+                       description, confidence, event_category, detector, severity,
+                       event_metadata, ip_address, actor_name, actor_email
+                FROM event_log_legacy
+            '''))
+            db.session.execute(text('DROP TABLE event_log_legacy'))
+            db.session.execute(text('PRAGMA foreign_keys=ON'))
             db.session.commit()
 
 

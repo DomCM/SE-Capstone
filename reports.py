@@ -3,7 +3,11 @@ import io
 from datetime import datetime, timedelta
 
 
-AUDIT_EVENT_TYPES = {'login', 'logout', 'create', 'delete', 'settings'}
+AUDIT_EVENT_TYPES = {
+    'login', 'logout', 'create', 'delete', 'settings', 'update',
+    'approve', 'deny', 'fulfill', 'add', 'remove', 'clear', 'reset',
+    'factory_reset', 'export', 'archive', 'restore',
+}
 
 REPORT_TITLES = {
     'village': 'Village-Wide Security Summary Report',

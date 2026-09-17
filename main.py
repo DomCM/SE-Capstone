@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -300,7 +300,8 @@ def stream_scope_key(user_id, camera):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    user = db.session.get(User, int(user_id))
+    return user if user and user.archived_at is None else None
 
 ADMIN_EMAILS = [email.strip().lower() for email in os.environ.get('ADMIN_EMAILS', '').split(',') if email.strip()]
 
@@ -309,7 +310,8 @@ from security import (
     get_user_role, is_admin_user, get_client_ip, record_audit_event,
     get_dashboard_target, encrypt_totp_secret, decrypt_totp_secret,
     get_or_create_totp_secret, send_security_email, create_email_otp, create_login_email_otp,
-    clear_audit_events_for_user, ensure_database_schema, create_admin_user,
+    clear_vision_events_for_user,
+    ensure_database_schema, create_admin_user,
     AUDIT_EVENT_TYPES,
 )
 from reports import build_report, generate_report_csv
@@ -1220,7 +1222,7 @@ def verify_otp():
                     challenge.used_at = datetime.utcnow()
                 db.session.commit()
 
-        if valid:
+        if valid and user and user.archived_at is None:
             if purpose == 'login':
                 user.last_login = datetime.utcnow()
                 db.session.commit()
@@ -1346,7 +1348,7 @@ def login():
         password = request.form.get('password')
         user = User.query.filter_by(email=email).first()
 
-        if user and check_password_hash(user.password, password):
+        if user and user.archived_at is None and check_password_hash(user.password, password):
             if user.totp_secret and user.totp_enabled:
                 session['pending_login_user_id'] = user.id
                 session['otp_purpose'] = 'login'
@@ -1722,16 +1724,32 @@ def admin_delete_user(user_id):
 
     user = User.query.get_or_404(user_id)
     try:
-        Camera.query.filter_by(user_id=user.id).delete()
-        Settings.query.filter_by(user_id=user.id).delete()
-        EventLog.query.filter_by(user_id=user.id).delete()
-        db.session.delete(user)
+        user.archived_at = datetime.utcnow()
         db.session.commit()
-        record_audit_event(current_user.id, 'delete', f"Deleted user \"{user.username}\"", 'Admin', get_client_ip())
-        flash(f'User {user.username} deleted.', 'success')
+        record_audit_event(current_user.id, 'archive', f"Archived user \"{user.username}\"", 'Admin', get_client_ip())
+        flash(f'User {user.username} archived.', 'success')
     except Exception as exc:
         db.session.rollback()
         flash(f'Unable to delete user: {exc}', 'danger')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/restore', methods=['POST'])
+@admin_required
+def admin_restore_user(user_id):
+    if user_id == current_user.id:
+        flash('You cannot restore your own account.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user = User.query.get_or_404(user_id)
+    if user.archived_at is None:
+        flash('That account is already active.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user.archived_at = None
+    db.session.commit()
+    record_audit_event(current_user.id, 'restore', f"Restored user \"{user.username}\"", 'Admin', get_client_ip())
+    flash(f'User {user.username} restored.', 'success')
     return redirect(url_for('admin_users'))
 
 
@@ -1802,6 +1820,11 @@ def admin_reports_export():
     )
     csv_data = generate_report_csv(report_context)
     filename = f"security_report_{report_context['selected_type']}_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    record_audit_event(
+        current_user.id, 'export',
+        f"Exported {report_context['selected_type']} security report",
+        'Admin', get_client_ip(),
+    )
     return Response(
         csv_data,
         mimetype="text/csv",
@@ -1840,6 +1863,11 @@ def approve_recording_request(request_id):
     else:
         recording_request.status = 'approved'
         db.session.commit()
+        record_audit_event(
+            current_user.id, 'approve',
+            f"Approved recording request #{recording_request.id} for user {recording_request.user_id}",
+            'Admin', get_client_ip(),
+        )
         flash('Recording request approved.', 'success')
     return redirect(url_for('admin_request'))
 
@@ -1857,6 +1885,11 @@ def reject_recording_request(request_id):
         recording_request.status = 'rejected'
         recording_request.rejection_reason = rejection_reason[:1000]
         db.session.commit()
+        record_audit_event(
+            current_user.id, 'deny',
+            f"Denied recording request #{recording_request.id} for user {recording_request.user_id}",
+            'Admin', get_client_ip(),
+        )
         flash('Recording request rejected.', 'success')
     return redirect(url_for('admin_request'))
 
@@ -1883,6 +1916,11 @@ def upload_recording_request(request_id):
         recording_request.video_path = video_path
         recording_request.fulfilled_at = datetime.utcnow()
         db.session.commit()
+        record_audit_event(
+            current_user.id, 'fulfill',
+            f"Fulfilled recording request #{recording_request.id} for user {recording_request.user_id}",
+            'Admin', get_client_ip(),
+        )
         flash('Recording request fulfilled.', 'success')
     return redirect(url_for('admin_request'))
 
@@ -1918,6 +1956,12 @@ def camera_virtual_lines(camera_id):
 
     camera.virtual_lines = json.dumps(normalized)
     db.session.commit()
+    if is_admin_user(current_user):
+        record_audit_event(
+            current_user.id, 'update',
+            f"Updated virtual lines for camera \"{camera.name}\" (#{camera.id})",
+            'Admin', get_client_ip(),
+        )
     return jsonify({'success': True, 'lines': normalized})
 
 
@@ -1946,9 +1990,14 @@ def camera_snapshot(camera_id):
 @app.route('/admin/clear_events', methods=['POST'])
 @admin_required
 def admin_clear_events():
-    clear_audit_events_for_user()
+    cleared_count = clear_vision_events_for_user()
     db.session.commit()
-    flash('All audit logs were cleared.', 'success')
+    record_audit_event(
+        current_user.id, 'clear',
+        f'Cleared {cleared_count} computer-vision event log(s); audit trail preserved',
+        'Admin', get_client_ip(),
+    )
+    flash('All computer-vision event logs were cleared. Audit logs were preserved.', 'success')
     return redirect(url_for('admin_logs'))
 
 
@@ -2009,10 +2058,13 @@ def admin_system_save():
 @app.route('/admin/system/clear_recordings', methods=['POST'])
 @admin_required
 def admin_clear_recordings():
+    cleared_count = 0
     for user_dir in glob.glob(os.path.join(BASE_RECORDINGS_DIR, '*', 'recordings')):
         for filename in os.listdir(user_dir):
             if filename.endswith('.webm'):
                 os.remove(os.path.join(user_dir, filename))
+                cleared_count += 1
+    record_audit_event(current_user.id, 'clear', f'Cleared {cleared_count} recording file(s)', 'Admin', get_client_ip())
     flash('All recordings were cleared.', 'success')
     return redirect(url_for('admin_system'))
 
@@ -2020,18 +2072,26 @@ def admin_clear_recordings():
 @app.route('/admin/system/clear_events', methods=['POST'])
 @admin_required
 def admin_system_clear_events():
-    clear_audit_events_for_user(current_user.id)
+    cleared_count = clear_vision_events_for_user()
     db.session.commit()
-    flash('All audit logs were cleared.', 'success')
+    record_audit_event(
+        current_user.id, 'clear',
+        f'Cleared {cleared_count} computer-vision event log(s); audit trail preserved',
+        'Admin', get_client_ip(),
+    )
+    flash('All computer-vision event logs were cleared. Audit logs were preserved.', 'success')
     return redirect(url_for('admin_system'))
 
 
 @app.route('/admin/system/clear_faces', methods=['POST'])
 @admin_required
 def admin_clear_faces():
+    cleared_count = 0
     for user_dir in glob.glob(os.path.join(BASE_RECORDINGS_DIR, '*', 'known_faces')):
+        cleared_count += sum(len(files) for _, _, files in os.walk(user_dir))
         shutil.rmtree(user_dir, ignore_errors=True)
         os.makedirs(user_dir, exist_ok=True)
+    record_audit_event(current_user.id, 'clear', f'Cleared {cleared_count} known face file(s)', 'Admin', get_client_ip())
     flash('All known faces were cleared.', 'success')
     return redirect(url_for('admin_system'))
 
@@ -2039,10 +2099,15 @@ def admin_clear_faces():
 @app.route('/admin/system/factory_reset', methods=['POST'])
 @admin_required
 def admin_factory_reset():
-    EventLog.query.delete()
+    cleared_count = clear_vision_events_for_user()
     Camera.query.delete()
     Settings.query.delete()
     db.session.commit()
+    record_audit_event(
+        current_user.id, 'factory_reset',
+        f'Factory reset completed; removed {cleared_count} computer-vision event log(s)',
+        'Admin', get_client_ip(),
+    )
     flash('Factory reset completed.', 'success')
     return redirect(url_for('admin_system'))
 
@@ -2072,6 +2137,12 @@ def add_camera():
     db.session.add(new_cam)
     db.session.commit()
     acquire_stream(current_user.id, new_cam)
+    if is_admin_user(current_user):
+        record_audit_event(
+            current_user.id, 'add',
+            f"Added camera \"{new_cam.name}\" (#{new_cam.id})",
+            'Admin', get_client_ip(),
+        )
     flash('Camera added.', 'success')
 
     return redirect(redirect_target)
@@ -2098,8 +2169,16 @@ def delete_camera(camera_id):
         release_stream(user_key, camera.id, manager.scope_key, manager)
     
     try:
+        camera_name = camera.name
+        camera_id = camera.id
         db.session.delete(camera)
         db.session.commit()
+        if is_admin:
+            record_audit_event(
+                current_user.id, 'remove',
+                f"Removed camera \"{camera_name}\" (#{camera_id})",
+                'Admin', get_client_ip(),
+            )
         flash(f'Camera "{camera.name}" removed.', 'success')
     except Exception as e:
         flash(f'Error deleting camera: {e}', 'danger')
