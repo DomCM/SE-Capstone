@@ -547,6 +547,28 @@
                     </label>
                 </div>
 
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Fire &amp; Smoke Email Alerts</div>
+                        <div class="toggle-desc">Send critical detection alerts only to your configured email address.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="email_alerts_enabled" {% if settings.email_alerts_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="field-group" style="margin-top: 18px;">
+                    <label class="field-label" for="recipient_email">Alert Email Address</label>
+                    <input type="email" name="recipient_email" id="recipient_email" value="{{ settings.recipient_email or current_user.email }}" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="critical_email_cooldown_minutes">Minimum Time Between Critical Emails (minutes)</label>
+                    <input type="number" name="critical_email_cooldown_minutes" id="critical_email_cooldown_minutes" value="{{ settings.critical_email_cooldown_minutes or 15 }}" min="1" max="1440">
+                    <p class="field-sublabel">Repeated detections during this window are logged but do not send another email. The cooldown is shared across your cameras.</p>
+                </div>
+
                 <div class="field-group" style="margin-top: 18px;">
                     <label class="field-label">Frame Processing Interval</label>
                     <input type="number" name="frame_process_interval" value="{{ settings.frame_process_interval or 3 }}" min="1" max="30">

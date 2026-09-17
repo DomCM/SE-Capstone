@@ -98,6 +98,7 @@ MAX_DETECTION_POOL_WORKERS = max(1, min(2, cpu_count() or 1))
 PROCESSING_INTERVAL_SECONDS = 0.1
 detection_pool = None
 face_recognition_lock = threading.Lock()
+email_alert_lock = threading.Lock()
 
 
 def is_human_detection_name(name):
@@ -414,18 +415,19 @@ def run_roi_detection(roi_tasks):
 
 
 def send_email_alert(user_settings, subject, body, image_frame=None):
-    if not user_settings or not user_settings.email_alerts_enabled:
+    if not user_settings or not getattr(user_settings, 'email_alerts_enabled', False):
         return
 
     sender = app.config['SMTP_USERNAME']
     password = app.config['SMTP_PASSWORD']
-    if not sender or not password or not user_settings.recipient_email:
+    recipient_email = getattr(user_settings, 'recipient_email', None)
+    if not sender or not password or not recipient_email:
         return
 
     try:
         msg = MIMEMultipart()
         msg['From'] = sender
-        msg['To'] = user_settings.recipient_email
+        msg['To'] = recipient_email
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
@@ -438,9 +440,27 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
             s.starttls()
             s.login(sender, password)
             s.send_message(msg)
-        print(f"Email sent to {user_settings.recipient_email}")
+        app.logger.info('Critical alert email sent to %s', recipient_email)
     except Exception as e:
-        print(f"Email failed: {e}")
+        app.logger.warning('Critical alert email failed: %s', e)
+
+
+def claim_critical_email_slot(user_id):
+    """Claim the user's persisted alert cooldown before starting delivery."""
+    with email_alert_lock:
+        with app.app_context():
+            settings = Settings.query.filter_by(user_id=user_id).first()
+            if not settings or not settings.email_alerts_enabled or not settings.recipient_email:
+                return False
+
+            now = datetime.utcnow()
+            cooldown_minutes = max(1, settings.critical_email_cooldown_minutes or 15)
+            if settings.last_critical_email_at and now - settings.last_critical_email_at < timedelta(minutes=cooldown_minutes):
+                return False
+
+            settings.last_critical_email_at = now
+            db.session.commit()
+            return True
 
 #video
 class VideoStreamManager:
@@ -509,6 +529,7 @@ class VideoStreamManager:
                 'active_classes': settings_obj.active_classes,
                 'email_alerts_enabled': settings_obj.email_alerts_enabled,
                 'recipient_email': settings_obj.recipient_email,
+                'critical_email_cooldown_minutes': getattr(settings_obj, 'critical_email_cooldown_minutes', 15),
                 'scale_down_amount': settings_obj.scale_down_amount,
                 'frame_process_interval': settings_obj.frame_process_interval,
             }
@@ -832,7 +853,11 @@ class VideoStreamManager:
         
         scale_down = self.settings_cache.get('scale_down_amount', 2)
         process_interval = max(1, self.settings_cache.get('frame_process_interval', 3))
-        active_classes = self.settings_cache.get('active_classes', 'fire,smoke').split(',')
+        active_classes = {
+            item.strip().lower()
+            for item in self.settings_cache.get('active_classes', 'fire,smoke').split(',')
+            if item.strip()
+        }
         
         global face_cache
         if self.user_id not in face_cache:
@@ -880,7 +905,7 @@ class VideoStreamManager:
                     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                     confidence = float(box.conf[0].item()) if getattr(box, 'conf', None) is not None and len(box.conf) > 0 else obj_conf
                     
-                    is_crit = name in active_classes
+                    is_crit = str(name).strip().lower() in active_classes
                     if is_crit:
                         critical_detected = True
                         detected_crit_names.append((name, confidence))
@@ -1007,7 +1032,8 @@ class VideoStreamManager:
             settings_obj = SettingsObj()
             for k, v in self.settings_cache.items():
                 setattr(settings_obj, k, v)
-            threading.Thread(target=send_email_alert, args=(settings_obj, "CRITICAL ALERT", msg, annotated_frame), daemon=True).start()
+            if claim_critical_email_slot(self.user_id):
+                threading.Thread(target=send_email_alert, args=(settings_obj, "CRITICAL ALERT", msg, annotated_frame), daemon=True).start()
         
         self.fire_alert_active = critical_detected
 
@@ -2332,10 +2358,17 @@ def settings():
     if request.method == 'POST':
         user_settings.yolo_enabled = 'yolo_enabled' in request.form
         user_settings.face_recognition_enabled = 'face_recognition_enabled' in request.form
+        user_settings.email_alerts_enabled = 'email_alerts_enabled' in request.form
+        recipient_email = request.form.get('recipient_email', '').strip().lower()
+        if not recipient_email or '@' not in recipient_email:
+            flash('Enter a valid alert email address.', 'danger')
+            return redirect(url_for('settings'))
+        user_settings.recipient_email = recipient_email[:150]
         try:
-            user_settings.frame_process_     = max(1, min(30, int(request.form.get('frame_process_interval', 3))))
+            user_settings.frame_process_interval = max(1, min(30, int(request.form.get('frame_process_interval', 3))))
             user_settings.object_detection_confidence = max(0.1, min(1.0, float(request.form.get('object_detection_confidence', 0.5))))
             user_settings.face_recognition_confidence = max(0.1, min(1.0, float(request.form.get('face_recognition_confidence', 0.6))))
+            user_settings.critical_email_cooldown_minutes = max(1, min(1440, int(request.form.get('critical_email_cooldown_minutes', 15))))
         except (TypeError, ValueError):
             flash('Detection settings must contain valid numeric values.', 'danger')
             return redirect(url_for('settings'))

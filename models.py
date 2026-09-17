@@ -54,6 +54,8 @@ class Settings(db.Model):
     session_timeout_minutes = db.Column(db.Integer, default=60)
     email_alerts_enabled = db.Column(db.Boolean, default=False)
     recipient_email = db.Column(db.String(150))
+    critical_email_cooldown_minutes = db.Column(db.Integer, nullable=False, default=15)
+    last_critical_email_at = db.Column(db.DateTime, nullable=True)
     scale_down_amount = db.Column(db.Integer, default=2)
     frame_process_interval = db.Column(db.Integer, default=3)
 
