@@ -111,8 +111,20 @@
             </div>
         </div>
         <div class="left-hero">
-            <h1 class="left-headline">Check your<br><em>inbox.</em></h1>
-            <p class="left-desc">We sent a 6-digit security code to your registered email address. Enter the code below to verify.</p>
+            <h1 class="left-headline">
+                {% if purpose == 'login' and legacy_otp %}
+                    Open your<br><em>authenticator.</em>
+                {% else %}
+                    Check your<br><em>inbox.</em>
+                {% endif %}
+            </h1>
+            <p class="left-desc">
+                {% if purpose == 'login' and legacy_otp %}
+                    Open your authenticator app and enter the 6-digit code shown for this account.
+                {% else %}
+                    We sent a 6-digit security code to your registered email address. Enter the code below to verify.
+                {% endif %}
+            </p>
         </div>
         <div></div>
     </div>
@@ -122,7 +134,13 @@
             <p class="right-greeting">{{ 'Login Verification' if purpose == 'login' else 'Password Recovery' }}</p>
             <h2 class="right-title">Enter OTP Code</h2>
             <p class="right-subtitle">
-                {% if purpose == 'login' %}Enter the current code from your authenticator app.{% else %}Enter the 6-digit code sent to your email.{% endif %}
+                {% if purpose == 'login' and legacy_otp %}
+                    Enter the current code from your authenticator app.
+                {% elif purpose == 'login' %}
+                    Enter the 6-digit code sent to your email.
+                {% else %}
+                    Enter the 6-digit code sent to your email.
+                {% endif %}
             </p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -130,8 +148,20 @@
             {% endwith %}
 
             <div class="email-notice">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                <span>{% if purpose == 'login' %}Authenticator code for{% else %}Code sent to{% endif %} <strong id="user-email-display">{{ email or 'your account' }}</strong></span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    {% if purpose == 'login' and legacy_otp %}
+                        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+                    {% else %}
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                    {% endif %}
+                </svg>
+                <span>
+                    {% if purpose == 'login' and legacy_otp %}
+                        Authenticator app code for <strong id="user-email-display">{{ email or 'your account' }}</strong>
+                    {% else %}
+                        Code sent to <strong id="user-email-display">{{ email or 'your account' }}</strong>
+                    {% endif %}
+                </span>
             </div>
 
             <form action="{{ url_for('verify_otp', purpose=purpose) }}" method="POST" id="otp-form">

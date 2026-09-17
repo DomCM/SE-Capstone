@@ -317,12 +317,26 @@
             display: flex; align-items: center; gap: 9px;
             padding: 11px 14px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             font-size: 13px; font-weight: 500;
+            box-shadow: 0 8px 24px rgba(5, 11, 26, 0.14);
+            animation: flash-in 0.25s ease-out;
         }
 
         .flash svg { width: 15px; height: 15px; flex-shrink: 0; }
         .flash-danger { background: var(--danger-bg); border: 1px solid #f5a89e; color: var(--danger); }
+        .flash-success { background: #eaf7f0; border: 1px solid #9bd4b8; color: #1f8a5f; }
+        .flash-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: min(360px, calc(100vw - 48px));
+        }
+        @keyframes flash-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
 
         /* Divider */
         .form-divider { height: 1px; background: var(--border); margin: 24px 0; }
@@ -553,15 +567,16 @@
             <h2 class="right-title">Sign in to your<br>dashboard</h2>
             <p class="right-subtitle">Access your cameras and security alerts</p>
 
-            <!-- Flash messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
+                <div class="flash-container" role="status" aria-live="polite">
                     {% for category, message in messages %}
-                    <div class="flash flash-danger">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <div class="flash {{ 'flash-danger' if category == 'danger' else 'flash-success' }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{% if category == 'danger' %}<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>{% else %}<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>{% endif %}</svg>
                         {{ message }}
                     </div>
                     {% endfor %}
+                </div>
                 {% endif %}
             {% endwith %}
 

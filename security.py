@@ -130,7 +130,17 @@ def create_email_otp(user):
     OtpChallenge.query.filter_by(user_id=user.id, purpose='password_reset', used_at=None).update({'used_at': datetime.utcnow()})
     code = f'{secrets.randbelow(1000000):06d}'
     db.session.add(OtpChallenge(user_id=user.id, purpose='password_reset', code_hash=generate_password_hash(code),
-                                expires_at=datetime.utcnow() + timedelta(minutes=10)))
+                                expires_at=datetime.utcnow() + timedelta(minutes=3)))
+    db.session.commit()
+    return code
+
+
+def create_login_email_otp(user):
+    """Invalidate any open login OTP challenges and issue a fresh 6-digit code."""
+    OtpChallenge.query.filter_by(user_id=user.id, purpose='login', used_at=None).update({'used_at': datetime.utcnow()})
+    code = f'{secrets.randbelow(1000000):06d}'
+    db.session.add(OtpChallenge(user_id=user.id, purpose='login', code_hash=generate_password_hash(code),
+                                expires_at=datetime.utcnow() + timedelta(minutes=3)))
     db.session.commit()
     return code
 
