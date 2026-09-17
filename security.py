@@ -259,7 +259,8 @@ def create_admin_user(username, email, password):
             email=email,
             password=generate_password_hash(password),
             role='admin',
-            totp_secret=encrypt_totp_secret(pyotp.random_base32()),
+            totp_secret=(encrypt_totp_secret(pyotp.random_base32())
+                         if app.config.get('LEGACY_OTP') else None),
             totp_enabled=False,
         )
         db.session.add(new_user)

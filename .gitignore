@@ -21,3 +21,4 @@ best.pt
 best_openvino_model/
 yolo26n.pt
 yolo26n_int8_openvino_model/
+templates/admin_cctv.html

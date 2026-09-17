@@ -1118,7 +1118,7 @@ def check_privacy_agreement():
         return redirect(url_for('disclaimer'))
 
     enrollment_endpoints = {'security_setup', 'logout', 'static', 'disclaimer', 'accept_terms'}
-    if (current_user.is_authenticated and current_user.totp_secret
+    if (app.config.get('LEGACY_OTP') and current_user.is_authenticated and current_user.totp_secret
             and not current_user.totp_enabled
             and request.endpoint not in enrollment_endpoints):
         return redirect(url_for('security_setup'))
@@ -1318,7 +1318,8 @@ def register():
             email=email,
             password=generate_password_hash(password),
             role='user',
-            totp_secret=encrypt_totp_secret(pyotp.random_base32()),
+            totp_secret=(encrypt_totp_secret(pyotp.random_base32())
+                         if app.config.get('LEGACY_OTP') else None),
         )
         db.session.add(new_user)
         db.session.commit()
@@ -1333,7 +1334,9 @@ def register():
         record_audit_event(new_user.id, 'create', f"Created account for {new_user.username}", 'Auth', get_client_ip())
 
         login_user(new_user)
-        return redirect(url_for('security_setup'))
+        if app.config.get('LEGACY_OTP'):
+            return redirect(url_for('security_setup'))
+        return redirect(url_for(get_dashboard_target(new_user)))
     
     return render_template('register.html')
 
@@ -1349,17 +1352,20 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and user.archived_at is None and check_password_hash(user.password, password):
+            if not app.config.get('LEGACY_OTP'):
+                session['pending_login_user_id'] = user.id
+                session['otp_purpose'] = 'login'
+                code = create_login_email_otp(user)
+                send_security_email(
+                    user,
+                    'Home Detection Security — login verification code',
+                    f'Your login verification code is {code}. It expires in 3 minutes.\n\n'
+                    f'If you did not request this, please contact your administrator.',
+                )
+                return redirect(url_for('verify_otp', purpose='login'))
             if user.totp_secret and user.totp_enabled:
                 session['pending_login_user_id'] = user.id
                 session['otp_purpose'] = 'login'
-                if not app.config.get('LEGACY_OTP'):
-                    code = create_login_email_otp(user)
-                    send_security_email(
-                        user,
-                        'Home Detection Security — login verification code',
-                        f'Your login verification code is {code}. It expires in 3 minutes.\n\n'
-                        f'If you did not request this, please contact your administrator.',
-                    )
                 return redirect(url_for('verify_otp', purpose='login'))
             if user.totp_secret and not user.totp_enabled:
                 login_user(user)
@@ -1925,7 +1931,7 @@ def upload_recording_request(request_id):
     return redirect(url_for('admin_request'))
 
 
-@app.route('/api/camera/<int:camera_id>/virtual_lines', methods=['GET', 'POST'])
+@app.route('/api/camera/<int:camera_id>/virtual_lines', methods=['GET', 'POST', 'DELETE'])
 @login_required
 def camera_virtual_lines(camera_id):
     camera = Camera.query.get_or_404(camera_id)
@@ -1934,6 +1940,25 @@ def camera_virtual_lines(camera_id):
 
     if request.method == 'GET':
         return jsonify({'camera_id': camera.id, 'lines': normalize_virtual_lines(camera.virtual_lines)})
+
+    if request.method == 'DELETE':
+        payload = request.get_json(silent=True) or {}
+        existing_lines = normalize_virtual_lines(camera.virtual_lines)
+        line_id = payload.get('line_id')
+        if payload.get('clear_all') or line_id is None:
+            updated_lines = []
+        else:
+            updated_lines = [line for line in existing_lines if str(line.get('id')) != str(line_id)]
+
+        camera.virtual_lines = json.dumps(updated_lines)
+        db.session.commit()
+        if is_admin_user(current_user):
+            record_audit_event(
+                current_user.id, 'update',
+                f"Removed virtual line(s) for camera \"{camera.name}\" (#{camera.id})",
+                'Admin', get_client_ip(),
+            )
+        return jsonify({'success': True, 'lines': updated_lines})
 
     payload = request.get_json(silent=True) or {}
     lines = payload.get('lines') or []
@@ -2584,6 +2609,7 @@ def main():
         help='Use authenticator app TOTP instead of email OTP (legacy/testing mode)',
     )
     args = parser.parse_args()
+    app.config['LEGACY_OTP'] = args.legacy_otp
 
     if args.create_admin:
         try:
@@ -2593,8 +2619,6 @@ def main():
         except Exception as exc:
             print(f"Admin creation failed: {exc}")
             return 1
-
-    app.config['LEGACY_OTP'] = args.legacy_otp
 
     if args.legacy_otp:
         print("[OTP MODE] Legacy mode active — login verification uses authenticator app (TOTP).")
