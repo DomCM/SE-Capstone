@@ -1,4 +1,4 @@
-﻿import os
+import os
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -312,7 +312,7 @@ from security import (
     clear_audit_events_for_user, ensure_database_schema, create_admin_user,
     AUDIT_EVENT_TYPES,
 )
-from reports import build_report
+from reports import build_report, generate_report_csv
 
 
 def allowed_file(filename):
@@ -1733,8 +1733,33 @@ def admin_reports():
         timeframe=request.args.get('timeframe', '7d'),
         zone=request.args.get('zone', 'all'),
         severity=request.args.get('severity', 'all'),
+        start_date=request.args.get('start_date'),
+        end_date=request.args.get('end_date'),
+        camera_model=Camera,
     )
     return render_template('admin_reports.html', **report_context)
+
+
+@app.route('/admin/reports/export')
+@admin_required
+def admin_reports_export():
+    report_context = build_report(
+        EventLog,
+        report_type=request.args.get('type', 'village'),
+        timeframe=request.args.get('timeframe', '7d'),
+        zone=request.args.get('zone', 'all'),
+        severity=request.args.get('severity', 'all'),
+        start_date=request.args.get('start_date'),
+        end_date=request.args.get('end_date'),
+        camera_model=Camera,
+    )
+    csv_data = generate_report_csv(report_context)
+    filename = f"security_report_{report_context['selected_type']}_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @app.route('/admin/request')
@@ -1874,7 +1899,7 @@ def camera_snapshot(camera_id):
 @app.route('/admin/clear_events', methods=['POST'])
 @admin_required
 def admin_clear_events():
-    clear_audit_events_for_user(current_user.id)
+    clear_audit_events_for_user()
     db.session.commit()
     flash('All audit logs were cleared.', 'success')
     return redirect(url_for('admin_logs'))
@@ -2155,7 +2180,7 @@ def settings():
         user_settings.yolo_enabled = 'yolo_enabled' in request.form
         user_settings.face_recognition_enabled = 'face_recognition_enabled' in request.form
         try:
-            user_settings.frame_process_interval = max(1, min(30, int(request.form.get('frame_process_interval', 3))))
+            user_settings.frame_process_     = max(1, min(30, int(request.form.get('frame_process_interval', 3))))
             user_settings.object_detection_confidence = max(0.1, min(1.0, float(request.form.get('object_detection_confidence', 0.5))))
             user_settings.face_recognition_confidence = max(0.1, min(1.0, float(request.form.get('face_recognition_confidence', 0.6))))
         except (TypeError, ValueError):

@@ -347,10 +347,16 @@
             <h1 class="page-title">Security Reports Center</h1>
             <p class="page-subtitle">Generate official Eusebio Bliss Village security audit documentation & PDF reports</p>
         </div>
-        <button class="btn-generate" onclick="window.print()">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export Formal PDF Report
-        </button>
+        <div style="display:flex; gap:10px;">
+            <a id="exportCsvBtn" href="/admin/reports/export?type={{ selected_type or 'village' }}&timeframe={{ timeframe or '7d' }}&zone={{ zone or 'all' }}&severity={{ severity or 'all' }}&start_date={{ start_date or '' }}&end_date={{ end_date or '' }}" class="btn-generate" style="background:var(--navy-600); text-decoration:none;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV Data
+            </a>
+            <button class="btn-generate" onclick="window.print()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Export Formal PDF Report
+            </button>
+        </div>
     </div>
 
     <!-- 1. SELECT REPORT TYPE CARDS -->
@@ -398,15 +404,24 @@
 
     <!-- 2. REPORT FILTERS FORM -->
     <div class="filter-card">
-        <form action="/admin/reports" method="GET" class="filter-form">
+        <form action="/admin/reports" method="GET" class="filter-form" id="reportFilterForm">
             <input type="hidden" id="typeInput" name="type" value="{{ selected_type or 'village' }}">
             <div class="field">
                 <label for="timeFrame">Time Frame</label>
-                <select id="timeFrame" name="timeframe">
+                <select id="timeFrame" name="timeframe" onchange="toggleCustomDates()">
                     <option value="24h" {% if timeframe == '24h' %}selected{% endif %}>Last 24 Hours</option>
                     <option value="7d" {% if timeframe == '7d' or not timeframe %}selected{% endif %}>Last 7 Days</option>
                     <option value="30d" {% if timeframe == '30d' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="custom" {% if timeframe == 'custom' %}selected{% endif %}>Custom Date Range</option>
                 </select>
+            </div>
+            <div class="field" id="startDateGroup" style="display:{% if timeframe == 'custom' %}flex{% else %}none{% endif %};">
+                <label for="startDate">Start Date</label>
+                <input type="date" id="startDate" name="start_date" value="{{ start_date or '' }}">
+            </div>
+            <div class="field" id="endDateGroup" style="display:{% if timeframe == 'custom' %}flex{% else %}none{% endif %};">
+                <label for="endDate">End Date</label>
+                <input type="date" id="endDate" name="end_date" value="{{ end_date or '' }}">
             </div>
             <div class="field">
                 <label for="cameraZone">Target Location / Zone</label>
@@ -478,7 +493,78 @@
             </div>
         </div>
 
-        <!-- DETAILED INCIDENT TABLE -->
+        {% if selected_type == 'frequency' %}
+        <!-- ALERT FREQUENCY ANALYTICS TABLE -->
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Location / Zone</th>
+                    <th>Total Triggers</th>
+                    <th>High Severity Alerts</th>
+                    <th>Peak Hour</th>
+                    <th>Primary Trigger Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if frequency_summary %}
+                    {% for row in frequency_summary %}
+                    <tr>
+                        <td><strong>{{ row.location }}</strong></td>
+                        <td>{{ row.total_triggers }}</td>
+                        <td>
+                            {% if row.high_severity > 0 %}
+                                <strong style="color:var(--danger);">{{ row.high_severity }} Alert(s)</strong>
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+                        <td>{{ row.peak_hour }}</td>
+                        <td>{{ row.top_event }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align:center;color:var(--text-muted);">No trigger frequency data available for the selected timeframe.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {% elif selected_type == 'surveillance' %}
+        <!-- SURVEILLANCE SYSTEM HEALTH TABLE -->
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Camera Location</th>
+                    <th>Operational Status</th>
+                    <th>Disconnect Alerts</th>
+                    <th>Last Recorded Activity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if surveillance_summary %}
+                    {% for row in surveillance_summary %}
+                    <tr>
+                        <td><strong>{{ row.camera_name }}</strong></td>
+                        <td>
+                            {% if row.disconnect_events == 0 %}
+                                <strong style="color:var(--success);">{{ row.status }}</strong>
+                            {% else %}
+                                <strong style="color:var(--danger);">{{ row.status }}</strong>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.disconnect_events }}</td>
+                        <td>{{ row.last_activity }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align:center;color:var(--text-muted);">No surveillance camera records found.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {% else %}
+        <!-- DETAILED INCIDENT & VILLAGE SUMMARY TABLE -->
         <table class="report-table">
             <thead>
                 <tr>
@@ -515,6 +601,7 @@
                 {% endif %}
             </tbody>
         </table>
+        {% endif %}
 
         <!-- SIGNATURE BLOCK FOR FORMAL REPORT -->
         <div class="report-signatures">
@@ -561,13 +648,31 @@
         document.addEventListener('click', () => navLinksList.classList.remove('show'));
     }
 
+    function toggleCustomDates() {
+        const timeFrame = document.getElementById('timeFrame').value;
+        const startGroup = document.getElementById('startDateGroup');
+        const endGroup = document.getElementById('endDateGroup');
+        if (timeFrame === 'custom') {
+            startGroup.style.display = 'flex';
+            endGroup.style.display = 'flex';
+        } else {
+            startGroup.style.display = 'none';
+            endGroup.style.display = 'none';
+        }
+    }
+
     // Dynamic Selection Handler
     function selectReportType(typeKey, title) {
         document.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('active');
+        }
         
         document.getElementById('typeInput').value = typeKey;
-        document.getElementById('reportHeadingTitle').textContent = title;
+        const form = document.getElementById('reportFilterForm');
+        if (form) {
+            form.submit();
+        }
     }
 </script>
 </body>
