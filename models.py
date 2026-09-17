@@ -76,7 +76,7 @@ class EventLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     camera_id = db.Column(db.Integer, db.ForeignKey('camera.id'), nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     source_name = db.Column(db.String(100))
     event_type = db.Column(db.String(50))
     description = db.Column(db.String(500))
