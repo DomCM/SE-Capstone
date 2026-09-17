@@ -152,6 +152,9 @@ def ensure_database_schema():
                 db.session.execute(text(f'ALTER TABLE user ADD COLUMN {name} {definition}'))
                 db.session.commit()
         camera_columns = {column['name'] for column in inspector.get_columns('camera')}
+        if 'zone' not in camera_columns:
+            db.session.execute(text('ALTER TABLE camera ADD COLUMN zone VARCHAR(100) NOT NULL DEFAULT "Main Entrance"'))
+            db.session.commit()
         if 'is_public' not in camera_columns:
             db.session.execute(text('ALTER TABLE camera ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT 0'))
             db.session.commit()

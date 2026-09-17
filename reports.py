@@ -43,25 +43,48 @@ def _metadata_zone(event):
         import json
         payload = json.loads(event_metadata)
         if isinstance(payload, dict):
-            return payload.get('camera_zone') or payload.get('zone')
+            zone_value = payload.get('camera_zone') or payload.get('zone')
+            if zone_value:
+                return zone_value
     except (TypeError, ValueError):
         pass
     return None
+
+
+def _resolved_zone(event):
+    camera_zone = (getattr(event.camera, 'zone', None) if getattr(event, 'camera', None) else None) or ''
+    metadata_zone = _metadata_zone(event) or ''
+    camera_name = (getattr(event.camera, 'name', None) if getattr(event, 'camera', None) else None) or ''
+    source_name = (getattr(event, 'source_name', None) or '')
+
+    if camera_zone:
+        return camera_zone
+    if metadata_zone and metadata_zone.lower() not in {camera_name.lower(), source_name.lower()}:
+        return metadata_zone
+    return 'Main Area'
 
 
 def _matches_zone(source_name, zone, event=None):
     if not zone or zone == 'all':
         return True
 
-    candidate = (source_name or '').lower()
+    target_zone = zone.strip().lower()
+    candidate_source = (source_name or '').lower()
     metadata_zone = (_metadata_zone(event) or '').lower() if event else ''
-    zone_text = f"{candidate} {metadata_zone}".strip()
+    
+    event_camera_zone = ''
+    if event and getattr(event, 'camera', None):
+        event_camera_zone = (getattr(event.camera, 'zone', '') or '').lower()
+
+    combined_text = f"{candidate_source} {metadata_zone} {event_camera_zone}".strip()
+    
     zone_aliases = {
-        'gate1': ('gate 1', 'gate1', 'cam 1'),
-        'north': ('north', 'cam 2'),
+        'gate1': ('gate 1', 'gate1', 'cam 1', 'entrance'),
+        'north': ('north', 'cam 2', 'perimeter'),
         'clubhouse': ('clubhouse', 'amenities', 'cam 3'),
     }
-    return any(alias in zone_text for alias in zone_aliases.get(zone, (zone.lower(),)))
+    aliases = zone_aliases.get(target_zone, (target_zone,))
+    return any(alias in combined_text for alias in aliases)
 
 
 def _matches_severity(event_severity, severity):
@@ -86,12 +109,25 @@ def build_report(
     camera_model=None,
 ):
     """Build the admin report context from security events in EventLog."""
-    # Note: EventLog model uses local datetime.now by default
     now = now or datetime.now()
     report_type = report_type if report_type in REPORT_TITLES else 'village'
     timeframe = timeframe if timeframe in {'24h', '7d', '30d', 'custom'} else '7d'
-    zone = zone if zone in {'all', 'gate1', 'north', 'clubhouse'} else 'all'
     severity = severity if severity in {'all', 'critical', 'normal'} else 'all'
+
+    # Extract dynamic camera zones from database
+    available_zones = []
+    if camera_model:
+        try:
+            cameras = camera_model.query.all()
+            for cam in cameras:
+                cam_zone = (getattr(cam, 'zone', None) or '').strip()
+                if cam_zone and cam_zone not in available_zones:
+                    available_zones.append(cam_zone)
+        except Exception:
+            pass
+
+    if not available_zones:
+        available_zones = ['Main Entrance', 'North Perimeter', 'Clubhouse & Amenities']
 
     since = None
     until = None
@@ -126,10 +162,15 @@ def build_report(
         if event_label.upper() == 'CRITICAL ALERT' and event.description:
             event_label = f'{event_label}: {event.description.removeprefix("Detected: ").strip()}'
         
+        event_zone = _resolved_zone(event)
+        cam_name = event.source_name or 'Unknown camera'
+
         report_events.append({
             'timestamp': event.timestamp.strftime('%Y-%m-%d %I:%M:%S %p') if event.timestamp else '-',
             'raw_timestamp': event.timestamp,
-            'location': event.source_name or 'Unknown source',
+            'location': event_zone,
+            'zone': event_zone,
+            'camera_name': cam_name,
             'event_type': event_label,
             'confidence': f'{event.confidence * 100:.1f}%' if event.confidence is not None else '-',
             'severity': event_severity,
@@ -153,37 +194,41 @@ def build_report(
     else:
         filtered_events = report_events
 
-    # Frequency Analytics Breakdown by Location
+    # Frequency Analytics Breakdown by Zone / Camera Name
     frequency_summary = []
     if report_type == 'frequency':
         location_data = {}
         for event in report_events:
-            loc = event['location']
-            if loc not in location_data:
-                location_data[loc] = {
-                    'location': loc,
+            camera_label = event.get('camera_name') or event.get('location') or 'Unknown camera'
+            key = (event['zone'], camera_label)
+            if key not in location_data:
+                location_data[key] = {
+                    'zone': event['zone'],
+                    'camera_name': camera_label,
                     'total_triggers': 0,
                     'high_severity': 0,
                     'hours': {},
                     'types': {},
                 }
-            location_data[loc]['total_triggers'] += 1
+            location_data[key]['total_triggers'] += 1
             if event['severity'] == 'High':
-                location_data[loc]['high_severity'] += 1
+                location_data[key]['high_severity'] += 1
             
             ts = event.get('raw_timestamp')
             if ts:
                 hour_str = ts.strftime('%I:00 %p')
-                location_data[loc]['hours'][hour_str] = location_data[loc]['hours'].get(hour_str, 0) + 1
+                location_data[key]['hours'][hour_str] = location_data[key]['hours'].get(hour_str, 0) + 1
             
             ev_type = event['event_type']
-            location_data[loc]['types'][ev_type] = location_data[loc]['types'].get(ev_type, 0) + 1
+            location_data[key]['types'][ev_type] = location_data[key]['types'].get(ev_type, 0) + 1
 
-        for loc, data in location_data.items():
+        for (z, c), data in location_data.items():
             peak_h = max(data['hours'], key=data['hours'].get) if data['hours'] else 'N/A'
             top_t = max(data['types'], key=data['types'].get) if data['types'] else 'N/A'
             frequency_summary.append({
-                'location': loc,
+                'zone': z,
+                'camera_name': c,
+                'location': f"{z} ({c})",
                 'total_triggers': data['total_triggers'],
                 'high_severity': data['high_severity'],
                 'peak_hour': peak_h,
@@ -199,12 +244,18 @@ def build_report(
     if camera_model:
         cameras = camera_model.query.all()
         for cam in cameras:
-            cam_events = [e for e in report_events if e['location'].lower() == cam.name.lower()]
+            cam_zone = getattr(cam, 'zone', 'Main Area') or 'Main Area'
+            cam_events = [
+                e for e in report_events
+                if (e.get('camera_name') or '').lower() == cam.name.lower()
+                or cam_zone.lower() in (e.get('zone') or '').lower()
+            ]
             disconnects = sum(1 for e in cam_events if 'offline' in e['event_type'].lower() or 'disconnect' in e['event_type'].lower())
             offline_event_count += disconnects
             last_ts = cam_events[0]['timestamp'] if cam_events else 'No recent logs'
             status = 'Operational' if disconnects == 0 else f'{disconnects} Disconnect Alert(s)'
             surveillance_summary.append({
+                'zone': cam_zone,
                 'camera_name': cam.name,
                 'status': status,
                 'disconnect_events': disconnects,
@@ -224,6 +275,7 @@ def build_report(
         'severity': severity,
         'start_date': start_date or '',
         'end_date': end_date or '',
+        'available_zones': available_zones,
         'report_title': REPORT_TITLES.get(report_type, REPORT_TITLES['village']),
         'total_triggers': len(report_events),
         'verified_residents': recognized_count,
@@ -245,33 +297,36 @@ def generate_report_csv(report_data):
     report_type = report_data.get('selected_type', 'village')
 
     if report_type == 'frequency':
-        writer.writerow(['Location / Zone', 'Total Triggers', 'High Severity Alerts', 'Peak Hour', 'Primary Trigger Type'])
+        writer.writerow(['Assigned Zone', 'Camera Name', 'Total Triggers', 'High Severity Alerts', 'Peak Hour', 'Primary Trigger Type'])
         for row in report_data.get('frequency_summary', []):
             writer.writerow([
-                row['location'],
-                row['total_triggers'],
-                row['high_severity'],
-                row['peak_hour'],
-                row['top_event'],
+                row.get('zone', '-'),
+                row.get('camera_name', '-'),
+                row.get('total_triggers', 0),
+                row.get('high_severity', 0),
+                row.get('peak_hour', '-'),
+                row.get('top_event', '-'),
             ])
     elif report_type == 'surveillance':
-        writer.writerow(['Camera Location', 'Status', 'Disconnect Events', 'Last Recorded Activity'])
+        writer.writerow(['Assigned Zone', 'Camera Name', 'Operational Status', 'Disconnect Events', 'Last Recorded Activity'])
         for row in report_data.get('surveillance_summary', []):
             writer.writerow([
-                row['camera_name'],
-                row['status'],
-                row['disconnect_events'],
-                row['last_activity'],
+                row.get('zone', '-'),
+                row.get('camera_name', '-'),
+                row.get('status', '-'),
+                row.get('disconnect_events', 0),
+                row.get('last_activity', '-'),
             ])
     else:
-        writer.writerow(['Timestamp', 'Camera Location', 'Event / Trigger Type', 'Confidence', 'Severity Status'])
+        writer.writerow(['Timestamp', 'Assigned Zone', 'Camera Name', 'Event / Trigger Type', 'Confidence', 'Severity Status'])
         for row in report_data.get('incident_logs', []):
             writer.writerow([
-                row['timestamp'],
-                row['location'],
-                row['event_type'],
-                row['confidence'],
-                row['severity'],
+                row.get('timestamp', '-'),
+                row.get('location', '-'),
+                row.get('camera_name', row.get('location', '-')),
+                row.get('event_type', '-'),
+                row.get('confidence', '-'),
+                row.get('severity', '-'),
             ])
 
     return output.getvalue()

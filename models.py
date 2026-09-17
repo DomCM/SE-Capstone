@@ -30,6 +30,7 @@ class Camera(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), default='My Camera')
+    zone = db.Column(db.String(100), nullable=False, default='Main Entrance')
     source = db.Column(db.String(500), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     is_public = db.Column(db.Boolean, default=False)

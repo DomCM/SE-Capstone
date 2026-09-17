@@ -835,6 +835,21 @@
                     <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door" required>
                 </div>
                 <div class="field">
+                    <label for="cam-zone">Zone / Location</label>
+                    <input id="cam-zone" type="text" name="zone" list="existingZones" placeholder="e.g. Main Entrance, Backyard" required>
+                    <datalist id="existingZones">
+                        {% if available_zones %}
+                            {% for z in available_zones %}
+                            <option value="{{ z }}">
+                            {% endfor %}
+                        {% else %}
+                            <option value="Main Entrance">
+                            <option value="Backyard Perimeter">
+                            <option value="Garage">
+                        {% endif %}
+                    </datalist>
+                </div>
+                <div class="field">
                     <label for="cam-url">RTSP / HTTP Stream URL</label>
                     <input id="cam-url" type="text" name="source" placeholder="rtsp://user:password@ip_address:port/stream" required>
                 </div>

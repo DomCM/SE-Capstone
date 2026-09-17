@@ -647,7 +647,22 @@
     <form action="/add_camera" method="POST" class="add-form">
         <div class="field">
             <label for="cam-name">Camera Name</label>
-            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door Gate 1" required>
+            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door Main Cam" required>
+        </div>
+        <div class="field">
+            <label for="cam-zone">Zone / Location</label>
+            <input id="cam-zone" type="text" name="zone" list="existingZones" placeholder="e.g. Gate 1, Clubhouse, North Perimeter" required>
+            <datalist id="existingZones">
+                {% if available_zones %}
+                    {% for z in available_zones %}
+                    <option value="{{ z }}">
+                    {% endfor %}
+                {% else %}
+                    <option value="Gate 1 (Main Entrance)">
+                    <option value="North Perimeter Fence">
+                    <option value="Clubhouse & Amenities">
+                {% endif %}
+            </datalist>
         </div>
         <div class="field">
             <label for="cam-url">RTSP / HTTP Stream URL</label>

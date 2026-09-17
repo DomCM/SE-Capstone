@@ -427,9 +427,15 @@
                 <label for="cameraZone">Target Location / Zone</label>
                 <select id="cameraZone" name="zone">
                     <option value="all" {% if zone == 'all' or not zone %}selected{% endif %}>All Village Cameras (Entire Zone)</option>
-                    <option value="gate1" {% if zone == 'gate1' %}selected{% endif %}>Gate 1 (Main Entrance)</option>
-                    <option value="north" {% if zone == 'north' %}selected{% endif %}>North Perimeter Fence</option>
-                    <option value="clubhouse" {% if zone == 'clubhouse' %}selected{% endif %}>Clubhouse & Amenities</option>
+                    {% if available_zones %}
+                        {% for z in available_zones %}
+                        <option value="{{ z }}" {% if zone == z or zone.lower() in z.lower() %}selected{% endif %}>{{ z }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="Gate 1 (Main Entrance)" {% if zone == 'Gate 1 (Main Entrance)' or zone == 'gate1' %}selected{% endif %}>Gate 1 (Main Entrance)</option>
+                        <option value="North Perimeter Fence" {% if zone == 'North Perimeter Fence' or zone == 'north' %}selected{% endif %}>North Perimeter Fence</option>
+                        <option value="Clubhouse & Amenities" {% if zone == 'Clubhouse & Amenities' or zone == 'clubhouse' %}selected{% endif %}>Clubhouse & Amenities</option>
+                    {% endif %}
                 </select>
             </div>
             <div class="field">
@@ -498,7 +504,8 @@
         <table class="report-table">
             <thead>
                 <tr>
-                    <th>Location / Zone</th>
+                    <th>Assigned Zone / Location</th>
+                    <th>Camera Name</th>
                     <th>Total Triggers</th>
                     <th>High Severity Alerts</th>
                     <th>Peak Hour</th>
@@ -509,7 +516,8 @@
                 {% if frequency_summary %}
                     {% for row in frequency_summary %}
                     <tr>
-                        <td><strong>{{ row.location }}</strong></td>
+                        <td><strong>{{ row.zone }}</strong></td>
+                        <td>{{ row.camera_name }}</td>
                         <td>{{ row.total_triggers }}</td>
                         <td>
                             {% if row.high_severity > 0 %}
@@ -524,7 +532,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="5" style="text-align:center;color:var(--text-muted);">No trigger frequency data available for the selected timeframe.</td>
+                        <td colspan="6" style="text-align:center;color:var(--text-muted);">No trigger frequency data available for the selected timeframe.</td>
                     </tr>
                 {% endif %}
             </tbody>
@@ -534,7 +542,8 @@
         <table class="report-table">
             <thead>
                 <tr>
-                    <th>Camera Location</th>
+                    <th>Assigned Zone / Location</th>
+                    <th>Camera Name</th>
                     <th>Operational Status</th>
                     <th>Disconnect Alerts</th>
                     <th>Last Recorded Activity</th>
@@ -544,7 +553,8 @@
                 {% if surveillance_summary %}
                     {% for row in surveillance_summary %}
                     <tr>
-                        <td><strong>{{ row.camera_name }}</strong></td>
+                        <td><strong>{{ row.zone }}</strong></td>
+                        <td>{{ row.camera_name }}</td>
                         <td>
                             {% if row.disconnect_events == 0 %}
                                 <strong style="color:var(--success);">{{ row.status }}</strong>
@@ -558,7 +568,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="4" style="text-align:center;color:var(--text-muted);">No surveillance camera records found.</td>
+                        <td colspan="5" style="text-align:center;color:var(--text-muted);">No surveillance camera records found.</td>
                     </tr>
                 {% endif %}
             </tbody>
@@ -569,7 +579,8 @@
             <thead>
                 <tr>
                     <th>Timestamp</th>
-                    <th>Camera Location</th>
+                    <th>Assigned Zone / Location</th>
+                    <th>Camera Name</th>
                     <th>Detection Event / Trigger Type</th>
                     <th>Confidence Score</th>
                     <th>Severity Status</th>
@@ -580,7 +591,8 @@
                     {% for log in incident_logs %}
                     <tr>
                         <td>{{ log.timestamp }}</td>
-                        <td>{{ log.location }}</td>
+                        <td><strong>{{ log.location }}</strong></td>
+                        <td>{{ log.camera_name }}</td>
                         <td>{{ log.event_type }}</td>
                         <td>{{ log.confidence }}</td>
                         <td>
@@ -596,7 +608,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="5" style="text-align:center;color:var(--text-muted);">No security events matched the selected filters.</td>
+                        <td colspan="6" style="text-align:center;color:var(--text-muted);">No security events matched the selected filters.</td>
                     </tr>
                 {% endif %}
             </tbody>

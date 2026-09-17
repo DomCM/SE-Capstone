@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -442,10 +442,11 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
 
 #video
 class VideoStreamManager:
-    def __init__(self, user_id, camera_id, source, settings, camera_name=None):
+    def __init__(self, user_id, camera_id, source, settings, camera_name=None, camera_zone=None):
         self.user_id = user_id
         self.camera_id = camera_id
         self.camera_name = camera_name or f'Cam {camera_id}'
+        self.camera_zone = camera_zone or 'Main Entrance'
         self.video_source = source
         self.cap = None
         self.last_connection_attempt = 0
@@ -664,7 +665,7 @@ class VideoStreamManager:
                             detector='vehicle',
                             severity='medium',
                             event_metadata={
-                                'camera_zone': self.camera_name.lower().replace(' ', '_'),
+                                'camera_zone': self.camera_zone,
                                 'class': vehicle['name'],
                                 'line_name': line.get('name', 'Lane'),
                                 'direction': direction,
@@ -959,7 +960,7 @@ class VideoStreamManager:
                                 event_category='vision',
                                 detector='face',
                                 severity='high',
-                                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'class': 'person'}
+                                event_metadata={'camera_zone': self.camera_zone, 'class': 'person'}
                             )
                         else:
                             self.log_db_event(
@@ -969,7 +970,7 @@ class VideoStreamManager:
                                 event_category='vision',
                                 detector='face',
                                 severity='normal',
-                                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'class': 'person', 'person_name': name}
+                                event_metadata={'camera_zone': self.camera_zone, 'class': 'person', 'person_name': name}
                             )
 
             except Exception as e:
@@ -997,7 +998,7 @@ class VideoStreamManager:
                 event_category='vision',
                 detector='yolo',
                 severity='critical',
-                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'classes': detected_names}
+                event_metadata={'camera_zone': self.camera_zone, 'classes': detected_names}
             )
             class SettingsObj:
                 pass
@@ -1019,7 +1020,7 @@ class VideoStreamManager:
                 event_category='vision',
                 detector='yolo',
                 severity='medium',
-                event_metadata={'camera_zone': self.camera_name.lower().replace(' ', '_'), 'person_count': len(human_boxes)}
+                event_metadata={'camera_zone': self.camera_zone, 'person_count': len(human_boxes)}
             )
 
         self.crowd_alert_active = crowd_detected
@@ -1056,7 +1057,7 @@ class VideoStreamManager:
                 severity = 'normal'
 
         if event_metadata is None:
-            event_metadata = {'camera_zone': self.camera_name.lower().replace(' ', '_')}
+            event_metadata = {'camera_zone': getattr(self, 'camera_zone', self.camera_name)}
 
         with app.app_context():
             try:
@@ -1389,6 +1390,7 @@ def index():
         alerts_this_week=alerts_this_week,
         high_severity_alerts=high_severity_alerts,
         recording_requests=recording_requests,
+        available_zones=get_available_zones(),
     )
 
 
@@ -1568,22 +1570,38 @@ def admin_dashboard():
     )
 
 
+def get_available_zones():
+    zones = []
+    try:
+        for c in Camera.query.all():
+            z = (getattr(c, 'zone', None) or '').strip()
+            if z and z not in zones:
+                zones.append(z)
+    except Exception:
+        pass
+    if not zones:
+        zones = ['Main Entrance', 'North Perimeter', 'Clubhouse & Amenities']
+    return zones
+
+
 @app.route('/admin/cctv')
 @admin_required
 def admin_cctv():
     camera_items = []
     for camera in Camera.query.filter_by(user_id=current_user.id).order_by(Camera.id).all():
+        cam_zone = getattr(camera, 'zone', 'Main Entrance') or 'Main Entrance'
         camera_items.append({
             'id': camera.id,
             'name': camera.name,
-            'location': '',
+            'zone': cam_zone,
+            'location': cam_zone,
             'status': 'online' if camera.is_active else 'offline',
             'motion_detected': False,
             'is_recording': False,
             'is_public': camera.is_public,
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
-    return render_template('admin_cctv.html', cameras=camera_items)
+    return render_template('admin_cctv.html', cameras=camera_items, available_zones=get_available_zones())
 
 
 @app.route('/admin/users')
@@ -2004,6 +2022,7 @@ def admin_factory_reset():
 def add_camera():
     source = request.form.get('source')
     name = request.form.get('name')
+    zone = request.form.get('zone', 'Main Entrance').strip() or 'Main Entrance'
     redirect_target = url_for('admin_cctv') if is_admin_user(current_user) else url_for('index')
 
     if not source:
@@ -2018,6 +2037,7 @@ def add_camera():
         user_id=current_user.id,
         source=source,
         name=name,
+        zone=zone,
         is_public=is_admin_user(current_user) or request.form.get('is_public') == 'true',
     )
     db.session.add(new_cam)
@@ -2110,7 +2130,7 @@ def acquire_stream(user_id, camera):
         if manager is None or manager.stream_stop_event.is_set():
             with app.app_context():
                 user_settings = Settings.query.filter_by(user_id=user_id).first()
-            manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings, camera.name)
+            manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings, camera.name, getattr(camera, 'zone', 'Main Entrance'))
             manager.scope_key = source_key
             active_physical_streams[source_key] = manager
             manager.start()
