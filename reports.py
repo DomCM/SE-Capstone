@@ -335,6 +335,43 @@ def build_report(
             row['patrol_recommendation'] = priority.get('patrol_recommendation', 'Routine patrol cadence is adequate for this location.')
             row['anomaly_flag'] = priority.get('anomaly_flag', 'No')
 
+        zone_totals = {}
+        for item in patrol_priority_summary:
+            zone_name = item['zone']
+            zone_totals[zone_name] = zone_totals.get(zone_name, 0) + item['risk_score']
+
+        zone_risk_chart = [
+            {'label': zone, 'value': score}
+            for zone, score in sorted(zone_totals.items(), key=lambda x: x[1], reverse=True)[:6]
+        ]
+
+        hourly_activity = {}
+        for event in report_events:
+            ts = event.get('raw_timestamp')
+            if ts is None:
+                continue
+            hour_key = ts.strftime('%H:00')
+            hourly_activity[hour_key] = hourly_activity.get(hour_key, 0) + 1
+        hourly_activity_chart = [
+            {'label': hour, 'value': count}
+            for hour, count in sorted(hourly_activity.items())
+        ]
+
+        severity_counts = {'High': 0, 'Warning': 0, 'Normal': 0}
+        for event in report_events:
+            level = event.get('severity') or 'Normal'
+            if level in severity_counts:
+                severity_counts[level] += 1
+        severity_chart = [
+            {'label': label, 'value': value}
+            for label, value in severity_counts.items()
+            if value > 0
+        ]
+    else:
+        zone_risk_chart = []
+        hourly_activity_chart = []
+        severity_chart = []
+
     # Surveillance System Health Breakdown
     surveillance_summary = []
     uptime_rate = '100.0%'
@@ -383,6 +420,9 @@ def build_report(
         'incident_logs': filtered_events,
         'frequency_summary': frequency_summary,
         'patrol_priority_summary': patrol_priority_summary,
+        'zone_risk_chart': zone_risk_chart,
+        'hourly_activity_chart': hourly_activity_chart,
+        'severity_chart': severity_chart,
         'surveillance_summary': surveillance_summary,
         'date_generated': now.strftime('%Y-%m-%d'),
         'doc_id': f'EBV-{now.strftime("%Y%m%d")}-{len(report_events):04d}',
