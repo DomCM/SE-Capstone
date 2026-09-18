@@ -101,6 +101,91 @@ def _matches_severity(event_severity, severity):
     return True
 
 
+def compute_patrol_priority_summary(events):
+    """Score each zone/camera by recent activity to guide patrol prioritization."""
+    zone_stats = {}
+
+    for event in events or []:
+        zone = (event.get('zone') or event.get('location') or 'Unassigned').strip() or 'Unassigned'
+        camera = event.get('camera_name') or 'Unknown camera'
+        key = (zone, camera)
+        stats = zone_stats.setdefault(key, {
+            'zone': zone,
+            'camera_name': camera,
+            'total_triggers': 0,
+            'high_severity': 0,
+            'unknown_faces': 0,
+            'crowd_events': 0,
+            'vehicle_crossings': 0,
+            'risk_score': 0,
+            'event_types': {},
+        })
+
+        stats['total_triggers'] += 1
+        if event.get('severity') == 'High':
+            stats['high_severity'] += 1
+
+        event_type = str(event.get('event_type') or '').lower()
+        if 'unknown' in event_type:
+            stats['unknown_faces'] += 1
+        if 'crowd' in event_type:
+            stats['crowd_events'] += 1
+        if 'vehicle' in event_type or 'crossing' in event_type:
+            stats['vehicle_crossings'] += 1
+
+        if 'critical' in event_type or 'alert' in event_type:
+            stats['risk_score'] += 12
+        elif 'unknown' in event_type:
+            stats['risk_score'] += 9
+        elif 'crowd' in event_type:
+            stats['risk_score'] += 6
+        elif 'vehicle' in event_type or 'crossing' in event_type:
+            stats['risk_score'] += 5
+        elif 'motion' in event_type:
+            stats['risk_score'] += 2
+        elif 'recogn' in event_type:
+            stats['risk_score'] += 1
+        else:
+            stats['risk_score'] += 1
+
+        stats['risk_score'] += stats['high_severity'] * 2
+        stats['risk_score'] += stats['unknown_faces'] * 3
+        stats['risk_score'] += stats['crowd_events'] * 2
+        stats['risk_score'] += stats['vehicle_crossings'] * 2
+
+        event_label = event.get('event_type') or 'Other'
+        stats['event_types'][event_label] = stats['event_types'].get(event_label, 0) + 1
+
+    summary = []
+    for entry in zone_stats.values():
+        risk_score = entry['risk_score']
+        if risk_score >= 24:
+            risk_level = 'High'
+            patrol_recommendation = 'Escalate physical patrols and increase monitoring in this zone.'
+        elif risk_score >= 10:
+            risk_level = 'Medium'
+            patrol_recommendation = 'Maintain active patrol checks and review the area during peak hours.'
+        else:
+            risk_level = 'Low'
+            patrol_recommendation = 'Routine patrol cadence is adequate for this location.'
+
+        strongest_event = max(entry['event_types'].items(), key=lambda item: item[1])[0] if entry['event_types'] else 'Routine activity'
+        summary.append({
+            'zone': entry['zone'],
+            'camera_name': entry['camera_name'],
+            'total_triggers': entry['total_triggers'],
+            'high_severity': entry['high_severity'],
+            'risk_score': risk_score,
+            'risk_level': risk_level,
+            'anomaly_flag': 'Yes' if risk_level != 'Low' else 'No',
+            'patrol_recommendation': patrol_recommendation,
+            'top_event': strongest_event,
+        })
+
+    summary.sort(key=lambda item: item['risk_score'], reverse=True)
+    return summary
+
+
 def build_report(
     event_log_model,
     report_type='village',
@@ -199,6 +284,7 @@ def build_report(
         filtered_events = report_events
 
     # Frequency Analytics Breakdown by Zone / Camera Name
+    patrol_priority_summary = []
     frequency_summary = []
     if report_type == 'frequency':
         location_data = {}
@@ -239,6 +325,15 @@ def build_report(
                 'top_event': top_t,
             })
         frequency_summary.sort(key=lambda x: x['total_triggers'], reverse=True)
+
+        patrol_priority_summary = compute_patrol_priority_summary(report_events)
+        priority_lookup = {(item['zone'], item['camera_name']): item for item in patrol_priority_summary}
+        for row in frequency_summary:
+            priority = priority_lookup.get((row['zone'], row['camera_name']), {})
+            row['risk_score'] = priority.get('risk_score', 0)
+            row['risk_level'] = priority.get('risk_level', 'Low')
+            row['patrol_recommendation'] = priority.get('patrol_recommendation', 'Routine patrol cadence is adequate for this location.')
+            row['anomaly_flag'] = priority.get('anomaly_flag', 'No')
 
     # Surveillance System Health Breakdown
     surveillance_summary = []
@@ -287,6 +382,7 @@ def build_report(
         'uptime_rate': uptime_rate,
         'incident_logs': filtered_events,
         'frequency_summary': frequency_summary,
+        'patrol_priority_summary': patrol_priority_summary,
         'surveillance_summary': surveillance_summary,
         'date_generated': now.strftime('%Y-%m-%d'),
         'doc_id': f'EBV-{now.strftime("%Y%m%d")}-{len(report_events):04d}',
@@ -301,7 +397,7 @@ def generate_report_csv(report_data):
     report_type = report_data.get('selected_type', 'village')
 
     if report_type == 'frequency':
-        writer.writerow(['Assigned Zone', 'Camera Name', 'Total Triggers', 'High Severity Alerts', 'Peak Hour', 'Primary Trigger Type'])
+        writer.writerow(['Assigned Zone', 'Camera Name', 'Total Triggers', 'High Severity Alerts', 'Peak Hour', 'Primary Trigger Type', 'Risk Score', 'Patrol Priority', 'Patrol Recommendation'])
         for row in report_data.get('frequency_summary', []):
             writer.writerow([
                 row.get('zone', '-'),
@@ -310,6 +406,9 @@ def generate_report_csv(report_data):
                 row.get('high_severity', 0),
                 row.get('peak_hour', '-'),
                 row.get('top_event', '-'),
+                row.get('risk_score', 0),
+                row.get('risk_level', 'Low'),
+                row.get('patrol_recommendation', '-'),
             ])
     elif report_type == 'surveillance':
         writer.writerow(['Assigned Zone', 'Camera Name', 'Operational Status', 'Disconnect Events', 'Last Recorded Activity'])

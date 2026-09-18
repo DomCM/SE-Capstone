@@ -501,6 +501,52 @@
         </div>
 
         {% if selected_type == 'frequency' %}
+        <div style="margin-bottom: 18px; padding: 14px 18px; background: var(--amber-bg); border: 1px solid #f1d38a; border-radius: var(--radius-md); color: var(--text-dark); font-weight: 600;">
+            Patrol Priority Analytics: zones and cameras are ranked by anomaly intensity and elevated trigger load to support manual security patrol decisions.
+        </div>
+
+        <!-- PATROL PRIORITY / HOTSPOT RANKING TABLE -->
+        <table class="report-table" style="margin-bottom: 22px;">
+            <thead>
+                <tr>
+                    <th>Priority Rank</th>
+                    <th>Assigned Zone / Location</th>
+                    <th>Camera Name</th>
+                    <th>Risk Score</th>
+                    <th>Priority Level</th>
+                    <th>Anomaly Flag</th>
+                    <th>Recommended Patrol Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if patrol_priority_summary %}
+                    {% for row in patrol_priority_summary %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ row.zone }}</strong></td>
+                        <td>{{ row.camera_name }}</td>
+                        <td><strong>{{ row.risk_score }}</strong></td>
+                        <td>
+                            {% if row.risk_level == 'High' %}
+                                <strong style="color:var(--danger);">{{ row.risk_level }}</strong>
+                            {% elif row.risk_level == 'Medium' %}
+                                <strong style="color:var(--amber);">{{ row.risk_level }}</strong>
+                            {% else %}
+                                <strong style="color:var(--success);">{{ row.risk_level }}</strong>
+                            {% endif %}
+                        </td>
+                        <td>{% if row.anomaly_flag == 'Yes' %}<strong style="color:var(--danger);">{{ row.anomaly_flag }}</strong>{% else %}{{ row.anomaly_flag }}{% endif %}</td>
+                        <td>{{ row.patrol_recommendation }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align:center;color:var(--text-muted);">No patrol-priority anomalies detected for the selected timeframe.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
         <!-- ALERT FREQUENCY ANALYTICS TABLE -->
         <table class="report-table">
             <thead>

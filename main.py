@@ -206,9 +206,9 @@ def detect_virtual_line_crossing(previous_center, current_center, line):
     if previous_side == 0 or current_side == 0:
         return None
     if previous_side * current_side < 0:
-        if previous_side < 0 and current_side > 0:
-            return 'positive'
         if previous_side > 0 and current_side < 0:
+            return 'positive'
+        if previous_side < 0 and current_side > 0:
             return 'negative'
     return None
 
