@@ -20,6 +20,7 @@ import secrets
 import gc
 import math
 import torch
+from html import escape
 from urllib.parse import urlsplit, urlunsplit
 from multiprocessing import Pool, cpu_count
 from ultralytics import YOLO
@@ -414,6 +415,110 @@ def run_roi_detection(roi_tasks):
         return [detect_faces_in_chunk(*task) for task in roi_tasks]
 
 
+def _build_alert_email_html(subject, body, image_frame=None):
+    alert_title = 'CRITICAL ALERT' if str(subject).upper().startswith('CRITICAL') else 'SECURITY ALERT'
+    alert_message = escape(body or 'A security event was detected on your property.')
+    timestamp = datetime.utcnow().strftime('%d %b %Y • %H:%M UTC')
+    image_markup = ''
+
+    if image_frame is not None:
+        image_markup = '''
+            <tr>
+                <td style="padding:0 32px 28px;">
+                    <div style="background:#f3f6ff;border:1px solid #dfe7f9;border-radius:16px;padding:18px;">
+                        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#4a6db5;margin-bottom:12px;">Camera Snapshot</div>
+                        <img src="cid:alert-image" alt="Security alert snapshot" style="display:block;width:100%;max-width:560px;border-radius:12px;border:1px solid #dfe7f9;background:#edf2ff;" />
+                    </div>
+                </td>
+            </tr>
+        '''
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{escape(subject)}</title>
+    </head>
+    <body style="margin:0;background:#f7f8fc;font-family:Arial, Helvetica, sans-serif;color:#0b1735;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f8fc;padding:32px 12px;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:620px;background:#ffffff;border:1px solid #e2e8f5;border-radius:18px;overflow:hidden;box-shadow:0 12px 28px rgba(11,23,53,0.08);">
+                        <tr>
+                            <td style="background:#0b1735;padding:22px 32px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td valign="middle" width="42">
+                                            <div style="width:42px;height:42px;border-radius:12px;background:#ffffff;display:flex;align-items:center;justify-content:center;">
+                                                <span style="font-family:Georgia, serif;font-size:22px;font-weight:700;color:#0b1735;">H</span>
+                                            </div>
+                                        </td>
+                                        <td valign="middle" style="padding-left:14px;">
+                                            <div style="font-family:Georgia, serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Home Detection <span style="font-style:italic;color:#dfe7f9;">Security</span></div>
+                                            <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#b8c6e8;margin-top:4px;">Property Protection</div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:28px 32px 12px;">
+                                <div style="display:inline-block;background:#fff1f1;border:1px solid #f7d1cf;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:0.12em;color:#c0392b;text-transform:uppercase;">{alert_title}</div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:0 32px 20px;">
+                                <div style="font-size:32px;line-height:1.15;font-weight:700;color:#0b1735;letter-spacing:-0.03em;">Unexpected activity detected</div>
+                                <div style="margin-top:10px;font-size:13px;color:#4a6db5;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">{timestamp}</div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:0 32px 8px;">
+                                <div style="background:#f3f6ff;border:1px solid #e2e8f5;border-radius:14px;padding:18px 20px;">
+                                    <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4a6db5;margin-bottom:12px;">Alert Summary</div>
+                                    <div style="font-size:18px;line-height:1.6;color:#0b1735;font-weight:600;">{alert_message}</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        {image_markup}
+
+                        <tr>
+                            <td style="padding:8px 32px 28px;">
+                                <div style="border-top:1px solid #e2e8f5;padding-top:18px;font-size:13px;line-height:1.7;color:#3a4d70;">
+                                    Please review the live feed and confirm the status in your dashboard. If this activity looks unfamiliar, verify the camera zone and take appropriate action.
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="background:#f7f8fc;border-top:1px solid #e2e8f5;padding:18px 32px;">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="left" style="font-size:12px;color:#7a8fba;">
+                                            Home Detection Security • Smart property monitoring
+                                        </td>
+                                        <td align="right" style="font-size:12px;color:#7a8fba;">
+                                            Secure alert system
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    '''
+
+
 def send_email_alert(user_settings, subject, body, image_frame=None):
     if not user_settings or not getattr(user_settings, 'email_alerts_enabled', False):
         return
@@ -425,16 +530,24 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
         return
 
     try:
-        msg = MIMEMultipart()
+        html_body = _build_alert_email_html(subject, body, image_frame)
+        msg = MIMEMultipart('mixed')
         msg['From'] = sender
         msg['To'] = recipient_email
         msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
+
+        alternative = MIMEMultipart('alternative')
+        alternative.attach(MIMEText(body or 'Security alert detected.', 'plain', 'utf-8'))
+        alternative.attach(MIMEText(html_body, 'html', 'utf-8'))
+        msg.attach(alternative)
 
         if image_frame is not None:
             success, encoded_image = cv2.imencode('.jpg', image_frame)
             if success:
-                msg.attach(MIMEImage(encoded_image.tobytes(), name="alert.jpg"))
+                image_part = MIMEImage(encoded_image.tobytes(), name='alert.jpg')
+                image_part.add_header('Content-ID', '<alert-image>')
+                image_part.add_header('Content-Disposition', 'inline', filename='alert.jpg')
+                msg.attach(image_part)
 
         with smtplib.SMTP(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as s:
             s.starttls()
@@ -1202,16 +1315,19 @@ def verify_otp():
         return redirect(url_for('login'))
     session['otp_purpose'] = purpose
 
+    pending_login_user = db.session.get(User, session.get('pending_login_user_id')) if purpose == 'login' else None
+    otp_email = pending_login_user.email if pending_login_user else session.get('recovery_email')
+
     if request.method == 'POST':
         code = request.form.get('otp', '').strip()
         if not code.isdigit() or len(code) != 6:
             flash('Enter the 6-digit verification code.', 'danger')
             return render_template('verify_otp.html', purpose=purpose,
-                                   email=session.get('recovery_email'),
+                                   email=otp_email,
                                    legacy_otp=app.config.get('LEGACY_OTP', False))
 
         if purpose == 'login':
-            user = db.session.get(User, session.get('pending_login_user_id'))
+            user = pending_login_user
             if app.config.get('LEGACY_OTP'):
                 # Legacy path: validate against the user's TOTP secret
                 secret = decrypt_totp_secret(user.totp_secret) if user else None
@@ -1263,7 +1379,7 @@ def verify_otp():
         flash('That verification code is invalid or expired.', 'danger')
 
     return render_template('verify_otp.html', purpose=purpose,
-                           email=session.get('recovery_email'),
+                           email=otp_email,
                            legacy_otp=app.config.get('LEGACY_OTP', False))
 
 

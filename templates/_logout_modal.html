@@ -1,0 +1,78 @@
+<style>
+    .logout-modal-overlay {
+        position: fixed; inset: 0; background: rgba(6, 13, 31, 0.55);
+        backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center;
+        padding: 20px; z-index: 10000; opacity: 0; visibility: hidden;
+        transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    .logout-modal-overlay.is-open { opacity: 1; visibility: visible; }
+    .logout-modal {
+        width: 100%; max-width: 380px; background: var(--white);
+        border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
+        padding: 28px; text-align: center; transform: translateY(14px) scale(0.96); opacity: 0;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+    }
+    .logout-modal-overlay.is-open .logout-modal { transform: translateY(0) scale(1); opacity: 1; }
+    .logout-modal-icon { width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: flex; align-items: center; justify-content: center; }
+    .logout-modal-icon svg { width: 24px; height: 24px; }
+    .logout-modal h3 { font-size: 17px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+    .logout-modal p { font-size: 14px; color: var(--text-mid); line-height: 1.6; margin-bottom: 24px; }
+    .logout-modal-actions { display: flex; gap: 10px; }
+    .logout-modal-btn { flex: 1; padding: 11px 16px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid transparent; transition: all 0.2s ease; }
+    .logout-modal-btn-no { background: var(--off-white); border-color: var(--border); color: var(--text-mid); }
+    .logout-modal-btn-no:hover { background: var(--border); }
+    .logout-modal-btn-yes { background: var(--danger); color: var(--white); box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28); }
+    .logout-modal-btn-yes:hover { background: #a5301f; transform: translateY(-1px); }
+</style>
+
+<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+    <div class="logout-modal">
+        <div class="logout-modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <h3 id="logoutModalTitle">Confirm Logout</h3>
+        <p>Are you sure you want to log out of the admin panel?</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
+            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const overlay = document.getElementById('logoutModalOverlay');
+        const yesBtn = document.getElementById('logoutModalYes');
+        const noBtn = document.getElementById('logoutModalNo');
+        let pendingHref = null;
+
+        document.querySelectorAll('a.nav-logout').forEach(link => {
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                pendingHref = link.getAttribute('href');
+                overlay?.classList.add('is-open');
+                noBtn?.focus();
+            });
+        });
+
+        yesBtn?.addEventListener('click', () => {
+            if (pendingHref) window.location.href = pendingHref;
+        });
+        noBtn?.addEventListener('click', () => {
+            overlay?.classList.remove('is-open');
+            pendingHref = null;
+        });
+        overlay?.addEventListener('click', event => {
+            if (event.target === overlay) {
+                overlay.classList.remove('is-open');
+                pendingHref = null;
+            }
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                overlay?.classList.remove('is-open');
+                pendingHref = null;
+            }
+        });
+    })();
+</script>
