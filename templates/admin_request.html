@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recording Requests — Eusebio Bliss Village Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Recording Requests — Home Detection Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* ══ LOCKED PAGE FRAME — identical sa lahat ng admin pages ═══════════
-           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
         html {
             height: 100%;
-            overflow-y: scroll;        /* laging naka-reserve ang scrollbar space */
+            overflow-y: scroll;
             scrollbar-gutter: stable;
         }
-
 
         :root {
             --navy-950:  #060d1f;
@@ -33,470 +31,552 @@
             --text-dark: #0b1735;
             --text-mid:  #3a4d70;
             --text-muted:#7a8fba;
-            --danger:    #c0392b;
-            --danger-bg: #fef2f1;
-            --success:   #1f8a5f;
-            --success-bg:#eaf7f0;
-            --amber:     #b07d2a;
-            --amber-bg:  #fef7e6;
 
-            --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 16px;
-            --shadow-xs: 0 1px 2px rgba(11,23,53,0.04);
-            --shadow-sm: 0 1px 4px rgba(11,23,53,0.07), 0 1px 2px rgba(11,23,53,0.04);
-            --shadow-md: 0 8px 24px rgba(11,23,53,0.10), 0 2px 6px rgba(11,23,53,0.06);
-            --shadow-lg: 0 16px 40px rgba(11,23,53,0.14), 0 4px 12px rgba(11,23,53,0.08);
+            --bg-main:       #f7f8fc;
+            --surface-white: #ffffff;
+            --border-color:  #cbd5e1;
+            --border-subtle: #e2e8f0;
+            
+            --text-primary:  #0f172a;
+            --text-secondary:#475569;
+            
+            --accent-blue:   #2563eb;
+            --accent-blue-bg:#eff6ff;
+            
+            --danger:        #dc2626;
+            --danger-bg:     #fef2f2;
+            --danger-border: #fecaca;
+            
+            --success:       #059669;
+            --success-bg:    #ecfdf5;
+            --success-border:#a7f3d0;
+            
+            --amber:         #d97706;
+            --amber-bg:      #fffbeb;
+            --amber-border:  #fde68a;
+            
+            --radius-sm:     6px;
+            --radius-md:     10px;
+            --radius-lg:     16px;
+            
+            --shadow-xs:     0 1px 2px rgba(11,23,53,0.04);
+            --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-card:   0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+            --shadow-hover:  0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+            --shadow-lg:     0 16px 40px rgba(11,23,53,0.14), 0 4px 12px rgba(11,23,53,0.08);
+            
             --font-sans: 'Inter', sans-serif;
-            --font-serif:'Playfair Display', Georgia, serif;
             --font-mono: 'JetBrains Mono', monospace;
         }
 
         body {
             font-family: var(--font-sans);
-            background: var(--off-white);
-            color: var(--text-dark);
+            background: var(--bg-main);
+            color: var(--text-primary);
             min-height: 100vh;
-            font-size: 14px; line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
-            display: flex; flex-direction: column;
+            display: flex;
         }
-
 
         /* ══════════════════════════════════════
-           RESPONSIVE NAVIGATION
+           SIDEBAR NAVIGATION
         ══════════════════════════════════════ */
-        nav {
-            position: sticky; top: 0; z-index: 200;
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: var(--shadow-xs); flex-shrink: 0;
-            width: 100%;
+        .admin-sidebar {
+            width: 280px; background: var(--surface-white);
+            border-right: 1px solid var(--border-subtle);
+            display: flex; flex-direction: column; flex-shrink: 0;
+            position: sticky; top: 0; height: 100vh; z-index: 100;
         }
-        .nav-inner {
-            max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 64px;
-            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+        
+        .sidebar-header {
+            padding: 24px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border-subtle); text-decoration: none;
         }
-        .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
+            width: 40px; height: 40px; background: var(--surface-white); border-radius: var(--radius-md);
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            padding: 2px; overflow: hidden; border: 1px solid var(--border);
+            padding: 2px; overflow: hidden; border: 1px solid var(--border-subtle);
         }
         .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-        .brand-text-block { line-height: 1.15; }
-        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
+        .brand-text-block { line-height: 1.2; }
+        .brand-name { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
         .brand-name em { font-style: italic; color: var(--navy-600); }
-        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+        .brand-sub { font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
-        .nav-clock {
-            display: flex; align-items: center; gap: 8px;
-            background: var(--navy-900); border-radius: 999px; padding: 6px 16px; flex-shrink: 0;
-        }
-        .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s ease-in-out infinite; }
-        @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
-        .nav-clock-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ef4444; }
-        .nav-clock-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.15); }
-        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; letter-spacing: 0.04em; }
-
-        .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
+        .nav-links { display: flex; flex-direction: column; padding: 20px 16px; gap: 6px; list-style: none; flex: 1; overflow-y: auto; }
         .nav-links a {
-            display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
-            font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
-            transition: background 0.15s, color 0.15s; white-space: nowrap; box-sizing: border-box;
-            border: 1px solid transparent;   /* pantay ang laki ng bawat link */
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-md);
+            font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none;
+            transition: all 0.2s ease; border: 1px solid transparent;
         }
-        .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
-        .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
-        .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
-        .nav-links a.active svg { opacity: 1; }
-        .nav-links a.nav-logout { margin-left: 6px; border-color: var(--border); }
-        .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
-
-        .menu-toggle {
-            display: none; background: transparent; border: 1px solid var(--border);
-            color: var(--navy-900); width: 40px; height: 40px; border-radius: var(--radius-sm);
-            align-items: center; justify-content: center; cursor: pointer;
-        }
-        .menu-toggle svg { width: 20px; height: 20px; }
+        .nav-links a svg { width: 18px; height: 18px; color: var(--text-muted); transition: color 0.2s ease; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-900); }
+        .nav-links a:hover svg { color: var(--navy-600); }
+        .nav-links a.active { background: var(--navy-50); color: var(--navy-900); font-weight: 600; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs); }
+        .nav-links a.active svg { color: var(--navy-600); }
 
         .nav-pill {
             display: inline-flex; align-items: center; justify-content: center;
-            min-width: 17px; height: 17px; padding: 0 4px;
+            min-width: 18px; height: 18px; padding: 0 5px;
             background: var(--danger); color: #fff; font-size: 10px; font-weight: 700;
-            border-radius: 999px; margin-left: 2px;
+            border-radius: 999px; margin-left: auto;
         }
 
+        /* Sidebar Profile Footer Section */
+        .sidebar-profile-container {
+            margin-top: auto; border-top: 1px solid var(--border-subtle); padding: 16px;
+            position: relative;
+        }
+        .sidebar-profile-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; padding: 10px 12px; border-radius: var(--radius-md);
+            background: var(--off-white); border: 1px solid var(--border-subtle); cursor: pointer;
+            transition: background 0.15s ease; text-align: left; font-family: var(--font-sans);
+        }
+        .sidebar-profile-btn:hover { background: var(--navy-50); }
+        .sidebar-profile-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .sidebar-profile-avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--navy-900); color: white;
+            display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0;
+        }
+        .sidebar-profile-text { min-width: 0; }
+        .sidebar-profile-name { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-profile-role { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
-        /* ══ PAGE LAYOUT ══════════════════════════════════════ */
-        .page { max-width: 1280px; margin: 0 auto; padding: 34px 28px 72px; width: 100%; }
+        .sidebar-profile-dropdown {
+            position: absolute; bottom: calc(100% + 8px); left: 16px; right: 16px;
+            background: var(--surface-white); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md); display: none; flex-direction: column; overflow: hidden; z-index: 10;
+        }
+        .sidebar-profile-dropdown.open { display: flex; }
+        .sidebar-profile-dropdown a {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            font-size: 13.5px; font-weight: 600; color: var(--danger); text-decoration: none;
+            transition: background 0.15s ease;
+        }
+        .sidebar-profile-dropdown a:hover { background: var(--danger-bg); }
+        .sidebar-profile-dropdown a svg { width: 16px; height: 16px; color: var(--danger); }
 
-        .page-header {
-            display: flex; align-items: flex-start; justify-content: space-between;
-            flex-wrap: wrap; gap: 16px; margin-bottom: 24px;
+        .mobile-toggle {
+            display: none; position: fixed; bottom: 20px; right: 20px;
+            width: 56px; height: 56px; border-radius: 50%; background: var(--navy-900); color: #fff;
+            border: none; box-shadow: var(--shadow-md); z-index: 200; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        .mobile-toggle svg { width: 24px; height: 24px; }
+
+        /* ══════════════════════════════════════
+           MAIN CONTENT AREA
+        ══════════════════════════════════════ */
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+
+        .page-header-wrapper {
+            background: var(--bg-main);
+            padding: 34px 28px 24px; display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px; 
         }
         .page-header-left { display: flex; align-items: center; gap: 16px; }
-        
-        /* 💡 SAKTONG HEADER ICON LAKI */
         .header-icon {
             width: 48px; height: 48px; background: var(--navy-900); border-radius: 12px;
-            display: flex; align-items: center; justify-content: center; color: #fff;
-            box-shadow: 0 6px 16px rgba(11,23,53,0.25); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; box-shadow: var(--shadow-card);
         }
         .header-icon svg { width: 22px; height: 22px; }
-
-        .page-title { font-family: var(--font-serif); font-size: 26px; font-weight: 700; color: var(--text-dark); }
+        .page-title { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
         .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
 
-        .badge {
-            display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
-            border-radius: 999px; font-size: 11.5px; font-weight: 600;
-        }
-        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid #9bd4b8; }
-        .badge-neutral { background: var(--navy-50); color: var(--navy-600); border: 1px solid var(--navy-200); }
+        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
 
-        .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
+
+        /* Stat Grid */
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
         .stat-card {
-            background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg);
-            padding: 16px 18px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 12px;
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); padding: 20px 22px; box-shadow: var(--shadow-card);
+            display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden;
+            transition: all 0.2s ease;
         }
-        .stat-icon {
-            width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .stat-icon svg { width: 18px; height: 18px; }
-        .stat-icon.pending  { background: var(--amber-bg); color: var(--amber); }
-        .stat-icon.approved { background: var(--navy-50); color: var(--navy-600); }
-        .stat-icon.fulfilled{ background: var(--success-bg); color: var(--success); }
-        .stat-icon.rejected { background: var(--danger-bg); color: var(--danger); }
-        .stat-value { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--text-dark); }
-        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; font-weight: 600; }
-
-        /* ══ CARD HEADER ══ */
-        .card-header {
-            background: var(--navy-900); padding: 16px 22px;
-            display: flex; align-items: center; gap: 12px; position: relative; overflow: hidden;
-        }
-        .card-header::after {
-            content: ''; position: absolute; inset: 0;
-            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-            background-size: 28px 28px; pointer-events: none;
-        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); border-color: var(--border-color); }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--navy-900); }
         
-        /* 💡 SAKTONG CARD HEADER ICON LAKI */
-        .card-header-icon {
-            width: 34px; height: 34px; background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--navy-200);
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .stat-icon svg { width: 20px; height: 20px; }
+        .si-amber { background: var(--amber-bg); color: var(--amber); }
+        .si-navy { background: var(--accent-blue-bg); color: var(--accent-blue); }
+        .si-success { background: var(--success-bg); color: var(--success); }
+        .si-danger { background: var(--danger-bg); color: var(--danger); }
+        
+        .stat-info { flex: 1; min-width: 0; }
+        .stat-value { font-size: 28px; font-weight: 800; color: var(--text-primary); font-family: var(--font-mono); line-height: 1; }
+        .stat-label { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Main Container Card */
+        .card {
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden;
+            display: flex; flex-direction: column; width: 100%;
         }
-        .card-header-icon svg { width: 17px; height: 17px; }
+        .card-header {
+            background: var(--surface-white); padding: 20px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .card-header-title { font-size: 16px; font-weight: 700; color: var(--navy-900); display: flex; align-items: center; gap: 10px; }
+        .card-header-title svg { color: var(--navy-600); }
+        .card-header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-        .card-header-text { font-size: 14px; font-weight: 600; color: #fff; }
-        .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; }
-
+        /* Filter Tabs */
         .filter-tabs {
-            display: flex; gap: 6px; padding: 14px 22px; background: var(--off-white);
-            border-bottom: 1px solid var(--border); flex-wrap: wrap;
+            display: flex; gap: 8px; padding: 14px 24px; background: var(--bg-main);
+            border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap;
         }
         .filter-tab {
-            padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
-            border: 1px solid var(--border); background: var(--white); color: var(--text-mid);
-            cursor: pointer; transition: all 0.15s; font-family: var(--font-sans);
+            padding: 7px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+            border: 1px solid var(--border-subtle); background: var(--surface-white); color: var(--text-secondary);
+            cursor: pointer; transition: all 0.15s ease; font-family: var(--font-sans);
         }
-        .filter-tab:hover { border-color: var(--navy-200); }
+        .filter-tab:hover { border-color: var(--border-color); color: var(--text-primary); }
         .filter-tab.active { background: var(--navy-900); color: #fff; border-color: var(--navy-900); }
 
-        /* ══ TABLE CARD & SAKTONG CAMERA CHIP ══ */
-        .table-card {
-            background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 24px;
-        }
-        .table-card::before {
-            content: ''; display: block; height: 3px;
-            background: linear-gradient(90deg, var(--navy-900), var(--navy-600), var(--navy-400));
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-        thead { background: var(--off-white); }
+        /* Table Styling */
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead { background: var(--bg-main); }
         thead th {
-            padding: 12px 18px; text-align: left; font-size: 11px; font-weight: 700;
+            padding: 14px 20px; font-size: 11px; font-weight: 700;
             color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
-            border-bottom: 1px solid var(--border); white-space: nowrap;
+            border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
         }
-        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+        tbody tr { border-bottom: 1px solid var(--border-subtle); transition: background 0.15s ease; }
         tbody tr:last-child { border-bottom: none; }
-        tbody tr:hover { background: var(--navy-50); }
-        tbody td { padding: 12px 18px; font-size: 13px; color: var(--text-mid); vertical-align: middle; }
-        tbody td.mono { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-dark); }
-        tbody td.username { font-weight: 600; color: var(--text-dark); display: flex; align-items: center; }
+        tbody tr:hover { background: var(--bg-main); }
+        tbody td { padding: 14px 20px; font-size: 13.5px; color: var(--text-secondary); vertical-align: middle; }
+        tbody td.mono { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); }
+        tbody td.username { font-weight: 600; color: var(--text-primary); }
 
+        .user-cell { display: flex; align-items: center; gap: 10px; }
         .avatar {
-            width: 30px; height: 30px; border-radius: 50%; background: var(--navy-100);
+            width: 32px; height: 32px; border-radius: 50%; background: var(--navy-900); color: #fff;
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 11.5px; font-weight: 700; color: var(--navy-800); margin-right: 10px; flex-shrink: 0;
+            font-size: 12px; font-weight: 700; flex-shrink: 0;
         }
 
-        /* 💡 SAKTONG CAMERA CHIP AT CAMERA LOGO */
         .camera-chip {
             display: inline-flex; align-items: center; gap: 6px;
-            background: var(--navy-50); border: 1px solid var(--navy-200); color: var(--navy-700);
-            padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+            background: var(--navy-50); border: 1px solid var(--border-subtle); color: var(--navy-900);
+            padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
             white-space: nowrap;
         }
-        .camera-chip svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--navy-600); }
+        .camera-chip svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--navy-600); }
 
-        .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .status-pending   { background: var(--amber-bg); color: var(--amber); border: 1px solid #e8c87a; }
-        .status-approved  { background: var(--navy-50); color: var(--navy-600); border: 1px solid var(--navy-200); }
-        .status-fulfilled { background: var(--success-bg); color: var(--success); border: 1px solid #9bd4b8; }
-        .status-rejected  { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5a89e; }
+        .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+        .status-pending   { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+        .status-approved  { background: var(--accent-blue-bg); color: var(--accent-blue); border: 1px solid #bfdbfe; }
+        .status-fulfilled { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+        .status-rejected  { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
 
-        .action-group { display: flex; gap: 6px; flex-wrap: wrap; }
-        .btn-sm {
-            display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
-            border-radius: var(--radius-sm); font-size: 11.5px; font-weight: 600; font-family: var(--font-sans);
-            cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--text-mid);
-            transition: all 0.15s; box-shadow: var(--shadow-xs);
+        /* Actions Dropdown */
+        .actions-dropdown-container { position: relative; display: inline-block; }
+        .btn-actions-dropdown {
+            display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+            border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; border: 1px solid var(--border-subtle); background: var(--surface-white); color: var(--text-primary);
+            transition: all 0.15s ease; box-shadow: var(--shadow-xs);
         }
-        .btn-sm:hover { background: var(--navy-50); border-color: var(--navy-200); color: var(--navy-800); }
-        .btn-sm-success { color: var(--success); border-color: #9bd4b8; }
-        .btn-sm-success:hover { background: var(--success-bg); color: var(--success); }
-        .btn-sm-danger { color: var(--danger); border-color: #f5c6c2; }
-        .btn-sm-danger:hover { background: var(--danger-bg); color: var(--danger); }
-        .btn-sm-primary { background: var(--navy-800); color: #fff; border-color: var(--navy-800); }
-        .btn-sm-primary:hover { background: var(--navy-700); color: #fff; }
+        .btn-actions-dropdown:hover { background: var(--navy-50); border-color: var(--border-color); color: var(--navy-900); }
+        .btn-actions-dropdown svg { width: 12px; height: 12px; color: var(--text-muted); }
 
-        .empty-state { padding: 56px 24px; text-align: center; }
-        .empty-state svg { width: 32px; height: 32px; margin: 0 auto 12px; color: var(--text-muted); display: block; opacity: 0.6; }
-        .empty-state p { font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-        .empty-state span { font-size: 12.5px; color: var(--text-muted); }
+        .actions-dropdown-menu {
+            position: absolute; right: 0; top: calc(100% + 6px);
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+            min-width: 170px; display: none; flex-direction: column; overflow: hidden; z-index: 50;
+        }
+        .actions-dropdown-menu.open { display: flex; }
+        
+        .dropdown-item {
+            display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px;
+            font-size: 12.5px; font-weight: 600; color: var(--text-primary); background: none; border: none;
+            cursor: pointer; text-align: left; font-family: var(--font-sans); transition: background 0.15s ease;
+        }
+        .dropdown-item:hover { background: var(--bg-main); }
+        .dropdown-item.success { color: var(--success); }
+        .dropdown-item.success:hover { background: var(--success-bg); }
+        .dropdown-item.danger { color: var(--danger); }
+        .dropdown-item.danger:hover { background: var(--danger-bg); }
+        .dropdown-item.primary { color: var(--navy-900); }
+        .dropdown-item.primary:hover { background: var(--navy-50); }
+        .dropdown-item.disabled { color: var(--text-muted); cursor: default; }
+        .dropdown-item.disabled:hover { background: none; }
 
-        /* ══ MODALS ══ */
+        .empty-state { padding: 60px 24px; text-align: center; }
+        .empty-state svg { width: 36px; height: 36px; margin: 0 auto 12px; color: var(--text-muted); display: block; opacity: 0.6; }
+        .empty-state p { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .empty-state span { font-size: 13px; color: var(--text-muted); }
+
+        /* Modals */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(6,13,31,0.78);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            position: fixed; inset: 0; background: rgba(6,13,31,0.65);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
             z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px;
         }
         .modal-overlay.open { display: flex; }
         .modal-card {
-            background: var(--white); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); overflow: hidden; width: 100%; max-width: 460px;
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); overflow: hidden; width: 100%; max-width: 480px;
             box-shadow: var(--shadow-lg); animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        @keyframes modalFadeIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes modalFadeIn { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         .modal-card-header {
-            padding: 18px 22px; border-bottom: 1px solid var(--border);
+            padding: 18px 22px; border-bottom: 1px solid var(--border-subtle);
             display: flex; align-items: center; justify-content: space-between;
         }
-        .modal-title { font-family: var(--font-serif); font-size: 17px; font-weight: 700; color: var(--text-dark); }
-        .modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 16px; }
+        .modal-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 18px; line-height: 1; }
 
         .modal-body { padding: 22px; }
-        .modal-desc { font-size: 13.5px; color: var(--text-mid); line-height: 1.6; }
+        .modal-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; }
 
         .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-        .meta-item { background: var(--off-white); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
+        .meta-item { background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; }
         .meta-item-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
-        .meta-item-value { font-size: 12.5px; font-weight: 600; color: var(--text-dark); font-family: var(--font-mono); }
+        .meta-item-value { font-size: 12.5px; font-weight: 600; color: var(--text-primary); font-family: var(--font-mono); }
 
         .reason-box {
-            background: var(--off-white); border: 1px solid var(--border); border-radius: var(--radius-md);
-            padding: 14px; font-size: 13px; color: var(--text-dark); line-height: 1.6;
+            background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            padding: 14px; font-size: 13px; color: var(--text-primary); line-height: 1.6;
         }
 
         .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-        .field label { font-size: 11.5px; font-weight: 600; color: var(--text-mid); }
+        .field label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
         .field textarea {
-            background: var(--off-white); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-            padding: 10px 13px; font-size: 13px; font-family: var(--font-sans); color: var(--text-dark);
-            outline: none; resize: vertical; min-height: 75px; width: 100%;
+            background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+            padding: 10px 12px; font-size: 13px; font-family: var(--font-sans); color: var(--text-primary);
+            outline: none; resize: vertical; min-height: 80px; width: 100%;
         }
+        .field textarea:focus { border-color: var(--navy-600); background: var(--surface-white); }
 
         .upload-drop {
-            border: 1.5px dashed var(--navy-200); border-radius: var(--radius-md);
-            padding: 22px; text-align: center; background: var(--navy-50); cursor: pointer; position: relative;
+            border: 1.5px dashed var(--border-color); border-radius: var(--radius-md);
+            padding: 22px; text-align: center; background: var(--bg-main); cursor: pointer; position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .upload-drop:hover { border-color: var(--navy-400); background: var(--navy-100); }
+        .upload-drop:hover { border-color: var(--navy-600); background: var(--navy-50); }
         .upload-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
         .modal-actions {
-            display: flex; justify-content: flex-end; gap: 8px; background: var(--off-white);
-            padding: 14px 22px; border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 8px; background: var(--bg-main);
+            padding: 14px 22px; border-top: 1px solid var(--border-subtle);
         }
         .btn-modal {
             padding: 9px 18px; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 600;
-            cursor: pointer; border: 1px solid var(--border); font-family: var(--font-sans);
+            cursor: pointer; border: 1px solid var(--border-subtle); font-family: var(--font-sans);
         }
-        .btn-modal-cancel { background: var(--white); color: var(--text-mid); }
+        .btn-modal-cancel { background: var(--surface-white); color: var(--text-secondary); }
+        .btn-modal-cancel:hover { background: var(--navy-50); }
         .btn-modal-confirm { background: var(--danger); color: #fff; border-color: var(--danger); }
-        .btn-modal-upload { background: var(--navy-800); color: #fff; border-color: var(--navy-800); }
+        .btn-modal-confirm:hover { background: #b91c1c; }
+        .btn-modal-upload { background: var(--navy-900); color: #fff; border-color: var(--navy-900); }
+        .btn-modal-upload:hover { background: var(--navy-800); }
 
-        footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
-        .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; }
+        /* Footer */
+        footer {
+            background: #ffffff; color: var(--text-muted);
+            border-top: 1px solid var(--border-subtle); padding: 20px 24px;
+            margin-top: auto; flex-shrink: 0; text-align: center;
+        }
+        .footer-inner {
+            max-width: 1280px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; font-size: 12.5px;
+        }
+        .footer-brand { font-weight: 700; color: var(--text-primary); }
 
         @media (max-width: 1024px) {
-            .nav-inner {
-                padding: 0 20px; height: auto;
-                padding-top: 12px; padding-bottom: 12px;
-                flex-wrap: wrap; gap: 12px;
-            }
-            .menu-toggle { display: flex; order: 3; }
-            .nav-links {
-                display: none; width: 100%;
-                flex-direction: column; order: 4;
-                background: var(--off-white); padding: 8px;
-                border-radius: var(--radius-md); border: 1px solid var(--border);
-                margin-top: 8px; gap: 4px;
-            }
-            .nav-links.show { display: flex; }
-            .stat-strip { grid-template-columns: repeat(2, 1fr); }
+            .admin-sidebar { position: fixed; transform: translateX(-100%); transition: transform 0.3s ease; box-shadow: var(--shadow-lg); }
+            .admin-sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; }
+            .page-header-wrapper { padding: 24px 20px; }
+            .page-content { padding: 0 20px 32px; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+            .stat-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
+
 {% include '_flash_toasts.html' %}
 
-<!-- ══ NAV ═══════════════════════════════════════════════════ -->
-<nav>
-    <div class="nav-inner">
-        <!-- Brand -->
-        <a class="nav-brand" href="/admin">
-            <div class="brand-logo-wrap">
-                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo">
-            </div>
-            <div class="brand-text-block">
-                <div class="brand-name">Home Detection <em>Security</em></div>
-                <div class="brand-sub">Admin Panel</div>
-            </div>
-        </a>
-
-        <!-- Live clock -->
-        <div class="nav-clock">
-            <span class="nav-clock-dot"></span>
-            <span class="nav-clock-label">Live</span>
-            <div class="nav-clock-sep"></div>
-            <span class="nav-clock-time" id="adminClock">--:--:--</span>
+<!-- ══ SIDEBAR NAVIGATION ═══════════════════════════════════ -->
+<aside class="admin-sidebar" id="adminSidebar">
+    <a href="{{ url_for('admin_dashboard') }}" class="sidebar-header">
+        <div class="brand-logo-wrap">
+            <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo" onerror="this.style.display='none'">
         </div>
+        <div class="brand-text-block">
+            <div class="brand-name">Home Detection Security</div>
+            <div class="brand-sub">Admin Panel</div>
+        </div>
+    </a>
+    <ul class="nav-links">
+        <li>
+            <a href="{{ url_for('admin_dashboard') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_cctv') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                CCTV Monitor
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_reports') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Reports
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_users') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Users
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_request') }}" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Request
+                {% if stats and stats.pending %}
+                <span class="nav-pill">{{ stats.pending }}</span>
+                {% endif %}
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_logs') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Admin Logs
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_system') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Settings
+            </a>
+        </li>
+    </ul>
 
-        <button class="menu-toggle" id="menuToggleBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <!-- Sidebar Profile Footer with Pop-up Logout -->
+    <div class="sidebar-profile-container" id="sidebarProfileContainer">
+        <div class="sidebar-profile-dropdown" id="sidebarProfileDropdown">
+            <a href="{{ url_for('logout') }}" class="nav-logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Log Out
+            </a>
+        </div>
+        <button class="sidebar-profile-btn" id="sidebarProfileBtn" type="button">
+            <div class="sidebar-profile-info">
+                <div class="sidebar-profile-avatar">A</div>
+                <div class="sidebar-profile-text">
+                    <div class="sidebar-profile-name">Administrator</div>
+                    <div class="sidebar-profile-role">System Admin</div>
+                </div>
+            </div>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-
-        <!-- Dynamic Nav Links with Reports Included -->
-        <ul class="nav-links" id="navLinksList">
-            <li>
-                <a href="/admin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="/admin/cctv">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                    CCTV Monitor
-                </a>
-            </li>
-            <!-- 🌐 ADDED REPORTS LINK -->
-            <li>
-                <a href="/admin/reports">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    Reports
-                </a>
-            </li>
-            <li>
-                <a href="/admin/users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    Users
-                </a>
-            </li>
-            <li>
-                <a href="/admin/request" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    Request
-                        <span class="nav-pill">{{ stats.pending }}</span>
-                </a>
-            </li>
-            <li>
-                <a href="/admin/logs">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Admin Logs
-                </a>
-            </li>
-            <li>
-                <a href="/admin/system">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    Settings
-                </a>
-            </li>
-            <li>
-                <a href="/logout" class="nav-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Logout
-                </a>
-            </li>
-        </ul>
     </div>
-</nav>
+</aside>
 
-    <!-- ══ PAGE WORKSPACE ════════════════════════════════════════ -->
-    <main class="page">
-        <div class="page-header">
-            <div class="page-header-left">
-                <div class="header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                </div>
-                <div>
-                    <h1 class="page-title">Recording Requests</h1>
-                    <p class="page-subtitle">Review, approve, reject, and fulfill homeowner CCTV footage requests</p>
-                </div>
-            </div>
-            <span class="badge badge-success">● System Online</span>
-        </div>
+<!-- Mobile Nav Toggle -->
+<button class="mobile-toggle" id="mobileToggle" title="Toggle Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
 
-        <!-- Stat Strip -->
-        <div class="stat-strip">
-            <div class="stat-card">
-                <div class="stat-icon pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-                <div><div class="stat-value">{{ stats.pending if stats else 0 }}</div><div class="stat-label">Pending</div></div>
+<main class="main-content">
+    
+    <div class="page-header-wrapper">
+        <div class="page-header-left">
+            <div class="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon approved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
-                <div><div class="stat-value">{{ stats.approved if stats else 0 }}</div><div class="stat-label">Awaiting Upload</div></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon fulfilled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-                <div><div class="stat-value">{{ stats.fulfilled if stats else 0 }}</div><div class="stat-label">Fulfilled</div></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon rejected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-                <div><div class="stat-value">{{ stats.rejected if stats else 0 }}</div><div class="stat-label">Rejected</div></div>
+            <div>
+                <h1 class="page-title">Recording Requests</h1>
+                <p class="page-subtitle">Review, approve, reject, and fulfill homeowner CCTV footage requests</p>
             </div>
         </div>
+        <span class="badge badge-success">● System Online</span>
+    </div>
 
-        <!-- Dynamic Requests Table -->
-        <div class="table-card">
+    <div class="page-content">
+
+        <!-- Stat Grid -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-icon si-amber">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.pending if stats else 0 }}</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-navy">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.approved if stats else 0 }}</div>
+                    <div class="stat-label">Awaiting Upload</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-success">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.fulfilled if stats else 0 }}</div>
+                    <div class="stat-label">Fulfilled</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon si-danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.rejected if stats else 0 }}</div>
+                    <div class="stat-label">Rejected</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Requests Table Card -->
+        <div class="card">
             <div class="card-header">
-                <div class="card-header-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                </div>
                 <div>
-                    <div class="card-header-text">Homeowner Footage Requests</div>
+                    <div class="card-header-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        Homeowner Footage Requests
+                    </div>
                     <div class="card-header-sub">Approve requests, upload video clips, or reject with reason</div>
                 </div>
             </div>
 
             <!-- Filter Tabs -->
             <div class="filter-tabs">
-                <button class="filter-tab active" onclick="filterTable('all', this)">All</button>
+                <button class="filter-tab active" onclick="filterTable('all', this)">All Requests</button>
                 <button class="filter-tab" onclick="filterTable('pending', this)">Pending</button>
                 <button class="filter-tab" onclick="filterTable('approved', this)">Awaiting Upload</button>
                 <button class="filter-tab" onclick="filterTable('fulfilled', this)">Fulfilled</button>
                 <button class="filter-tab" onclick="filterTable('rejected', this)">Rejected</button>
             </div>
 
-            <div style="overflow-x:auto;">
+            <div class="table-responsive">
                 <table id="requestsTable">
                     <thead>
                         <tr>
@@ -506,54 +586,78 @@
                             <th>Reason</th>
                             <th>Requested On</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if requests %}
                             {% for req in requests %}
-                            <tr data-status="{{ req.status }}">
+                            <tr data-status="{{ req.status | lower }}">
                                 <td class="username">
-                                    <span class="avatar">{{ req.username[0] | upper }}</span>
-                                    {{ req.username }}
+                                    <div class="user-cell">
+                                        <span class="avatar">{{ req.username[0] | upper }}</span>
+                                        <span>{{ req.username }}</span>
+                                    </div>
                                 </td>
                                 <td>
-                                    <!-- 💡 SAKTONG CAMERA LOGO AT CHIP -->
                                     <span class="camera-chip">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                                         {{ req.camera_name }}
                                     </span>
                                 </td>
-                                <td class="mono">{{ req.date_needed }}<br>{{ req.time_range }}</td>
+                                <td class="mono">{{ req.date_needed }}<br><span style="color:var(--text-muted); font-size:11.5px;">{{ req.time_range }}</span></td>
                                 <td>
-                                    <button type="button" class="btn-sm" onclick="openReasonModal('{{ req.username }}', '{{ req.reason }}')">View Reason</button>
+                                    <button type="button" class="btn-actions-dropdown" style="padding:4px 10px; font-size:11.5px;" onclick="openReasonModal('{{ req.username }}', '{{ req.reason }}')">
+                                        View Details
+                                    </button>
                                 </td>
                                 <td class="mono">{{ req.created_at }}</td>
                                 <td>
-                                    <span class="status-pill status-{{ req.status }}">
+                                    <span class="status-pill status-{{ req.status | lower }}">
                                         ● {{ req.status | capitalize }}
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="action-group">
-                                        {% if req.status == 'pending' %}
-                                        <form action="/admin/request/{{ req.id }}/approve" method="POST" style="margin:0;">
-                                            <button type="submit" class="btn-sm btn-sm-success">
-                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Approve
+                                <td style="text-align: right;">
+                                    <!-- Compact Actions Dropdown -->
+                                    <div class="actions-dropdown-container">
+                                        <button type="button" class="btn-actions-dropdown" onclick="toggleActionMenu(event, 'dropdown-{{ req.id }}')">
+                                            Actions
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </button>
+                                        <div class="actions-dropdown-menu" id="dropdown-{{ req.id }}">
+                                            <button type="button" class="dropdown-item" onclick="openReasonModal('{{ req.username }}', '{{ req.reason }}')">
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                View Reason
                                             </button>
-                                        </form>
-                                        <button type="button" class="btn-sm btn-sm-danger" onclick="openRejectModal('{{ req.id }}', '{{ req.username }}')">
-                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Reject
-                                        </button>
-                                        {% elif req.status == 'approved' %}
-                                        <button type="button" class="btn-sm btn-sm-primary" onclick="openUploadModal('{{ req.id }}', '{{ req.username }}', '{{ req.camera_name }}', '{{ req.date_needed }}', '{{ req.time_range }}')">
-                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Footage
-                                        </button>
-                                        {% elif req.status == 'fulfilled' %}
-                                        <span class="badge badge-neutral">{{ req.video_filename or 'clip_download.mp4' }}</span>
-                                        {% else %}
-                                        <span style="font-size:11.5px; color:var(--text-muted);">{{ req.rejection_reason or 'Rejected' }}</span>
-                                        {% endif %}
+                                            
+                                            {% if req.status | lower == 'pending' %}
+                                            <form action="{{ url_for('approve_recording_request', request_id=req.id) }}" method="POST" style="margin:0;">
+                                                <button type="submit" class="dropdown-item success">
+                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                                                    Approve Request
+                                                </button>
+                                            </form>
+                                            <button type="button" class="dropdown-item danger" onclick="openRejectModal('{{ req.id }}', '{{ req.username }}')">
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                Reject Request
+                                            </button>
+                                            {% elif req.status | lower == 'approved' %}
+                                            <button type="button" class="dropdown-item primary" onclick="openUploadModal('{{ req.id }}', '{{ req.username }}', '{{ req.camera_name }}', '{{ req.date_needed }}', '{{ req.time_range }}')">
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                Upload Footage
+                                            </button>
+                                            {% elif req.status | lower == 'fulfilled' %}
+                                            <div class="dropdown-item disabled">
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                {{ req.video_filename or 'clip_download.mp4' }}
+                                            </div>
+                                            {% else %}
+                                            <div class="dropdown-item disabled">
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                {{ req.rejection_reason or 'Rejected' }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -573,8 +677,15 @@
                 </table>
             </div>
         </div>
-    </main>
-</div>
+    </div>
+
+    <footer>
+        <div class="footer-inner">
+            <span class="footer-brand">Home Detection Security</span>
+            <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
+        </div>
+    </footer>
+</main>
 
 <!-- ══ REASON MODAL ═════════════════════════════════════════ -->
 <div class="modal-overlay" id="reasonModal">
@@ -584,7 +695,7 @@
             <button class="modal-close" onclick="closeModal('reasonModal')">✕</button>
         </div>
         <div class="modal-body">
-            <div classmeta-grid">
+            <div class="meta-grid">
                 <div class="meta-item"><div class="meta-item-label">Homeowner</div><div class="meta-item-value" id="reasonUser">—</div></div>
             </div>
             <div class="reason-box" id="reasonText" style="margin-top:12px;">—</div>
@@ -637,7 +748,7 @@
                     <label>Select Video File (.mp4, .avi, .mkv)</label>
                     <label class="upload-drop">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        <div style="font-size:12.5px; font-weight:600; color:var(--navy-700); margin-top:4px;" id="uploadFileLabel">Click or drag video file here</div>
+                        <div style="font-size:12.5px; font-weight:600; color:var(--text-primary); margin-top:6px;" id="uploadFileLabel">Click or drag video file here</div>
                         <input type="file" name="video_file" id="recordingFileInput" accept="video/*" onchange="handleFileSelect(this)" required>
                     </label>
                 </div>
@@ -648,27 +759,54 @@
             </div>
         </form>
     </div>
-
-
-<footer>
-    <div class="footer-inner">
-        <span>&copy; 2026 Eusebio Bliss Village Homeowners Association, Inc. All rights reserved.</span>
-    </div>
-</footer>
-
-{% include '_logout_modal.html' %}
+</div>
 
 <script>
-    function updateClock() {
-        const now = new Date();
-        const h = String(now.getHours()).padStart(2,'0');
-        const m = String(now.getMinutes()).padStart(2,'0');
-        const s = String(now.getSeconds()).padStart(2,'0');
-        document.getElementById('adminClock').textContent = `${h}:${m}:${s}`;
+    // Mobile Drawer Toggle
+    const mobileToggle = document.getElementById('mobileToggle');
+    const adminSidebar = document.getElementById('adminSidebar');
+    if (mobileToggle && adminSidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            adminSidebar.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (!adminSidebar.contains(e.target) && !mobileToggle.contains(e.target)) {
+                adminSidebar.classList.remove('open');
+            }
+        });
     }
-    updateClock();
-    setInterval(updateClock, 1000);
 
+    // Sidebar Profile Dropdown Toggle
+    const profileBtn = document.getElementById('sidebarProfileBtn');
+    const profileDropdown = document.getElementById('sidebarProfileDropdown');
+    if (profileBtn && profileDropdown) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', () => {
+            profileDropdown.classList.remove('open');
+        });
+    }
+
+    // Actions Menu Toggle
+    function toggleActionMenu(event, menuId) {
+        event.stopPropagation();
+        const targetMenu = document.getElementById(menuId);
+        document.querySelectorAll('.actions-dropdown-menu').forEach(menu => {
+            if (menu !== targetMenu) menu.classList.remove('open');
+        });
+        if (targetMenu) {
+            targetMenu.classList.toggle('open');
+        }
+    }
+
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.actions-dropdown-menu').forEach(menu => menu.classList.remove('open'));
+    });
+
+    // Modals Handlers
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('open');
     }
@@ -681,7 +819,7 @@
 
     function openRejectModal(reqId, user) {
         document.getElementById('rejectUser').textContent = user;
-        document.getElementById('rejectForm').action = `/admin/request/${reqId}/reject`;
+        document.getElementById('rejectForm').action = `{{ url_for('admin_request') }}/${reqId}/reject`;
         document.getElementById('rejectModal').classList.add('open');
     }
 
@@ -690,7 +828,7 @@
         document.getElementById('uploadCamera').textContent = camera;
         document.getElementById('uploadDate').textContent = date;
         document.getElementById('uploadTime').textContent = time;
-        document.getElementById('uploadForm').action = `/admin/request/${reqId}/upload`;
+        document.getElementById('uploadForm').action = `{{ url_for('admin_request') }}/${reqId}/upload`;
         document.getElementById('uploadModal').classList.add('open');
     }
 
@@ -700,30 +838,22 @@
         }
     }
 
+    // Table Filter Handler
     function filterTable(status, tabBtn) {
         document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
         tabBtn.classList.add('active');
 
         const rows = document.querySelectorAll('#requestsTable tbody tr');
         rows.forEach(row => {
-            if (status === 'all' || row.getAttribute('data-status') === status) {
+            const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+            if (status === 'all' || rowStatus === status) {
                 row.style.display = '';
             } else {
                 row.style.display = 'none';
             }
         });
     }
-
-    // Responsive Mobile Drawer
-    const menuToggleBtn = document.getElementById('menuToggleBtn');
-    const navLinksList = document.getElementById('navLinksList');
-    if (menuToggleBtn && navLinksList) {
-        menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            navLinksList.classList.toggle('show');
-        });
-        document.addEventListener('click', () => navLinksList.classList.remove('show'));
-    }
 </script>
+{% include '_logout_modal.html' %}
 </body>
 </html>

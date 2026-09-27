@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management — Home Detection Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            height: 100%;
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+        }
+
+        :root {
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-400:  #4a6db5;
+            --navy-200:  #b8c6e8;
+            --navy-100:  #dce4f5;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f7f8fc;
+            --border:    #e2e8f5;
+            --text-dark: #0b1735;
+            --text-mid:  #3a4d70;
+            --text-muted:#7a8fba;
+
+            --bg-main:       #f7f8fc;
+            --surface-white: #ffffff;
+            --border-color:  #cbd5e1;
+            --border-subtle: #e2e8f0;
+            
+            --text-primary:  #0f172a;
+            --text-secondary:#475569;
+            
+            --accent-blue:   #2563eb;
+            --accent-blue-bg:#eff6ff;
+            
+            --danger:        #dc2626;
+            --danger-bg:     #fef2f2;
+            --danger-border: #fecaca;
+            
+            --success:       #059669;
+            --success-bg:    #ecfdf5;
+            --success-border:#a7f3d0;
+            
+            --amber:         #d97706;
+            --amber-bg:      #fffbeb;
+            --amber-border:  #fde68a;
+            
+            --radius-sm:     6px;
+            --radius-md:     10px;
+            --radius-lg:     16px;
+            
+            --shadow-xs:     0 1px 2px rgba(11,23,53,0.04);
+            --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-card:   0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+            --shadow-hover:  0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+            --shadow-lg:     0 16px 40px rgba(11,23,53,0.14), 0 4px 12px rgba(11,23,53,0.08);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+        }
+
+        .admin-sidebar {
+            width: 280px; background: var(--surface-white);
+            border-right: 1px solid var(--border-subtle);
+            display: flex; flex-direction: column; flex-shrink: 0;
+            position: sticky; top: 0; height: 100vh; z-index: 100;
+        }
+        
+        .sidebar-header {
+            padding: 24px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border-subtle); text-decoration: none;
+        }
+        .brand-logo-wrap {
+            width: 40px; height: 40px; background: var(--surface-white); border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            padding: 2px; overflow: hidden; border: 1px solid var(--border-subtle);
+        }
+        .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .brand-text-block { line-height: 1.2; }
+        .brand-name { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
+        .brand-name em { font-style: italic; color: var(--navy-600); }
+        .brand-sub { font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+        .nav-links { display: flex; flex-direction: column; padding: 20px 16px; gap: 6px; list-style: none; flex: 1; overflow-y: auto; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-md);
+            font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none;
+            transition: all 0.2s ease; border: 1px solid transparent;
+        }
+        .nav-links a svg { width: 18px; height: 18px; color: var(--text-muted); transition: color 0.2s ease; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-900); }
+        .nav-links a:hover svg { color: var(--navy-600); }
+        .nav-links a.active { background: var(--navy-50); color: var(--navy-900); font-weight: 600; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs); }
+        .nav-links a.active svg { color: var(--navy-600); }
+
+        .sidebar-profile-container {
+            margin-top: auto; border-top: 1px solid var(--border-subtle); padding: 16px;
+            position: relative;
+        }
+        .sidebar-profile-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; padding: 10px 12px; border-radius: var(--radius-md);
+            background: var(--off-white); border: 1px solid var(--border-subtle); cursor: pointer;
+            transition: background 0.15s ease; text-align: left; font-family: var(--font-sans);
+        }
+        .sidebar-profile-btn:hover { background: var(--navy-50); }
+        .sidebar-profile-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .sidebar-profile-avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--navy-900); color: white;
+            display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0;
+        }
+        .sidebar-profile-text { min-width: 0; }
+        .sidebar-profile-name { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-profile-role { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+        .sidebar-profile-dropdown {
+            position: absolute; bottom: calc(100% + 8px); left: 16px; right: 16px;
+            background: var(--surface-white); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md); display: none; flex-direction: column; overflow: hidden; z-index: 10;
+        }
+        .sidebar-profile-dropdown.open { display: flex; }
+        .sidebar-profile-dropdown a {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            font-size: 13.5px; font-weight: 600; color: var(--danger); text-decoration: none;
+            transition: background 0.15s ease;
+        }
+        .sidebar-profile-dropdown a:hover { background: var(--danger-bg); }
+        .sidebar-profile-dropdown a svg { width: 16px; height: 16px; color: var(--danger); }
+
+        .mobile-toggle {
+            display: none; position: fixed; bottom: 20px; right: 20px;
+            width: 56px; height: 56px; border-radius: 50%; background: var(--navy-900); color: #fff;
+            border: none; box-shadow: var(--shadow-md); z-index: 200; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        .mobile-toggle svg { width: 24px; height: 24px; }
+
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+
+        .page-header-wrapper {
+            background: var(--bg-main);
+            padding: 34px 28px 24px; display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px; 
+        }
+        .page-header-left { display: flex; align-items: center; gap: 16px; }
+        .header-icon {
+            width: 48px; height: 48px; background: var(--navy-900); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; box-shadow: var(--shadow-card);
+        }
+        .header-icon svg { width: 22px; height: 22px; }
+        .page-title { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
+
+        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
+
+        .add-card-compact {
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+            padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        }
+        .add-compact-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+        .add-compact-title svg { color: var(--navy-600); width: 18px; height: 18px; }
+        
+        .add-form-inline { display: flex; align-items: flex-end; gap: 12px; flex: 1; flex-wrap: wrap; justify-content: flex-end; }
+        .field-compact { display: flex; flex-direction: column; gap: 4px; min-width: 140px; flex: 1; max-width: 200px; }
+        .field-compact label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+        .field-compact input, .field-compact select {
+            background: var(--bg-main); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md); padding: 8px 12px; font-size: 13px;
+            font-family: var(--font-sans); color: var(--text-primary); outline: none; width: 100%; height: 38px;
+        }
+        .field-compact input:focus, .field-compact select:focus {
+            border-color: var(--accent-blue); box-shadow: 0 0 0 4px var(--accent-blue-bg); background: var(--white);
+        }
+        .btn-add-compact {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--navy-900);
+            color: #fff; border: none; padding: 0 18px; border-radius: var(--radius-md);
+            font-size: 13px; font-weight: 600; cursor: pointer; height: 38px; white-space: nowrap;
+            transition: background 0.15s; flex-shrink: 0; box-shadow: var(--shadow-xs);
+        }
+        .btn-add-compact:hover { background: var(--navy-800); }
+
+        .table-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 16px 24px; background: var(--surface-white);
+            border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap;
+        }
+        .search-box { position: relative; flex: 1; max-width: 340px; min-width: 200px; }
+        .search-box input {
+            width: 100%; padding: 8px 12px 8px 36px; border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle); font-size: 13px; outline: none; background: var(--bg-main);
+            font-family: var(--font-sans); transition: all 0.2s ease; height: 38px; color: var(--text-primary);
+        }
+        .search-box input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 4px var(--accent-blue-bg); background: var(--white); }
+        .search-box svg {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; color: var(--text-muted);
+        }
+
+        .btn-export-csv {
+            display: inline-flex; align-items: center; gap: 8px; background: var(--surface-white);
+            border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 0 16px;
+            border-radius: var(--radius-md); font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; font-family: var(--font-sans); box-shadow: var(--shadow-xs); height: 38px;
+        }
+        .btn-export-csv:hover { background: var(--navy-50); color: var(--navy-900); border-color: var(--border-color); }
+
+        .table-card {
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: visible;
+            display: flex; flex-direction: column; flex: 1;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: var(--off-white); }
+        thead th {
+            padding: 14px 20px; text-align: left; font-size: 11.5px; font-weight: 700;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        tbody tr { border-bottom: 1px solid var(--border-subtle); transition: background 0.12s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: var(--navy-50); }
+        tbody td { padding: 14px 20px; font-size: 13.5px; color: var(--text-secondary); vertical-align: middle; }
+        tbody td.mono { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); }
+        tbody td.username { font-weight: 600; color: var(--text-primary); display: flex; align-items: center; }
+
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--accent-blue-bg);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; color: var(--accent-blue); margin-right: 12px; flex-shrink: 0;
+        }
+
+        .badge-admin  { background: var(--navy-900); color: #fff; }
+        .badge-user   { background: var(--navy-100); color: var(--navy-900); border: 1px solid var(--border-subtle); }
+        .badge-active { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+        .badge-banned { background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger-border); }
+
+        /* Compact Actions Dropdown */
+        .action-dropdown-wrap { position: relative; display: inline-block; }
+        .btn-action-trigger {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+            border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border-subtle); background: var(--surface-white);
+            color: var(--text-secondary); transition: all 0.15s; box-shadow: var(--shadow-xs);
+        }
+        .btn-action-trigger:hover { background: var(--navy-50); color: var(--navy-900); border-color: var(--border-color); }
+        .btn-action-trigger svg { width: 14px; height: 14px; transition: transform 0.2s ease; }
+        
+        .action-dropdown-menu {
+            position: absolute; right: 0; top: calc(100% + 4px);
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+            display: none; flex-direction: column; min-width: 150px; z-index: 50; overflow: hidden;
+            padding: 4px;
+        }
+        .action-dropdown-menu.open { display: flex; }
+        .action-dropdown-item {
+            display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+            font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+            background: transparent; border: none; width: 100%; text-align: left;
+            border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s ease;
+        }
+        .action-dropdown-item svg { width: 13px; height: 13px; color: var(--text-muted); }
+        .action-dropdown-item:hover { background: var(--navy-50); color: var(--navy-900); }
+        .action-dropdown-item:hover svg { color: var(--navy-600); }
+        .action-dropdown-item.danger { color: var(--danger); }
+        .action-dropdown-item.danger svg { color: var(--danger); }
+        .action-dropdown-item.danger:hover { background: var(--danger-bg); color: var(--danger); }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px); z-index: 1000; display: flex;
+            align-items: center; justify-content: center; padding: 24px;
+            opacity: 0; visibility: hidden; transition: all 0.2s ease;
+        }
+        .modal-overlay.open { opacity: 1; visibility: visible; }
+        .modal-card {
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); overflow: hidden; width: 100%;
+            max-width: 420px; box-shadow: var(--shadow-lg); transform: translateY(10px);
+            transition: transform 0.2s ease;
+        }
+        .modal-overlay.open .modal-card { transform: translateY(0); }
+        .modal-body { padding: 32px 24px; text-align: center; }
+        .modal-icon {
+            width: 52px; height: 52px; border-radius: 50%; background: var(--danger-bg);
+            color: var(--danger); display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px; border: 1px solid var(--danger-border);
+        }
+        .modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .modal-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; }
+        .modal-actions {
+            display: flex; gap: 12px; padding: 16px 24px; background: var(--bg-main);
+            border-top: 1px solid var(--border-subtle);
+        }
+        .btn-modal {
+            flex: 1; padding: 10px 16px; border-radius: var(--radius-md); font-size: 13.5px;
+            font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
+        }
+        .btn-modal-cancel { background: var(--surface-white); border-color: var(--border-subtle); color: var(--text-secondary); }
+        .btn-modal-cancel:hover { background: var(--bg-main); color: var(--text-primary); }
+        .btn-modal-confirm { background: var(--danger); color: #fff; }
+        .btn-modal-confirm:hover { background: #b91c1c; }
+
+        .toast-container {
+            position: fixed; bottom: 24px; right: 24px; z-index: 1100;
+            display: flex; flex-direction: column; gap: 8px; max-width: 340px; width: calc(100% - 48px);
+        }
+        .toast {
+            background: var(--navy-900); color: #fff; border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+            display: flex; align-items: center; gap: 10px; font-size: 13px;
+            animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .toast.toast-danger { background: #7f1d1d; border-color: #991b1b; }
+        .toast.toast-success { background: #065f46; border-color: #047857; }
+        @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        footer {
+            background: var(--surface-white); color: var(--text-muted);
+            border-top: 1px solid var(--border-subtle); padding: 20px 24px;
+            margin-top: auto; flex-shrink: 0; text-align: center;
+        }
+        .footer-inner {
+            max-width: 1280px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; font-size: 12.5px;
+        }
+        .footer-brand { font-weight: 700; color: var(--text-primary); }
+
+        @media (max-width: 1024px) {
+            .admin-sidebar { position: fixed; transform: translateX(-100%); transition: transform 0.3s ease; box-shadow: var(--shadow-lg); }
+            .admin-sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; }
+            .page-header-wrapper { padding: 24px 20px; }
+            .page-content { padding: 0 20px 32px; }
+            .add-form-inline { flex-direction: column; align-items: stretch; }
+            .field-compact { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+{% include '_flash_toasts.html' %}
+
+<aside class="admin-sidebar" id="adminSidebar">
+    <a href="{{ url_for('admin_dashboard') }}" class="sidebar-header">
+        <div class="brand-logo-wrap">
+            <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo" onerror="this.style.display='none'">
+        </div>
+        <div class="brand-text-block">
+            <div class="brand-name">Home Detection <em>Security</em></div>
+            <div class="brand-sub">Admin Panel</div>
+        </div>
+    </a>
+    <ul class="nav-links">
+        <li>
+            <a href="{{ url_for('admin_dashboard') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_cctv') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                CCTV Monitor
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_reports') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Reports
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_users') }}" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Users
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_request') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Request
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_logs') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Admin Logs
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_system') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Settings
+            </a>
+        </li>
+    </ul>
+
+    <div class="sidebar-profile-container" id="sidebarProfileContainer">
+        <div class="sidebar-profile-dropdown" id="sidebarProfileDropdown">
+            <a href="{{ url_for('logout') }}" class="nav-logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Log Out
+            </a>
+        </div>
+        <button class="sidebar-profile-btn" id="sidebarProfileBtn" type="button">
+            <div class="sidebar-profile-info">
+                <div class="sidebar-profile-avatar">A</div>
+                <div class="sidebar-profile-text">
+                    <div class="sidebar-profile-name">Administrator</div>
+                    <div class="sidebar-profile-role">System Admin</div>
+                </div>
+            </div>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+    </div>
+</aside>
+
+<button class="mobile-toggle" id="mobileToggle" title="Toggle Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<main class="main-content">
+    <div class="page-header-wrapper">
+        <div class="page-header-left">
+            <div class="header-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div>
+                <h1 class="page-title">User Management</h1>
+                <p class="page-subtitle">Create accounts, assign roles, and manage access permissions</p>
+            </div>
+        </div>
+        <span class="badge badge-success">● System Online</span>
+    </div>
+
+    <div class="page-content">
+        <!-- Compact Create User Bar -->
+        <div class="add-card-compact">
+            <div class="add-compact-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <span>Quick Create User</span>
+            </div>
+            <form id="createUserForm" class="add-form-inline" method="post" action="{{ url_for('admin_create_user') }}">
+                <div class="field-compact">
+                    <label for="username">Username</label>
+                    <input id="username" name="username" type="text" placeholder="e.g. johndoe" required>
+                </div>
+                <div class="field-compact">
+                    <label for="email">Email Address</label>
+                    <input id="email" name="email" type="email" placeholder="user@example.com" required>
+                </div>
+                <div class="field-compact">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" placeholder="••••••••" required>
+                </div>
+                <div class="field-compact" style="max-width: 100px;">
+                    <label for="role">Role</label>
+                    <select id="role" name="role">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-add-compact">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Create
+                </button>
+            </form>
+        </div>
+
+        <div class="table-card">
+            <div class="table-toolbar">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="userSearchInput" placeholder="Search by name, email, or role..." onkeyup="filterUsers()">
+                </div>
+                
+                <button class="btn-export-csv" onclick="exportUsersCSV()">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Users List (CSV)
+                </button>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Registered</th>
+                            <th>Last Login</th>
+                            <th style="text-align: right; padding-right: 24px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if users %}
+                            {% for user in users %}
+                            <tr id="user-row-{{ user.id }}">
+                                <td class="username" data-label="User">
+                                    <span class="avatar">{{ user.username[0] | upper }}</span>
+                                    <span class="user-name-text">{{ user.username }}</span>
+                                </td>
+                                <td class="mono" data-label="Email">{{ user.email }}</td>
+                                <td data-label="Role">
+                                    <span class="role-badge badge {{ 'badge-admin' if user.role == 'admin' else 'badge-user' }}">
+                                        {{ user.role | capitalize }}
+                                    </span>
+                                </td>
+                                <td data-label="Status">
+                                    <span class="status-badge badge {{ 'badge-banned' if user.banned else 'badge-active' }}">
+                                        {{ 'Banned' if user.banned else 'Active' }}
+                                    </span>
+                                </td>
+                                <td class="mono" data-label="Registered">{{ user.created_at }}</td>
+                                <td class="mono" data-label="Last Login">{{ user.last_login or '—' }}</td>
+                                <td data-label="Actions" style="text-align: right; padding-right: 24px;">
+                                    <div class="action-dropdown-wrap">
+                                        <button type="button" class="btn-action-trigger" onclick="toggleActionDropdown(event, this)">
+                                            <span>Actions</span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </button>
+                                        <div class="action-dropdown-menu">
+                                            <button type="button" class="action-dropdown-item btn-toggle-role" data-user-id="{{ user.id }}" data-action="role">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                                <span class="role-btn-label">{{ 'Make User' if user.role == 'admin' else 'Make Admin' }}</span>
+                                            </button>
+
+                                            <button type="button" class="action-dropdown-item btn-toggle-ban" data-user-id="{{ user.id }}" data-action="ban">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                                <span class="ban-btn-label">{{ 'Unban' if user.banned else 'Ban' }}</span>
+                                            </button>
+
+                                            <button type="button" class="action-dropdown-item danger" data-user-id="{{ user.id }}" data-user-name="{{ user.username }}" data-action="delete">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <!-- Static Fallback Rows -->
+                        <tr id="user-row-1">
+                            <td class="username"><span class="avatar">A</span><span class="user-name-text">admin</span></td>
+                            <td class="mono">admin@homedetection.com</td>
+                            <td><span class="role-badge badge badge-admin">Admin</span></td>
+                            <td><span class="status-badge badge badge-active">Active</span></td>
+                            <td class="mono">2026-07-01</td>
+                            <td class="mono">2026-08-27 00:15:20</td>
+                            <td style="text-align: right; padding-right: 24px;">
+                                <div class="action-dropdown-wrap">
+                                    <button type="button" class="btn-action-trigger" onclick="toggleActionDropdown(event, this)">
+                                        <span>Actions</span>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </button>
+                                    <div class="action-dropdown-menu">
+                                        <button type="button" class="action-dropdown-item btn-toggle-role" data-user-id="1" data-action="role">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                            <span class="role-btn-label">Make User</span>
+                                        </button>
+                                        <button type="button" class="action-dropdown-item btn-toggle-ban" data-user-id="1" data-action="ban">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                            <span class="ban-btn-label">Ban</span>
+                                        </button>
+                                        <button type="button" class="action-dropdown-item danger" data-user-id="1" data-user-name="admin" data-action="delete">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="user-row-2">
+                            <td class="username"><span class="avatar">J</span><span class="user-name-text">johndoe</span></td>
+                            <td class="mono">johndoe@eusebiobliss.ph</td>
+                            <td><span class="role-badge badge badge-user">User</span></td>
+                            <td><span class="status-badge badge badge-active">Active</span></td>
+                            <td class="mono">2026-08-10</td>
+                            <td class="mono">2026-08-26 14:20:00</td>
+                            <td style="text-align: right; padding-right: 24px;">
+                                <div class="action-dropdown-wrap">
+                                    <button type="button" class="btn-action-trigger" onclick="toggleActionDropdown(event, this)">
+                                        <span>Actions</span>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </button>
+                                    <div class="action-dropdown-menu">
+                                        <button type="button" class="action-dropdown-item btn-toggle-role" data-user-id="2" data-action="role">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                            <span class="role-btn-label">Make Admin</span>
+                                        </button>
+                                        <button type="button" class="action-dropdown-item btn-toggle-ban" data-user-id="2" data-action="ban">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                            <span class="ban-btn-label">Ban</span>
+                                        </button>
+                                        <button type="button" class="action-dropdown-item danger" data-user-id="2" data-user-name="johndoe" data-action="delete">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-inner">
+            <span class="footer-brand">Home Detection Security</span>
+            <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
+        </div>
+    </footer>
+</main>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="modal-overlay" id="confirmDeleteModal">
+    <div class="modal-card">
+        <div class="modal-body">
+            <div class="modal-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </div>
+            <h3 class="modal-title">Delete User Account?</h3>
+            <p class="modal-desc" id="confirmModalText">Are you sure you want to permanently delete this user account?</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-modal btn-modal-confirm" id="confirmDeleteBtn">Delete Account</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const mobileToggle = document.getElementById('mobileToggle');
+    const adminSidebar = document.getElementById('adminSidebar');
+    if (mobileToggle && adminSidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            adminSidebar.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (!adminSidebar.contains(e.target) && !mobileToggle.contains(e.target)) {
+                adminSidebar.classList.remove('open');
+            }
+        });
+    }
+
+    const profileBtn = document.getElementById('sidebarProfileBtn');
+    const profileDropdown = document.getElementById('sidebarProfileDropdown');
+    if (profileBtn && profileDropdown) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', () => {
+            profileDropdown.classList.remove('open');
+        });
+    }
+
+    // Actions Dropdown Logic
+    function toggleActionDropdown(event, button) {
+        event.stopPropagation();
+        const menu = button.nextElementSibling;
+        const isOpen = menu.classList.contains('open');
+        
+        // Close all other open dropdowns first
+        document.querySelectorAll('.action-dropdown-menu').forEach(m => m.classList.remove('open'));
+        
+        if (!isOpen) {
+            menu.classList.add('open');
+        }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.action-dropdown-menu').forEach(m => m.classList.remove('open'));
+    });
+
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<span>${msg}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
+
+    let targetUserIdToDelete = null;
+    let targetUserNameToDelete = null;
+
+    function toggleRole(button) {
+        const userId = button.dataset.userId;
+        fetch(`/admin/users/${userId}/toggle_role`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to update user role');
+            return response.text();
+        }).then(() => {
+            window.location.reload();
+        }).catch(() => {
+            showToast('Unable to update user role.', 'danger');
+        });
+    }
+
+    function toggleBan(button) {
+        const userId = button.dataset.userId;
+        fetch(`/admin/users/${userId}/toggle_ban`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to update ban status');
+            return response.text();
+        }).then(() => {
+            window.location.reload();
+        }).catch(() => {
+            showToast('Unable to update ban status.', 'danger');
+        });
+    }
+
+    function promptDeleteUser(userId, username) {
+        targetUserIdToDelete = userId;
+        targetUserNameToDelete = username;
+        document.getElementById('confirmModalText').textContent = `Are you sure you want to permanently delete account "${username}"?`;
+        document.getElementById('confirmDeleteModal').classList.add('open');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('confirmDeleteModal').classList.remove('open');
+        targetUserIdToDelete = null;
+        targetUserNameToDelete = null;
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (!targetUserIdToDelete) {
+            closeDeleteModal();
+            return;
+        }
+
+        fetch(`/admin/users/${targetUserIdToDelete}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to delete user');
+            return response.text();
+        }).then(() => {
+            const row = document.querySelector(`[data-user-id="${targetUserIdToDelete}"]`)?.closest('tr');
+            if (row) row.remove();
+            showToast(`User ${targetUserNameToDelete} deleted.`, 'danger');
+            closeDeleteModal();
+            setTimeout(() => window.location.reload(), 600);
+        }).catch(() => {
+            showToast('Unable to delete user.', 'danger');
+            closeDeleteModal();
+        });
+    });
+
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('[data-action]');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        if (action === 'role') {
+            toggleRole(button);
+        } else if (action === 'ban') {
+            toggleBan(button);
+        } else if (action === 'delete') {
+            const userId = button.dataset.userId;
+            const userName = button.dataset.userName || 'this user';
+            promptDeleteUser(userId, userName);
+        }
+    });
+
+    function filterUsers() {
+        const input = document.getElementById('userSearchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#usersTable tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(input) ? '' : 'none';
+        });
+    }
+
+    function exportUsersCSV() {
+        const table = document.getElementById('usersTable');
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll('td, th');
+            for (let j = 0; j < cols.length - 1; j++) {
+                let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').trim();
+                row.push('"' + data + '"');
+            }
+            csv.push(row.join(','));
+        }
+
+        const csvFile = new Blob([csv.join('\n')], { type: 'text/csv' });
+        const downloadLink = document.createElement('a');
+        downloadLink.download = 'Eusebio_Bliss_Users_List.csv';
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+</script>
+{% include '_logout_modal.html' %}
+</body>
+</html>

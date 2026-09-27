@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Code — Home Detection Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <!-- Matched exactly to admin_dashboard, login, register, and forgot_password typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,41 +25,205 @@
             --text-dark: #0b1735;
             --text-mid:  #3a4d70;
             --text-muted:#7a8fba;
+            --danger:    #c0392b;
+            --danger-bg: #fef2f1;
             --emerald-500: #10b981;
             --primary-glow: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(11, 23, 53, 0) 70%);
+
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
-        body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; background: var(--white); }
+        body {
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            display: flex;
+            background: var(--white);
+            -webkit-font-smoothing: antialiased;
+        }
 
+        /* ── LEFT PANEL ────────────────────────────── */
         .left-panel {
-            width: 55%; background: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-900) 100%);
-            position: relative; display: flex; flex-direction: column; justify-content: space-between;
-            padding: 48px 56px; overflow: hidden; box-shadow: 4px 0 24px rgba(5, 11, 26, 0.15);
+            width: 55%;
+            background: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-900) 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px 56px;
+            overflow: hidden;
+            box-shadow: 4px 0 24px rgba(5, 11, 26, 0.15);
         }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            width: 500px; height: 500px;
+            border-radius: 50%;
+            background: var(--primary-glow);
+            top: -160px; left: -160px;
+            pointer-events: none;
+        }
+
+        .left-panel::after {
+            content: '';
+            position: absolute;
+            width: 360px; height: 360px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(11, 23, 53, 0) 70%);
+            bottom: -80px; right: -80px;
+            pointer-events: none;
+        }
+
+        .left-circle-mid {
+            position: absolute;
+            width: 260px; height: 260px;
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.06);
+            bottom: 120px; left: -60px;
+            pointer-events: none;
+            animation: spin 120s linear infinite;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .left-panel-grid {
-            position: absolute; inset: 0;
-            background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-            background-size: 56px 56px; pointer-events: none;
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 56px 56px;
+            pointer-events: none;
         }
 
-        .left-brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
-        .left-logo-box { width: 44px; height: 44px; background: #ffffff; border-radius: 12px; padding: 3px; display: flex; align-items: center; justify-content: center;}
+        .left-brand {
+            display: flex; align-items: center; gap: 12px;
+            position: relative; z-index: 2;
+        }
+
+        .left-logo-box {
+            width: 44px; height: 44px;
+            background: #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            padding: 3px;
+        }
+
+        .left-brand:hover .left-logo-box { transform: scale(1.08) rotate(5deg); }
         .left-logo-box img { width: 100%; height: 100%; object-fit: contain; }
-        .left-brand-name { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); }
-        .left-brand-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.4); text-transform: uppercase; }
 
-        .left-hero { position: relative; z-index: 2; animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .left-headline { font-family: 'Playfair Display', Georgia, serif; font-size: 48px; font-weight: 700; color: var(--white); margin-bottom: 20px; }
-        .left-desc { font-size: 14px; color: rgba(255, 255, 255, 0.6); max-width: 380px; line-height: 1.7; }
+        .left-brand-name {
+            font-size: 14px; font-weight: 700;
+            color: rgba(255,255,255,0.95);
+            letter-spacing: -0.01em; line-height: 1.1;
+        }
 
-        .right-panel { width: 45%; display: flex; align-items: center; justify-content: center; padding: 48px 56px; }
-        .right-inner { width: 100%; max-width: 360px; animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .right-greeting { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--navy-400); margin-bottom: 10px; }
-        .right-title { font-family: 'Playfair Display', Georgia, serif; font-size: 30px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; }
-        .right-subtitle { font-size: 13.5px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+        .left-brand-sub {
+            font-size: 10px; font-weight: 500;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.07em; text-transform: uppercase;
+            margin-top: 2px;
+        }
 
-        /* Email Banner Info */
+        .left-hero {
+            position: relative; z-index: 2;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .left-eyebrow {
+            display: inline-flex; align-items: center; gap: 7px;
+            font-size: 10.5px; font-weight: 600;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: #93c5fd; background: rgba(147, 197, 253, 0.08);
+            border: 1px solid rgba(147, 197, 253, 0.15);
+            padding: 6px 14px; border-radius: 999px; margin-bottom: 28px;
+        }
+
+        .left-eyebrow-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #60a5fa; box-shadow: 0 0 8px #60a5fa;
+            position: relative;
+        }
+
+        .left-eyebrow-dot::after {
+            content: ''; position: absolute; inset: -4px;
+            border-radius: 50%; border: 1px solid rgba(96, 165, 250, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+
+        .left-headline {
+            font-family: var(--font-sans);
+            font-size: 48px; font-weight: 800; line-height: 1.08;
+            color: var(--white); letter-spacing: -0.02em; margin-bottom: 20px;
+        }
+
+        .left-headline em {
+            font-style: italic; font-weight: 400; color: var(--navy-200);
+            background: linear-gradient(120deg, var(--white) 30%, var(--navy-200) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .left-desc {
+            font-size: 14px; font-weight: 400; line-height: 1.7;
+            color: rgba(255, 255, 255, 0.6); max-width: 380px; margin-bottom: 40px;
+        }
+        
+        .left-footer {
+            position: relative; z-index: 2;
+            display: flex; align-items: center; gap: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 24px;
+        }
+
+        .security-badge {
+            display: flex; align-items: center; gap: 7px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px; padding: 8px 16px;
+            font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.7);
+            letter-spacing: 0.03em;
+        }
+
+        .security-badge svg { width: 13px; height: 13px; color: var(--emerald-500); }
+
+        /* ── RIGHT PANEL ────────────────────────────── */
+        .right-panel {
+            width: 45%; display: flex; align-items: center; justify-content: center;
+            padding: 48px 56px; background: var(--white);
+        }
+
+        .right-inner { 
+            width: 100%; max-width: 360px; 
+            animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .right-brand-mobile { display: none; }
+
+        .right-greeting {
+            font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--navy-400); margin-bottom: 10px;
+        }
+
+        .right-title {
+            font-family: var(--font-sans);
+            font-size: 30px; font-weight: 700; color: var(--text-dark);
+            letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 6px;
+        }
+
+        .right-subtitle {
+            font-size: 13.5px; color: var(--text-muted);
+            margin-bottom: 24px; line-height: 1.5;
+        }
+
+        /* Email Notice */
         .email-notice {
             background: var(--navy-50);
             border: 1px solid var(--navy-100);
@@ -71,28 +236,96 @@
             align-items: center;
             gap: 10px;
         }
+        
         .email-notice svg { width: 18px; height: 18px; color: var(--navy-600); flex-shrink: 0; }
         .email-notice strong { color: var(--navy-900); font-weight: 600; word-break: break-all; }
 
-        /* OTP Inputs Box */
-        .otp-container { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 24px; }
-        .otp-input {
-            width: 48px; height: 52px; background: var(--off-white);
-            border: 1.5px solid var(--border); border-radius: 8px;
-            font-size: 20px; font-weight: 700; text-align: center;
-            color: var(--navy-900); outline: none; transition: all 0.15s;
+        .flash {
+            display: flex; align-items: center; gap: 9px;
+            padding: 11px 14px; border-radius: 8px; margin-bottom: 20px;
+            font-size: 13px; font-weight: 500;
         }
-        .otp-input:focus { border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100); background: var(--white); }
+
+        .flash svg { width: 15px; height: 15px; flex-shrink: 0; }
+        .flash-danger { background: var(--danger-bg); border: 1px solid #f5a89e; color: var(--danger); }
+
+        /* OTP Inputs */
+        .otp-container { 
+            display: flex; 
+            gap: 8px; 
+            justify-content: space-between; 
+            margin-bottom: 24px; 
+        }
+        
+        .otp-input {
+            width: 48px; 
+            height: 52px; 
+            background: var(--off-white);
+            border: 1.5px solid var(--border); 
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 20px; 
+            font-weight: 700; 
+            text-align: center;
+            color: var(--navy-900); 
+            outline: none; 
+            transition: all 0.15s;
+        }
+        
+        .otp-input:focus { 
+            border-color: var(--navy-600); 
+            box-shadow: 0 0 0 3px var(--navy-100); 
+            background: var(--white); 
+        }
+
+        .otp-input.input-error {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px var(--danger-bg);
+            background: var(--white);
+        }
+
+        .error-message {
+            display: none;
+            color: var(--danger);
+            font-size: 11.5px;
+            font-weight: 500;
+            margin-top: -14px;
+            margin-bottom: 18px;
+            letter-spacing: 0.01em;
+            text-align: center;
+        }
 
         .btn-submit {
             width: 100%; background: var(--navy-800); color: var(--white);
-            border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: background 0.15s; box-shadow: 0 4px 16px rgba(13,27,62,0.25);
+            border: none; padding: 12px; border-radius: 8px;
+            font-size: 14px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; letter-spacing: -0.01em;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            box-shadow: 0 4px 16px rgba(13,27,62,0.25); margin-top: 4px;
             display: flex; align-items: center; justify-content: center; gap: 8px;
+            text-decoration: none;
         }
-        .btn-submit:hover { background: var(--navy-950); }
 
-        @media (max-width: 840px) { .left-panel { display: none; } .right-panel { width: 100%; } }
+        .btn-submit svg { width: 15px; height: 15px; }
+        .btn-submit:hover { background: var(--navy-950); box-shadow: 0 6px 22px rgba(13,27,62,0.35); transform: translateY(-1px); }
+        .btn-submit:active { transform: translateY(0); }
+
+        @media (max-width: 840px) {
+            body { flex-direction: column; }
+            .left-panel { display: none; }
+            .right-panel { width: 100%; padding: 40px 28px; min-height: 100vh; }
+            .right-brand-mobile {
+                display: flex; align-items: center; gap: 10px; margin-bottom: 36px;
+            }
+            .right-brand-mobile .mob-logo {
+                width: 36px; height: 36px; background: #ffffff;
+                border-radius: 9px; border: 1px solid var(--border);
+                display: flex; align-items: center; justify-content: center; padding: 4px;
+            }
+            .right-brand-mobile .mob-logo img { width: 100%; height: 100%; object-fit: contain; }
+            .right-brand-mobile .mob-name { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+        }
+
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
     </style>
@@ -101,6 +334,8 @@
 
     <div class="left-panel">
         <div class="left-panel-grid"></div>
+        <div class="left-circle-mid"></div>
+
         <div class="left-brand">
             <div class="left-logo-box">
                 <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
@@ -110,58 +345,71 @@
                 <div class="left-brand-sub">Monitoring System</div>
             </div>
         </div>
+
         <div class="left-hero">
+            <div class="left-eyebrow">
+                <span class="left-eyebrow-dot"></span>
+                Verification Step
+            </div>
             <h1 class="left-headline">
-                {% if purpose == 'login' and legacy_otp %}
-                    Open your<br><em>authenticator.</em>
-                {% else %}
-                    Check your<br><em>inbox.</em>
-                {% endif %}
+                Check your<br><em>inbox.</em>
             </h1>
             <p class="left-desc">
-                {% if purpose == 'login' and legacy_otp %}
-                    Open your authenticator app and enter the 6-digit code shown for this account.
-                {% else %}
-                    We sent a 6-digit security code to your registered email address. Enter the code below to verify.
-                {% endif %}
+                We sent a 6-digit security code to verify your identity. Enter the code below to complete this step safely.
             </p>
         </div>
-        <div></div>
+
+       <div class="left-footer">
+            <div class="security-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                Eusebio Bliss Village 1
+            </div>
+            <div class="security-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                24 / 7 monitoring
+            </div>
+        </div>
     </div>
 
     <div class="right-panel">
         <div class="right-inner">
+            <div class="right-brand-mobile">
+                <div class="mob-logo">
+                    <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
+                </div>
+                <span class="mob-name">Home Detection Security</span>
+            </div>
+
             <p class="right-greeting">{{ 'Login Verification' if purpose == 'login' else 'Password Recovery' }}</p>
             <h2 class="right-title">Enter OTP Code</h2>
             <p class="right-subtitle">
-                {% if purpose == 'login' and legacy_otp %}
-                    Enter the current code from your authenticator app.
-                {% elif purpose == 'login' %}
-                    Enter the 6-digit code sent to your email.
+                {% if purpose == 'login' %}
+                    Enter the current code from your authenticator app to proceed.
                 {% else %}
-                    Enter the 6-digit code sent to your email.
+                    Enter the 6-digit code sent to your email to verify.
                 {% endif %}
             </p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% for category, message in messages %}<p class="right-subtitle">{{ message }}</p>{% endfor %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash flash-danger">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
             {% endwith %}
 
             <div class="email-notice">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    {% if purpose == 'login' and legacy_otp %}
-                        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-                    {% else %}
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                    {% endif %}
-                </svg>
-                <span>
-                    {% if purpose == 'login' and legacy_otp %}
-                        Authenticator app code for <strong id="user-email-display">{{ email or 'your account' }}</strong>
-                    {% else %}
-                        Code sent to <strong id="user-email-display">{{ email or 'your account' }}</strong>
-                    {% endif %}
-                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>{% if purpose == 'login' %}Authenticator code required for{% else %}Verification code sent to{% endif %} <strong id="user-email-display">{{ email or 'your account' }}</strong></span>
             </div>
 
             <form action="{{ url_for('verify_otp', purpose=purpose) }}" method="POST" id="otp-form">
@@ -173,58 +421,105 @@
                     <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
                     <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" required>
                 </div>
+                
+                <div id="otpError" class="error-message">Please fill out all 6 digits of the code.</div>
+                
                 <input type="hidden" name="otp" id="otp-value">
 
                 <button type="submit" class="btn-submit">
                     Verify & Continue
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
             </form>
 
         </div>
     </div>
 
+    <!-- OTP Input Logic Script -->
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const emailParam = urlParams.get('email');
-        if (emailParam) {
-            document.getElementById('user-email-display').textContent = emailParam;
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Retrieve dynamic email from URL parameter if available (for UI masking/display)
+            const urlParams = new URLSearchParams(window.location.search);
+            const emailParam = urlParams.get('email');
+            if (emailParam) {
+                document.getElementById('user-email-display').textContent = emailParam;
+            }
 
-        const inputs = document.querySelectorAll('.otp-input');
-        const otpForm = document.getElementById('otp-form');
-        const otpValue = document.getElementById('otp-value');
+            const inputs = document.querySelectorAll('.otp-input');
+            const otpForm = document.getElementById('otp-form');
+            const otpValue = document.getElementById('otp-value');
+            const otpError = document.getElementById('otpError');
 
-        otpForm.addEventListener('submit', (event) => {
-            otpValue.value = Array.from(inputs).map(input => input.value).join('');
-        });
+            inputs.forEach((input, index) => {
+                // Clear error styling on focus
+                input.addEventListener('focus', () => {
+                    inputs.forEach(i => i.classList.remove('input-error'));
+                    otpError.style.display = 'none';
+                });
 
-        inputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                const value = e.target.value;
-                if (!/^[0-9]$/.test(value)) {
-                    e.target.value = '';
-                    return;
-                }
-                if (value.length === 1 && index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                }
+                // Restrict input to numeric & auto-advance
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    
+                    // Strip non-numeric characters immediately
+                    if (!/^[0-9]$/.test(value)) {
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    // Auto-advance to next input
+                    if (value.length === 1 && index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+                });
+
+                // Handle backspace to reverse focus
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !input.value && index > 0) {
+                        inputs[index - 1].focus();
+                    }
+                });
+
+                // Handle pasting a full code effortlessly
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pasteData = e.clipboardData.getData('text').trim();
+                    
+                    // Only process if it's exactly 6 digits
+                    if (/^\d{6}$/.test(pasteData)) {
+                        pasteData.split('').forEach((char, i) => {
+                            if (inputs[i]) inputs[i].value = char;
+                        });
+                        inputs[inputs.length - 1].focus();
+                        inputs.forEach(i => i.classList.remove('input-error'));
+                        otpError.style.display = 'none';
+                    }
+                });
             });
 
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !input.value && index > 0) {
-                    inputs[index - 1].focus();
-                }
-            });
+            // Submission Validation
+            otpForm.addEventListener('submit', (event) => {
+                let code = '';
+                let isComplete = true;
 
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pasteData = e.clipboardData.getData('text').trim();
-                if (/^\d{6}$/.test(pasteData)) {
-                    pasteData.split('').forEach((char, i) => {
-                        if (inputs[i]) inputs[i].value = char;
-                    });
-                    inputs[inputs.length - 1].focus();
+                // Collect code and check completeness
+                inputs.forEach(input => {
+                    if (!input.value) {
+                        isComplete = false;
+                        input.classList.add('input-error');
+                    }
+                    code += input.value;
+                });
+
+                if (!isComplete) {
+                    event.preventDefault(); // Stop submission
+                    otpError.style.display = 'block';
+                    // Focus on the first empty input
+                    const firstEmpty = Array.from(inputs).find(input => !input.value);
+                    if (firstEmpty) firstEmpty.focus();
+                } else {
+                    // Inject full 6-digit code into hidden field for backend processing
+                    otpValue.value = code;
                 }
             });
         });

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — Home Detection Security</title>
+    <!-- Using only Inter font for a clean, modern, and readable look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            height: 100%;
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+        }
+
+        :root {
+            /* Premium Navy & Neutral Palette matching Dashboard */
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f8fafc;
+            --background:#f1f5f9; 
+            --border:    #e2e8f0;
+            
+            /* Status Colors */
+            --text-dark: #0f172a;
+            --text-mid:  #334155;
+            --text-muted:#64748b;
+            --danger:    #dc2626;
+            --danger-bg: #fef2f2;
+            --success:   #16a34a;
+            --success-bg:#f0fdf4;
+            --amber:     #d97706;
+            --amber-bg:  #fffbeb;
+            
+            /* Radii & Soft Shadows */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 6px rgba(15, 23, 42, 0.02);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.05), 0 10px 15px rgba(15, 23, 42, 0.03);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--text-dark);
+            font-size: 14px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            flex-direction: column;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 32px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex-shrink: 0; }
+
+        .brand-logo-wrap {
+            width: 40px; height: 40px;
+            background: var(--navy-900);
+            border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; color: white; overflow: hidden;
+        }
+        .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+
+        .brand-text-block { line-height: 1.2; }
+        .brand-name { font-size: 16px; font-weight: 700; color: var(--navy-950); }
+        .brand-sub { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+        .nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 16px; border-radius: var(--radius-md);
+            font-size: 14px; font-weight: 500; color: var(--text-mid);
+            text-decoration: none; transition: all 0.2s ease; white-space: nowrap;
+        }
+        .nav-links a svg { width: 18px; height: 18px; color: var(--text-muted); transition: color 0.2s ease; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-900); }
+        .nav-links a:hover svg { color: var(--navy-600); }
+        .nav-links a.active { background: var(--white); color: var(--navy-900); font-weight: 600; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+        .nav-links a.active svg { color: var(--navy-600); }
+        .nav-logout:hover { background: var(--danger-bg) !important; color: var(--danger) !important; }
+        .nav-logout:hover svg { color: var(--danger) !important; }
+
+        .page { max-width: 1280px; margin: 0 auto; padding: 40px 32px 80px; width: 100%; flex: 1 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+        .page-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+        .page-title { font-size: 28px; font-weight: 800; color: var(--navy-950); letter-spacing: -0.02em; line-height: 1.2; }
+        .page-subtitle { font-size: 15px; color: var(--text-muted); margin-top: 6px; }
+
+        .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border-radius: 999px;
+            font-size: 13px; font-weight: 600;
+        }
+        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid #bbf7d0; }
+
+        .flash {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500;
+            box-shadow: var(--shadow-sm); margin-bottom: -16px; 
+        }
+        .flash svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .flash-danger  { background: var(--danger-bg);  border: 1px solid #fecaca; color: var(--danger); }
+        .flash-success { background: var(--success-bg); border: 1px solid #bbf7d0; color: var(--success); }
+
+        .settings-content { max-width: 860px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 32px; }
+
+        .card {
+            background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm); overflow: hidden;
+        }
+
+        .card-header {
+            padding: 24px 32px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;
+        }
+        .card-header-main { display: flex; align-items: center; gap: 16px; }
+        .card-header-icon {
+            width: 44px; height: 44px; background: var(--navy-50); color: var(--navy-600);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .card-header-icon svg { width: 22px; height: 22px; }
+        .card-header-text { font-size: 18px; font-weight: 700; color: var(--text-dark); }
+        .card-header-sub { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+
+        .card-body { padding: 32px; }
+
+        .form-row { display: flex; flex-wrap: wrap; gap: 20px; }
+        .field { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 250px; margin-bottom: 20px; }
+        
+        .field label { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+        .field-sub { font-size: 12.5px; color: var(--text-muted); margin-top: -4px; line-height: 1.4; }
+        
+        .field input, .field select, .field textarea {
+            background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-md);
+            padding: 12px 16px; font-size: 14px; font-family: var(--font-sans); color: var(--text-dark);
+            outline: none; transition: all 0.2s ease; width: 100%;
+        }
+        .field input:focus, .field select:focus, .field textarea:focus {
+            border-color: var(--navy-400); box-shadow: 0 0 0 4px var(--navy-50); background: var(--white);
+        }
+        .field input:disabled { background: var(--off-white); color: var(--text-muted); cursor: not-allowed; border-color: var(--border); }
+
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }
+        .toggle-row:first-child { padding-top: 0; }
+        .toggle-info { flex: 1; padding-right: 16px; }
+        .toggle-label { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+        .toggle-desc  { font-size: 13px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+        .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; display: inline-block; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 24px; cursor: pointer; transition: 0.3s; }
+        .toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .toggle-switch input:checked + .toggle-slider { background: var(--success); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        .range-container { display: flex; align-items: center; gap: 16px; }
+        input[type="range"] { flex: 1; height: 6px; background: var(--border); border-radius: 8px; outline: none; appearance: none; cursor: pointer; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--white); border: 2px solid var(--navy-700); box-shadow: var(--shadow-sm); cursor: pointer; }
+        .range-val { font-size: 14px; font-weight: 700; font-family: var(--font-mono); color: var(--navy-900); min-width: 40px; text-align: right; background: var(--off-white); padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background: var(--navy-900); color: #fff; border: none; padding: 12px 24px;
+            border-radius: var(--radius-md); font-size: 14px; font-weight: 600; font-family: var(--font-sans);
+            cursor: pointer; height: 46px; white-space: nowrap; transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(11,23,53,0.15); width: 100%; margin-top: 12px;
+        }
+        .btn-primary:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(11,23,53,0.2); }
+
+        .btn-secondary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background: var(--white); color: var(--text-dark); border: 1px solid var(--border);
+            padding: 10px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s ease; box-shadow: var(--shadow-sm);
+        }
+        .btn-secondary:hover { background: var(--off-white); border-color: var(--navy-200); }
+
+        .custom-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        .custom-table th {
+            background: var(--off-white); color: var(--text-mid); font-weight: 600;
+            padding: 16px 32px; border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+        .custom-table td {
+            padding: 16px 32px; border-bottom: 1px solid var(--border); color: var(--text-dark); vertical-align: middle;
+        }
+        .custom-table tr:last-child td { border-bottom: none; }
+        .custom-table tr:hover td { background: var(--off-white); }
+
+        .btn-remove {
+            display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn-remove:hover { background: var(--danger-bg); color: var(--danger); }
+
+        /* Empty State */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 60px 24px; background: var(--white); text-align: center;
+        }
+        .empty-icon {
+            width: 64px; height: 64px; border-radius: 16px; background: var(--off-white);
+            display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+        }
+        .empty-icon svg { width: 32px; height: 32px; color: var(--text-muted); }
+        .empty-title { font-size: 16px; font-weight: 700; color: var(--navy-900); margin-bottom: 8px; }
+        .empty-body { font-size: 14px; color: var(--text-muted); max-width: 400px; line-height: 1.5; }
+
+        footer {
+            background: transparent; color: var(--text-muted); padding: 24px;
+            text-align: center; font-size: 13px; margin-top: auto;
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .modal-overlay.is-open { opacity: 1; visibility: visible; }
+        .modal-box {
+            width: 100%; max-width: 400px; background: var(--white); border-radius: var(--radius-lg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); padding: 32px; text-align: center;
+            transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.is-open .modal-box { transform: translateY(0) scale(1); opacity: 1; }
+        
+        .modal-icon-wrap {
+            width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+        }
+        .modal-icon-wrap.danger { background: var(--danger-bg); color: var(--danger); }
+        .modal-icon-wrap.info { background: var(--navy-50); color: var(--navy-700); }
+        
+        .modal-title { font-size: 20px; font-weight: 700; color: var(--navy-950); margin-bottom: 8px; }
+        .modal-desc { font-size: 15px; color: var(--text-muted); }
+        
+        .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+        .btn-modal {
+            flex: 1; padding: 12px 20px; border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.2s ease;
+        }
+        .btn-modal-cancel { background: var(--background); color: var(--text-dark); border: 1px solid var(--border); }
+        .btn-modal-cancel:hover { background: var(--border); }
+        .btn-modal-danger { background: var(--danger); color: var(--white); }
+        .btn-modal-danger:hover { background: #b91c1c; }
+        .btn-modal-confirm { background: var(--navy-900); color: var(--white); }
+        .btn-modal-confirm:hover { background: var(--navy-700); }
+
+        @media (max-width: 1024px) {
+            .nav-inner { padding: 16px 24px; flex-wrap: wrap; height: auto; gap: 16px; }
+            .nav-links { width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: 8px; margin-top: 8px; }
+            .page { padding: 32px 24px 60px; gap: 32px; }
+        }
+        @media (max-width: 768px) {
+            .form-row { flex-direction: column; gap: 0; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .header-right { width: 100%; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+{% include '_flash_toasts.html' %}
+
+<nav>
+    <div class="nav-inner">
+        <a class="nav-brand" href="{{ url_for('index') }}">
+            <div class="brand-logo-wrap">
+                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="Logo" onerror="this.style.display='none';">
+            </div>
+            <div class="brand-text-block">
+                <div class="brand-name">Home Detection Security</div>
+                <div class="brand-sub">Eusebio Bliss Village 1</div>
+            </div>
+        </a>
+
+        <ul class="nav-links">
+            <li>
+                <a href="{{ url_for('index') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('cctv') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    CCTV Monitor
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('events_page') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Event Log
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('user_request') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Request Recording
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('settings') }}" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l.06-.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Settings
+                </a>
+            </li>
+            <li>
+                <button type="button" class="nav-logout" onclick="openLogoutModal()" style="background:transparent; border:none; cursor:pointer; font-family:var(--font-sans); display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:var(--radius-md); font-size:14px; font-weight:500; color:var(--text-mid); transition:all 0.2s ease;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--text-muted);"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
+                </button>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<main class="page">
+    
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">System Settings</h1>
+            <p class="page-subtitle">Configure user profile details, detection thresholds, and notification alerts.</p>
+        </div>
+
+    <div class="settings-content">
+
+        <!-- 1. Homeowner Profile Settings -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div>
+                        <div class="card-header-text">Homeowner Profile</div>
+                        <div class="card-header-sub">Manage your account credentials and personal details.</div>
+                    </div>
+                </div>
+                <div>
+                    <button type="button" class="btn-secondary" id="profileModeToggle">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span id="toggleModeText">Edit Profile</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <form id="profileForm" action="{{ url_for('update_profile') }}" method="POST">
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="prof_username">Username</label>
+                            <input type="text" name="username" id="prof_username" value="{{ current_user.username }}" disabled required>
+                        </div>
+                        <div class="field">
+                            <label for="prof_email">Email Address</label>
+                            <input type="email" name="email" id="prof_email" value="{{ current_user.email }}" disabled required>
+                        </div>
+                    </div>
+                    
+                    <div id="profileSaveContainer" style="display: none; margin-top: 8px;">
+                        <button type="button" class="btn-primary" id="btnOpenSaveConfirm" style="width: auto;">
+                            Save Profile Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. Detection Logic -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+                    <div>
+                        <div class="card-header-text">Detection Logic & AI</div>
+                        <div class="card-header-sub">Configure how the system analyzes video feeds and triggers alerts.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <form method="POST" id="settingsForm">
+                    <!-- Toggles -->
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Fire & Smoke Detection</div>
+                            <div class="toggle-desc">Detects active fire and thick smoke using YOLOv8 AI models.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="yolo_enabled" {% if settings.yolo_enabled %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="toggle-row" style="margin-bottom: 24px;">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Face Recognition</div>
+                            <div class="toggle-desc">Identifies known individuals from your saved database to avoid false alarms.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-row" style="margin-bottom: 24px;">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Fire & Smoke Email Alerts</div>
+                            <div class="toggle-desc">Send critical detection alerts only to your configured email address.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="email_alerts_enabled" {% if settings.email_alerts_enabled %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="field" style="margin-bottom: 20px;">
+                        <label for="recipient_email">Alert Email Address</label>
+                        <input type="email" name="recipient_email" id="recipient_email" value="{{ settings.recipient_email or current_user.email }}" required>
+                    </div>
+
+                    <div class="field" style="margin-bottom: 20px;">
+                        <label for="critical_email_cooldown_minutes">Minimum Time Between Critical Emails (minutes)</label>
+                        <input type="number" name="critical_email_cooldown_minutes" id="critical_email_cooldown_minutes" value="{{ settings.critical_email_cooldown_minutes or 15 }}" min="1" max="1440">
+                        <p class="field-sub">Repeated detections during this window are logged but do not send another email. The cooldown is shared across your cameras.</p>
+                    </div>
+
+                    <!-- Number & Sliders -->
+                    <div class="field">
+                        <label>Frame Processing Interval</label>
+                        <input type="number" name="frame_process_interval" value="{{ settings.frame_process_interval or 3 }}" min="1" max="30">
+                        <p class="field-sub">Process every N-th frame (e.g., 3 = every third frame). Higher values improve performance but slightly delay detection.</p>
+                    </div>
+
+                    <div class="field" style="margin-top: 24px;">
+                        <label>Object & Hazard Detection Confidence</label>
+                        <div class="range-container">
+                            <input type="range" min="0.1" max="1.0" step="0.05" name="object_detection_confidence"
+                                value="{{ settings.object_detection_confidence or 0.5 }}"
+                                oninput="document.getElementById('object-val').innerText = parseFloat(this.value).toFixed(2)">
+                            <span id="object-val" class="range-val">{{ settings.object_detection_confidence or 0.5 }}</span>
+                        </div>
+                        <p class="field-sub">Lower values detect more objects but increase false alarms. Higher values are stricter.</p>
+                    </div>
+
+                    <div class="field" style="margin-top: 24px;">
+                        <label>Facial Recognition Confidence</label>
+                        <div class="range-container">
+                            <input type="range" min="0.1" max="1.0" step="0.05" name="face_recognition_confidence"
+                                value="{{ settings.face_recognition_confidence or 0.6 }}"
+                                oninput="document.getElementById('face-val').innerText = parseFloat(this.value).toFixed(2)">
+                            <span id="face-val" class="range-val">{{ settings.face_recognition_confidence or 0.6 }}</span>
+                        </div>
+                        <p class="field-sub">Lower values match faces more easily. Higher values require a near-perfect match.</p>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        Save Detection Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. Manage Known Faces -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    <div>
+                        <div class="card-header-text">Known Faces Database</div>
+                        <div class="card-header-sub">Add trusted individuals so the system recognizes them as safe.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Add form -->
+                <form action="{{ url_for('add_face') }}" method="POST" enctype="multipart/form-data" style="margin-bottom: 32px;">
+                    <label style="font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 12px; display: block;">Add New Person</label>
+                    <div class="form-row" style="align-items: flex-end;">
+                        <div class="field" style="margin-bottom: 0;">
+                            <label>Full Name</label>
+                            <input type="text" name="name" placeholder="e.g. John Doe" required>
+                        </div>
+                        <div class="field" style="margin-bottom: 0;">
+                            <label>Face Photo (JPG/PNG)</label>
+                            <input type="file" name="file" accept=".jpg,.jpeg,.png" required style="padding: 9px 12px;">
+                        </div>
+                        <div style="flex-shrink: 0;">
+                            <button type="submit" class="btn-primary" style="margin-top: 0; width: auto;">
+                                Upload Photo
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Faces List -->
+                <label style="font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 12px; display: block;">Currently Recognized People</label>
+                
+                <div style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;">
+                    <table class="custom-table">
+                        <thead style="display: none;">
+                            <tr>
+                                <th>Name</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if known_faces %}
+                                {% for name in known_faces %}
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--navy-100); color: var(--navy-800); display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                                                {{ name[0] | upper }}
+                                            </div>
+                                            <span style="font-weight: 500;">{{ name }}</span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: right; width: 100px;">
+                                        <form action="{{ url_for('delete_face', name=name) }}" method="POST" onsubmit="return confirm('Delete facial data for {{ name }}?');" style="margin:0;">
+                                            <button type="submit" class="btn-remove">Remove</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="2" style="padding: 0; background: var(--white);">
+                                        <div class="empty-state">
+                                            <div class="empty-icon">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                            </div>
+                                            <p class="empty-title">No faces added</p>
+                                            <p class="empty-body">Upload a photo using the form above to add trusted people to your system.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<footer>
+    <div>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</div>
+</footer>
+
+<!-- Profile Save Confirmation Modal -->
+<div class="modal-overlay" id="saveProfileModal">
+    <div class="modal-box">
+        <div class="modal-icon-wrap info">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        </div>
+        <h3 class="modal-title">Save Profile Changes?</h3>
+        <p class="modal-desc">Are you sure you want to save these profile changes? This will update your personal details in the system.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-modal btn-modal-cancel" id="btnCloseSaveConfirm">Cancel</button>
+            <button type="button" class="btn-modal btn-modal-confirm" id="btnConfirmProfileSave">Yes, Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Logout Confirmation Modal (Standardized from Dashboard) -->
+<div class="modal-overlay" id="logoutModalOverlay">
+    <div class="modal-box">
+        <div class="modal-icon-wrap danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <h3 class="modal-title">Confirm Logout</h3>
+        <p class="modal-desc">Are you sure you want to log out of the dashboard?</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-modal btn-modal-cancel" id="logoutModalNo">Cancel</button>
+            <button type="button" class="btn-modal btn-modal-danger" id="logoutModalYes">Yes, Log Out</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Profile View vs Edit Mode Logic
+    const toggleBtn = document.getElementById('profileModeToggle');
+    const toggleText = document.getElementById('toggleModeText');
+    const profileInputs = document.querySelectorAll('#profileForm input');
+    const profileSaveContainer = document.getElementById('profileSaveContainer');
+
+    let isEditMode = false;
+
+    toggleBtn.addEventListener('click', () => {
+        isEditMode = !isEditMode;
+
+        profileInputs.forEach(input => {
+            input.disabled = !isEditMode;
+        });
+
+        if (isEditMode) {
+            toggleText.textContent = "Cancel Edit";
+            profileSaveContainer.style.display = 'block';
+            document.getElementById('prof_username').focus();
+        } else {
+            toggleText.textContent = "Edit Profile";
+            profileSaveContainer.style.display = 'none';
+        }
+    });
+
+    // Confirmation Modal Logic for Profile Save
+    const saveModal = document.getElementById('saveProfileModal');
+    const btnOpenConfirm = document.getElementById('btnOpenSaveConfirm');
+    const btnCloseConfirm = document.getElementById('btnCloseSaveConfirm');
+    const btnConfirmSave = document.getElementById('btnConfirmProfileSave');
+    const profileForm = document.getElementById('profileForm');
+
+    btnOpenConfirm.addEventListener('click', () => {
+        saveModal.classList.add('is-open');
+        document.body.style.overflow = 'hidden'; 
+    });
+
+    btnCloseConfirm.addEventListener('click', () => {
+        saveModal.classList.remove('is-open');
+        document.body.style.overflow = '';
+    });
+
+    btnConfirmSave.addEventListener('click', () => {
+        saveModal.classList.remove('is-open');
+        document.body.style.overflow = '';
+        profileForm.submit();
+    });
+
+    // Standardized Modal Logout Logic
+    (function () {
+        var overlay = document.getElementById('logoutModalOverlay');
+        var yesBtn = document.getElementById('logoutModalYes');
+        var noBtn = document.getElementById('logoutModalNo');
+        if (!overlay || !yesBtn || !noBtn) return;
+
+        var pendingHref = null;
+
+        function openModal(href) {
+            pendingHref = href;
+            overlay.classList.add('is-open');
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        function closeModal() {
+            overlay.classList.remove('is-open');
+            document.body.style.overflow = '';
+            pendingHref = null;
+        }
+
+        document.querySelectorAll('a.nav-logout').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                openModal(link.getAttribute('href'));
+            });
+        });
+
+        yesBtn.addEventListener('click', function () {
+            if (pendingHref) window.location.href = pendingHref;
+        });
+
+        noBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                if (overlay.classList.contains('is-open')) closeModal();
+                if (saveModal.classList.contains('is-open')) {
+                    saveModal.classList.remove('is-open');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+    })();
+</script>
+</body>
+</html>

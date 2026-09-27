@@ -4,21 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CCTV Monitor — Home Detection Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* ══ LOCKED PAGE FRAME — identical sa lahat ng admin pages ═══════════
-           Pinipigilan nito ang paggalaw ng nav kapag lumipat ng tab.        */
         html {
             height: 100%;
-            overflow-y: scroll;        /* laging naka-reserve ang scrollbar space */
+            overflow-y: scroll;
             scrollbar-gutter: stable;
         }
 
-
         :root {
-            /* ── Core Palette ── */
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
             --navy-800:  #0d1b3e;
@@ -34,243 +30,246 @@
             --text-dark: #0b1735;
             --text-mid:  #3a4d70;
             --text-muted:#7a8fba;
-            --danger:    #c0392b;
-            --danger-bg: #fef2f1;
-            --success:   #1f8a5f;
-            --success-bg:#eaf7f0;
-            --amber:     #b07d2a;
-            --amber-bg:  #fef7e6;
+            --danger:    #dc2626;
+            --danger-bg: #fef2f2;
+            --danger-border: #fecaca;
+            --success:   #059669;
+            --success-bg:#ecfdf5;
+            --success-border:#a7f3d0;
+            --amber:     #d97706;
+            --amber-bg:  #fffbeb;
             
-            /* ── Tokens ── */
-            --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 16px;
-            --shadow-xs: 0 1px 2px rgba(11,23,53,0.04);
-            --shadow-sm: 0 1px 4px rgba(11,23,53,0.07), 0 1px 2px rgba(11,23,53,0.04);
-            --shadow-md: 0 8px 24px rgba(11,23,53,0.10), 0 2px 6px rgba(11,23,53,0.06);
-            --shadow-lg: 0 16px 40px rgba(11,23,53,0.14), 0 4px 12px rgba(11,23,53,0.08);
+            --bg-main:       #f7f8fc;
+            --surface-white: #ffffff;
+            --border-color:  #cbd5e1;
+            --border-subtle: #e2e8f0;
+            --text-primary:  #0f172a;
+            --text-secondary:#475569;
+            --accent-blue:   #2563eb;
+            --accent-blue-bg:#eff6ff;
+            
+            --radius-sm:     6px;
+            --radius-md:     10px;
+            --radius-lg:     16px;
+            
+            --shadow-xs:     0 1px 2px rgba(11,23,53,0.04);
+            --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-card:   0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+            --shadow-hover:  0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+            --shadow-lg:     0 16px 40px rgba(11,23,53,0.14), 0 4px 12px rgba(11,23,53,0.08);
+            
             --font-sans: 'Inter', sans-serif;
-            --font-serif:'Playfair Display', Georgia, serif;
             --font-mono: 'JetBrains Mono', monospace;
         }
 
         body {
             font-family: var(--font-sans);
-            background: var(--off-white);
-            color: var(--text-dark);
+            background: var(--bg-main);
+            color: var(--text-primary);
             min-height: 100vh;
-            font-size: 14px; line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
-            display: flex; flex-direction: column;
+            display: flex;
         }
 
-        /* ══════════════════════════════════════
-           RESPONSIVE NAVIGATION
-        ══════════════════════════════════════ */
-        nav {
-            position: sticky; top: 0; z-index: 200;
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: var(--shadow-xs); flex-shrink: 0;
-            width: 100%;
+        .admin-sidebar {
+            width: 280px; background: var(--surface-white);
+            border-right: 1px solid var(--border-subtle);
+            display: flex; flex-direction: column; flex-shrink: 0;
+            position: sticky; top: 0; height: 100vh; z-index: 100;
         }
-        .nav-inner {
-            max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 64px;
-            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+        
+        .sidebar-header {
+            padding: 24px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border-subtle); text-decoration: none;
         }
-        .nav-brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
         .brand-logo-wrap {
-            width: 38px; height: 38px; background: var(--white); border-radius: 10px;
+            width: 40px; height: 40px; background: var(--surface-white); border-radius: var(--radius-md);
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-            padding: 2px; overflow: hidden; border: 1px solid var(--border);
+            padding: 2px; overflow: hidden; border: 1px solid var(--border-subtle);
         }
         .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-        .brand-text-block { line-height: 1.15; }
-        .brand-name { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em; }
+        .brand-text-block { line-height: 1.2; }
+        .brand-name { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
         .brand-name em { font-style: italic; color: var(--navy-600); }
-        .brand-sub { font-size: 9.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+        .brand-sub { font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 
-        .nav-clock {
-            display: flex; align-items: center; gap: 8px;
-            background: var(--navy-900); border-radius: 999px; padding: 6px 16px; flex-shrink: 0;
-        }
-        .nav-clock-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-red 1.5s ease-in-out infinite; }
-        @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,0.25)} 50%{box-shadow:0 0 0 5px rgba(239,68,68,0.06)} }
-        .nav-clock-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ef4444; }
-        .nav-clock-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.15); }
-        .nav-clock-time { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff; letter-spacing: 0.04em; }
-
-        .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
+        .nav-links { display: flex; flex-direction: column; padding: 20px 16px; gap: 6px; list-style: none; flex: 1; overflow-y: auto; }
         .nav-links a {
-            display: flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius-sm);
-            font-size: 13px; font-weight: 500; color: var(--text-mid); text-decoration: none;
-            transition: background 0.15s, color 0.15s; white-space: nowrap; box-sizing: border-box;
-            border: 1px solid transparent;   /* pantay ang laki ng bawat link */
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-md);
+            font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none;
+            transition: all 0.2s ease; border: 1px solid transparent;
         }
-        .nav-links a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
-        .nav-links a:hover { background: var(--navy-50); color: var(--navy-800); }
-        .nav-links a.active { background: var(--navy-900); color: var(--white); font-weight: 600; box-shadow: 0 4px 12px rgba(11,23,53,0.22); }
-        .nav-links a.active svg { opacity: 1; }
-        .nav-links a.nav-logout { margin-left: 6px; border-color: var(--border); }
-        .nav-links a.nav-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #f5a89e; }
+        .nav-links a svg { width: 18px; height: 18px; color: var(--text-muted); transition: color 0.2s ease; flex-shrink: 0; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-900); }
+        .nav-links a:hover svg { color: var(--navy-600); }
+        .nav-links a.active { background: var(--navy-50); color: var(--navy-900); font-weight: 600; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs); }
+        .nav-links a.active svg { color: var(--navy-600); }
 
-        .menu-toggle {
-            display: none; background: transparent; border: 1px solid var(--border);
-            color: var(--navy-900); width: 40px; height: 40px; border-radius: var(--radius-sm);
-            align-items: center; justify-content: center; cursor: pointer;
+        .sidebar-profile-container {
+            margin-top: auto; border-top: 1px solid var(--border-subtle); padding: 16px;
+            position: relative;
         }
-        .menu-toggle svg { width: 20px; height: 20px; }
-        @media (max-width: 1024px) {
-            .nav-inner {
-                padding: 0 20px; height: auto;
-                padding-top: 12px; padding-bottom: 12px;
-                flex-wrap: wrap; gap: 12px;
-            }
-            .menu-toggle { display: flex; order: 3; }
-            .nav-links {
-                display: none; width: 100%;
-                flex-direction: column; order: 4;
-                background: var(--off-white); padding: 8px;
-                border-radius: var(--radius-md); border: 1px solid var(--border);
-                margin-top: 8px; gap: 4px;
-            }
-            .nav-links.show { display: flex; }
+        .sidebar-profile-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; padding: 10px 12px; border-radius: var(--radius-md);
+            background: var(--off-white); border: 1px solid var(--border-subtle); cursor: pointer;
+            transition: background 0.15s ease; text-align: left; font-family: var(--font-sans);
+        }
+        .sidebar-profile-btn:hover { background: var(--navy-50); }
+        .sidebar-profile-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .sidebar-profile-avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--navy-900); color: white;
+            display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0;
+        }
+        .sidebar-profile-text { min-width: 0; }
+        .sidebar-profile-name { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-profile-role { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+        .sidebar-profile-dropdown {
+            position: absolute; bottom: calc(100% + 8px); left: 16px; right: 16px;
+            background: var(--surface-white); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md); display: none; flex-direction: column; overflow: hidden; z-index: 10;
+        }
+        .sidebar-profile-dropdown.open { display: flex; }
+        .sidebar-profile-dropdown a {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            font-size: 13.5px; font-weight: 600; color: var(--danger); text-decoration: none;
+            transition: background 0.15s ease;
+        }
+        .sidebar-profile-dropdown a:hover { background: var(--danger-bg); }
+        .sidebar-profile-dropdown a svg { width: 16px; height: 16px; color: var(--danger); }
+
+        .mobile-toggle {
+            display: none; position: fixed; bottom: 20px; right: 20px;
+            width: 56px; height: 56px; border-radius: 50%; background: var(--navy-900); color: #fff;
+            border: none; box-shadow: var(--shadow-md); z-index: 200; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        .mobile-toggle svg { width: 24px; height: 24px; }
+
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+
+        .page-header-wrapper {
+            background: var(--bg-main);
+            padding: 34px 28px 24px; display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px; 
+        }
+        .page-header-left { display: flex; align-items: center; gap: 16px; }
+        .header-icon {
+            width: 48px; height: 48px; background: var(--navy-900); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; box-shadow: var(--shadow-card);
+        }
+        .header-icon svg { width: 22px; height: 22px; }
+        .page-title { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
+
+        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
+
+        .top-form-card {
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden;
+        }
+        .top-form-body { padding: 20px 24px; }
+        
+        /* Updated Grid to support the restored Zone field */
+        .connect-form-inline {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr 1fr auto;
+            gap: 16px;
+            align-items: flex-end;
         }
 
+        .field { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+        .field label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+        .field input, .field select {
+            background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            padding: 10px 14px; font-size: 13.5px; font-family: var(--font-sans); color: var(--text-primary);
+            outline: none; transition: all 0.2s ease; width: 100%; height: 42px;
+        }
+        .field input:focus, .field select:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 4px var(--accent-blue-bg); background: var(--white); }
+        .field input::placeholder { color: var(--text-muted); }
+        
+        .btn-primary {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: var(--navy-900); color: #fff; border: none; padding: 0 22px;
+            border-radius: var(--radius-md); font-size: 13.5px; font-weight: 600; cursor: pointer;
+            height: 42px; transition: all 0.2s ease; box-shadow: var(--shadow-xs); white-space: nowrap;
+        }
+        .btn-primary:hover { background: var(--navy-800); transform: translateY(-1px); box-shadow: var(--shadow-card); }
+        .btn-primary svg { width: 15px; height: 15px; }
 
-        ══════════════════════════════════════ */
         .toolbar {
-            background: var(--white); border-bottom: 1px solid var(--border);
-            padding: 10px 24px; display: flex; align-items: center;
-            justify-content: space-between; flex-wrap: wrap; gap: 10px;
-            flex-shrink: 0; box-shadow: var(--shadow-xs);
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            box-shadow: var(--shadow-card);
         }
-        .toolbar-left  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .toolbar-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); user-select: none; }
-        .toolbar-divider { width: 1px; height: 20px; background: var(--border); }
+        .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .toolbar-divider { width: 1px; height: 20px; background: var(--border-subtle); }
 
-        .layout-btns, .filter-btns {
-            display: flex; gap: 2px; background: var(--off-white);
-            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px;
-        }
+        .layout-btns, .filter-btns { display: flex; gap: 2px; background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 3px; }
         .layout-btn, .filter-btn {
-            border: none; background: transparent; color: var(--text-muted); cursor: pointer;
-            padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;
-            display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+            border: none; background: transparent; color: var(--text-secondary); cursor: pointer;
+            padding: 5px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;
+            display: flex; align-items: center; justify-content: center; transition: all 0.15s;
         }
         .layout-btn svg { width: 14px; height: 14px; }
-        .layout-btn:hover, .filter-btn:hover { background: var(--white); color: var(--text-dark); box-shadow: var(--shadow-xs); }
-        .layout-btn.active, .filter-btn.active { background: var(--navy-900); color: var(--white); box-shadow: 0 2px 6px rgba(11,23,53,0.3); }
+        .layout-btn:hover, .filter-btn:hover { background: var(--white); color: var(--text-primary); }
+        .layout-btn.active, .filter-btn.active { background: var(--navy-900); color: var(--white); box-shadow: var(--shadow-xs); }
 
         .toggle-btn {
-            display: flex; align-items: center; gap: 6px;
-            background: var(--white); border: 1px solid var(--border);
-            color: var(--text-mid); padding: 5px 12px; border-radius: var(--radius-sm);
-            font-size: 12px; font-weight: 500; font-family: var(--font-sans);
-            cursor: pointer; transition: all 0.15s; white-space: nowrap; box-shadow: var(--shadow-xs);
+            display: flex; align-items: center; gap: 8px; background: var(--surface-white); border: 1px solid var(--border-subtle);
+            color: var(--text-secondary); padding: 7px 12px; border-radius: var(--radius-md);
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
         }
-        .toggle-btn svg { width: 12px; height: 12px; }
-        .toggle-btn:hover { background: var(--navy-50); color: var(--text-dark); border-color: var(--navy-200); }
-        .toggle-btn.on { background: var(--success-bg); color: var(--success); border-color: #9bd4b8; }
+        .toggle-btn svg { width: 14px; height: 14px; }
+        .toggle-btn:hover { background: var(--bg-main); color: var(--text-primary); }
+        .toggle-btn.on { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
 
-        .cam-count {
-            font-size: 12px; font-family: var(--font-mono); color: var(--text-mid);
-            padding: 4px 12px; background: var(--off-white); border: 1px solid var(--border); border-radius: var(--radius-sm);
-        }
+        .cam-count { font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); font-weight: 500; }
         .cam-count span { color: var(--success); font-weight: 700; }
 
-        /* ══════════════════════════════════════
-           CAMERA WALL
-        ══════════════════════════════════════ */
-        .camera-wall {
-            flex: 1 0 auto; padding: 20px; display: grid; gap: 14px;
-            align-content: start; overflow-y: auto;
+        .card {
+            background: var(--surface-white); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden;
+            display: flex; flex-direction: column;
         }
-        .camera-wall.layout-2x2 { grid-template-columns: repeat(2, 1fr); }
-        .camera-wall.layout-3x3 { grid-template-columns: repeat(3, 1fr); }
-        .camera-wall.layout-4x4 { grid-template-columns: repeat(4, 1fr); }
-        .camera-wall.layout-1   { grid-template-columns: 1fr; max-width: 960px; margin: 0 auto; width: 100%; }
+        .card-header {
+            background: var(--surface-white); padding: 18px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .card-header-icon {
+            width: 34px; height: 34px; background: var(--accent-blue-bg); color: var(--accent-blue);
+            border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .card-header-icon svg { width: 18px; height: 18px; }
+        .card-title-text { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+        .card-header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
 
-        /* ══════════════════════════════════════
-           CAMERA TILE
-        ══════════════════════════════════════ */
+        .monitor-section-wrap { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+        .camera-wall-container { flex: 1; display: flex; flex-direction: column; background: var(--surface-white); min-height: 480px; }
+        .camera-wall { display: grid; gap: 20px; align-content: start; width: 100%; padding: 4px; }
+        .camera-wall.layout-2x2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+        .camera-wall.layout-3x3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .camera-wall.layout-4x4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        .camera-wall.layout-1   { grid-template-columns: 1fr; max-width: 1000px; margin: 0 auto; }
+
         .cam-tile {
-            background: var(--navy-950); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); overflow: hidden; position: relative;
-            aspect-ratio: 16/9; display: flex; flex-direction: column;
-            cursor: pointer; box-shadow: var(--shadow-md);
-            transition: border-color 0.15s, box-shadow 0.2s, transform 0.15s;
+            background: var(--navy-950); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+            overflow: hidden; position: relative; aspect-ratio: 16/9; display: flex; flex-direction: column;
+            cursor: pointer; box-shadow: var(--shadow-xs); transition: all 0.2s ease;
         }
-        .cam-tile::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0;
-            height: 3px; background: linear-gradient(90deg, var(--navy-900), var(--navy-400)); z-index: 10;
-        }
-        .cam-tile.offline::before { background: linear-gradient(90deg, #252f4a, #3a4560); }
-        .cam-tile:hover {
-            border-color: var(--navy-400);
-            box-shadow: 0 8px 28px rgba(11,23,53,0.18), 0 2px 6px rgba(11,23,53,0.10);
-            transform: translateY(-2px);
-        }
-        .cam-tile.selected { border-color: var(--navy-900); box-shadow: 0 0 0 3px rgba(11,23,53,0.2), var(--shadow-md); }
-        .cam-tile.offline { background: #080d1a; }
+        .cam-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--navy-700); z-index: 10; }
+        .cam-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); border-color: var(--accent-blue); }
 
-        .cam-feed {
-            flex: 1; position: relative; overflow: hidden;
-            background: var(--navy-950); display: flex; align-items: center; justify-content: center;
-        }
-        .cam-feed img.stream { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .cam-feed::after {
-            content: ''; position: absolute; inset: 0;
-            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-            pointer-events: none; z-index: 1;
-        }
-
-        .offline-placeholder {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 10px; width: 100%; height: 100%; color: #2a3555;
-        }
-        .offline-placeholder svg { width: 30px; height: 30px; opacity: 0.45; }
-        .offline-placeholder p { font-size: 11px; font-family: var(--font-mono); opacity: 0.45; letter-spacing: 0.04em; }
-
-        .cam-hud-top {
-            position: absolute; top: 0; left: 0; right: 0; padding: 10px 12px;
-            display: flex; align-items: flex-start; justify-content: space-between;
-            background: linear-gradient(180deg, rgba(6,13,31,0.85) 0%, transparent 100%); z-index: 5;
-            transition: opacity 0.2s ease;
-        }
-        .cam-hud-bottom {
-            position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 12px;
-            display: flex; align-items: flex-end; justify-content: space-between;
-            background: linear-gradient(0deg, rgba(6,13,31,0.85) 0%, transparent 100%); z-index: 5;
-            transition: opacity 0.2s ease;
-        }
-
-        .cam-name { font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 0.06em; font-family: var(--font-mono); text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
-        .cam-id   { font-size: 9.5px; color: rgba(255,255,255,0.42); font-family: var(--font-mono); margin-top: 2px; }
-        .cam-timestamp { font-size: 9.5px; font-family: var(--font-mono); color: rgba(255,255,255,0.48); }
-
-        .cam-status {
-            font-size: 9px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
-            padding: 3px 8px; border-radius: 999px; display: flex; align-items: center; gap: 5px;
-        }
-        .cam-status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-        .status-live { background: rgba(31,138,95,0.2); color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
-        .status-live .cam-status-dot { background: #4ade80; animation: pulse-green 1.8s ease-in-out infinite; }
-        @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 2px rgba(74,222,128,0.25)} 50%{box-shadow:0 0 0 5px rgba(74,222,128,0.06)} }
-        .status-offline { background: rgba(192,57,43,0.18); color: #f87171; border: 1px solid rgba(248,113,113,0.35); }
-        .status-offline .cam-status-dot { background: #f87171; }
-        .status-recording { background: rgba(192,57,43,0.22); color: #f87171; border: 1px solid rgba(248,113,113,0.45); }
-        .status-recording .cam-status-dot { background: #f87171; animation: pulse-red-record 0.7s ease-in-out infinite; }
-
-        @keyframes pulse-red-record {
-            0%, 100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.4); }
-            50% { box-shadow: 0 0 0 6px rgba(239,68,68,0.1); }
-        }
-
+        /* Motion Tile states restored from Old code */
         .cam-tile.alert { animation: alert-flash 0.6s ease-in-out 3; }
-        @keyframes alert-flash { 0%,100%{border-color:var(--border)} 50%{border-color:var(--danger);box-shadow:0 0 0 3px rgba(192,57,43,0.22)} }
+        @keyframes alert-flash { 0%,100%{border-color:var(--border-subtle)} 50%{border-color:var(--danger);box-shadow:0 0 0 3px rgba(220,38,38,0.22)} }
 
         .motion-badge {
             position: absolute; top: 38px; right: 10px;
@@ -286,163 +285,108 @@
         .crosshair::before { width: 1px; height: 100%; left: 50%; }
         .crosshair::after  { height: 1px; width: 100%; top: 50%; }
 
-        /* Public Visibility Badge & Actions */
-        .public-badge {
-            font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-            padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;
-        }
-        .public-badge.is-public { background: rgba(37,99,235,0.3); color: #60a5fa; border: 1px solid rgba(96,165,250,0.4); }
-        .public-badge.is-private { background: rgba(255,255,255,0.12); color: #94a3b8; border: 1px solid rgba(255,255,255,0.2); }
+        .cam-feed { flex: 1; position: relative; overflow: hidden; background: var(--navy-950); display: flex; align-items: center; justify-content: center; }
+        .cam-feed img.stream { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-        .btn-toggle-public {
-            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
-            color: #fff; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
-            cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px;
-        }
-        .btn-toggle-public:hover { background: rgba(255,255,255,0.3); }
+        .cam-hud-top { position: absolute; top: 0; left: 0; right: 0; padding: 10px 12px; display: flex; align-items: flex-start; justify-content: space-between; background: linear-gradient(180deg, rgba(6,13,31,0.85) 0%, transparent 100%); z-index: 5; transition: opacity 0.2s ease; }
+        .cam-hud-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 12px; display: flex; align-items: flex-end; justify-content: space-between; background: linear-gradient(0deg, rgba(6,13,31,0.85) 0%, transparent 100%); z-index: 5; transition: opacity 0.2s ease; }
 
-        /* ══════════════════════════════════════
-           ADD CAMERA PANEL
-        ══════════════════════════════════════ */
-        .add-camera-panel {
-            background: var(--white); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); overflow: hidden; margin: 14px auto 24px;
-            width: calc(100% - 48px); max-width: 1280px; box-shadow: var(--shadow-sm);
-        }
-        .add-camera-panel .card-header {
-            background: var(--navy-900); padding: 16px 22px;
-            display: flex; align-items: center; gap: 12px; position: relative; overflow: hidden;
-        }
-        .add-camera-panel .card-header::after {
-            content: ''; position: absolute; inset: 0;
-            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-            background-size: 28px 28px; pointer-events: none;
-        }
-        .add-camera-panel .card-header-icon {
-            width: 34px; height: 34px; background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15); border-radius: 99px;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 1;
-        }
-        .add-camera-panel .card-header-icon svg { width: 16px; height: 16px; color: var(--navy-200); }
-        .add-camera-panel .card-header-text { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -0.01em; position: relative; z-index: 1; }
-        .add-camera-panel .card-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 2px; position: relative; z-index: 1; }
-        .add-camera-panel .add-form {
-            display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding: 18px 22px 22px;
-        }
-        .add-camera-panel .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
-        .add-camera-panel .field label { font-size: 11.5px; font-weight: 600; color: var(--text-mid); letter-spacing: 0.02em; }
-        .add-camera-panel .field input, .add-camera-panel .field select {
-            background: var(--off-white); border: 1.5px solid var(--border);
-            border-radius: var(--radius-sm); padding: 10px 13px; font-size: 13px;
-            font-family: var(--font-sans); color: var(--text-dark); outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; width: 100%;
-        }
-        .add-camera-panel .field input::placeholder { color: var(--text-muted); }
-        .add-camera-panel .field input:focus, .add-camera-panel .field select:focus {
-            border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100); background: var(--white);
-        }
-        .add-camera-panel .btn-add {
-            display: flex; align-items: center; gap: 7px; background: var(--navy-800);
-            color: #fff; border: none; padding: 10px 22px; border-radius: var(--radius-sm);
-            font-size: 13px; font-weight: 600; font-family: var(--font-sans); cursor: pointer; height: 41px;
-            white-space: nowrap; transition: background 0.15s, transform 0.1s, box-shadow 0.15s; letter-spacing: -0.01em; box-shadow: 0 4px 14px rgba(11,23,53,0.22);
-        }
-        .add-camera-panel .btn-add svg { width: 14px; height: 14px; }
-        .add-camera-panel .btn-add:hover { background: var(--navy-700); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(11,23,53,0.3); }
+        .cam-name { font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 0.05em; font-family: var(--font-mono); }
+        .cam-id   { font-size: 9px; color: rgba(255,255,255,0.5); font-family: var(--font-mono); margin-top: 2px; }
+        .cam-timestamp { font-size: 9.5px; font-family: var(--font-mono); color: rgba(255,255,255,0.6); }
+
+        .cam-status { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; display: flex; align-items: center; gap: 5px; }
+        .cam-status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .status-live { background: rgba(31,138,95,0.25); color: #4ade80; border: 1px solid rgba(74,222,128,0.4); }
+        .status-live .cam-status-dot { background: #4ade80; animation: pulse-green 1.8s ease-in-out infinite; }
+        @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 2px rgba(74,222,128,0.25)} 50%{box-shadow:0 0 0 5px rgba(74,222,128,0.06)} }
         
-        .cam-delete-form { margin: 0; }
-        .btn-delete {
-            border: none; background: rgba(255,255,255,0.92); color: var(--danger);
-            width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 700;
-            cursor: pointer; transition: transform 0.15s, background 0.15s; display: inline-flex; align-items: center; justify-content: center;
+        /* Restored Recording status pulse */
+        .status-recording { background: rgba(220,38,38,0.22); color: #f87171; border: 1px solid rgba(248,113,113,0.45); }
+        .status-recording .cam-status-dot { background: #f87171; animation: pulse-red-record 0.7s ease-in-out infinite; }
+        @keyframes pulse-red-record {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(220,38,38,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(220,38,38,0.1); }
         }
-        .btn-delete:hover { background: #fee9e7; transform: translateY(-1px); }
 
-        /* ══════════════════════════════════════
-           MODAL & TOAST NOTIFICATIONS
-        ══════════════════════════════════════ */
+        .public-badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+        .public-badge.is-public { background: rgba(37,99,235,0.3); color: #60a5fa; border: 1px solid rgba(96,165,250,0.4); }
+        .public-badge.is-private { background: rgba(255,255,255,0.12); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.2); }
+
+        .cam-hud-actions { display: flex; align-items: center; gap: 6px; }
+        .btn-toggle-public { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+        .btn-toggle-public:hover { background: rgba(255,255,255,0.3); }
+        .btn-delete { background: rgba(255,255,255,0.95); color: var(--danger); width: 24px; height: 24px; border-radius: 50%; border: none; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .btn-delete:hover { background: var(--danger-bg); transform: translateY(-1px); }
+
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 80px 24px; background: var(--surface-white); text-align: center;
+            border: 2px dashed var(--border-subtle); border-radius: var(--radius-lg); height: 100%; flex: 1;
+        }
+        .empty-icon {
+            width: 64px; height: 64px; border-radius: var(--radius-md); background: var(--bg-main);
+            display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+        }
+        .empty-icon svg { width: 32px; height: 32px; color: var(--text-muted); }
+        .empty-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .empty-body { font-size: 14px; color: var(--text-muted); max-width: 450px; line-height: 1.5; }
+
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(6,13,31,0.78);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
             z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px;
         }
-        .modal-overlay.open { display: flex; }
-        .modal-box {
-            background: var(--white); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); overflow: hidden;
-            width: min(1100px, calc(100vw - 32px)); display: flex; flex-direction: column;
-            max-height: 90vh; box-shadow: var(--shadow-lg);
+        .modal-overlay.is-open { display: flex; }
+        
+        .modal-box-small {
+            width: 100%; max-width: 400px; background: var(--surface-white); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md); padding: 32px; text-align: center;
         }
-        .modal-header {
-            background: var(--navy-900); padding: 14px 20px;
-            display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;
+        .modal-icon { width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent-blue-bg); color: var(--accent-blue); }
+        .modal-icon svg { width: 24px; height: 24px; }
+        .modal-title-sm { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .modal-desc-sm { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
+        .modal-actions-sm { display: flex; gap: 12px; }
+        .btn-modal-sm { flex: 1; padding: 12px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.2s ease; }
+        .btn-modal-cancel { background: var(--bg-main); border-color: var(--border-subtle); color: var(--text-secondary); }
+        .btn-modal-cancel:hover { background: var(--border-subtle); color: var(--text-primary); }
+        .btn-modal-confirm { background: var(--navy-900); color: var(--white); box-shadow: var(--shadow-xs); }
+        .btn-modal-confirm:hover { background: var(--navy-800); }
+
+        .modal-box-large {
+            background: var(--surface-white); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+            overflow: hidden; width: 100%; max-width: 1100px; display: flex; flex-direction: column; max-height: 90vh; box-shadow: var(--shadow-md);
         }
-        .modal-header::after {
-            content: ''; position: absolute; inset: 0;
-            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-            background-size: 24px 24px; pointer-events: none;
-        }
-        .modal-title { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
-        .modal-title-text { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: #fff; }
-        .modal-title small { font-size: 11px; font-family: var(--font-mono); color: rgba(255,255,255,0.45); font-weight: 400; }
-        .modal-close {
-            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-            color: var(--navy-200); width: 32px; height: 32px; border-radius: var(--radius-sm);
-            cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center;
-            transition: all 0.12s; position: relative; z-index: 1;
-        }
-        .modal-close:hover { background: rgba(192,57,43,0.25); color: #f87171; border-color: rgba(192,57,43,0.4); }
-        .modal-feed {
-            background: var(--navy-950);
-            flex: 1;
-            position: relative;
-            min-height: 320px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .modal-feed img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            max-height: calc(90vh - 126px);
-        }
+        .modal-header-lg { background: var(--surface-white); padding: 20px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 10; }
+        .modal-title-lg { display: flex; align-items: center; gap: 14px; }
+        .modal-title-text { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        .modal-title-lg small { font-size: 12.5px; font-family: var(--font-mono); color: var(--text-muted); font-weight: 500; }
+        .modal-close { background: var(--bg-main); border: 1px solid var(--border-subtle); color: var(--text-secondary); width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .modal-close:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+        
+        .modal-feed { position: relative; background: var(--navy-950); flex: 1; display: flex; justify-content: center; align-items: center; min-height: 400px; overflow: hidden; }
+        .modal-feed img { width: 100%; height: 100%; object-fit: contain; max-height: calc(90vh - 150px); }
+        
+        /* Restored Canvas for Virtual Lines */
         #modalLineCanvas {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            max-height: calc(90vh - 126px);
-            display: block;
-            background: transparent;
-            cursor: crosshair;
-            z-index: 2;
-            pointer-events: auto;
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            max-height: calc(90vh - 150px); display: block;
+            background: transparent; cursor: crosshair; z-index: 2; pointer-events: auto;
         }
 
-        .modal-footer {
-            border-top: 1px solid var(--border); padding: 11px 20px;
-            display: flex; align-items: center; justify-content: space-between; background: var(--off-white); flex-wrap: wrap; gap: 10px;
-        }
-        .modal-info { font-size: 11.5px; font-family: var(--font-mono); color: var(--text-muted); }
-        .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .modal-footer-lg { border-top: 1px solid var(--border-subtle); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-main); flex-wrap: wrap; gap: 16px; position: relative; z-index: 10;}
+        .modal-info { font-size: 12.5px; font-family: var(--font-mono); color: var(--text-muted); font-weight: 500; }
+        .modal-actions-lg { display: flex; gap: 12px; flex-wrap: wrap; }
+        
+        .btn-modal-action { display: flex; align-items: center; gap: 8px; background: var(--surface-white); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 600; cursor: pointer; text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.15s ease; white-space: nowrap; }
+        .btn-modal-action svg { width: 15px; height: 15px; }
+        .btn-modal-action:hover { background: var(--navy-50); color: var(--navy-900); border-color: var(--border-color); }
+        .btn-modal-action.primary { background: var(--navy-900); color: var(--white); border-color: var(--navy-900); }
+        .btn-modal-action.primary:hover { background: var(--navy-800); }
+        .btn-modal-action.danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+        .btn-modal-action.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-        .btn-modal {
-            display: flex; align-items: center; gap: 6px;
-            background: var(--white); border: 1px solid var(--border); color: var(--text-mid);
-            padding: 7px 14px; border-radius: var(--radius-sm);
-            font-size: 12.5px; font-weight: 600; font-family: var(--font-sans);
-            cursor: pointer; transition: all 0.15s; text-decoration: none; box-shadow: var(--shadow-xs);
-            white-space: nowrap;
-        }
-        .btn-modal svg { width: 13px; height: 13px; }
-        .btn-modal:hover { background: var(--navy-50); color: var(--navy-800); border-color: var(--navy-200); }
-        .btn-modal.primary { background: var(--navy-900); color: #fff; border-color: var(--navy-900); box-shadow: 0 4px 12px rgba(11,23,53,0.25); }
-        .btn-modal.primary:hover { background: var(--navy-700); border-color: var(--navy-700); }
-        .btn-modal.danger { background: var(--danger-bg); color: var(--danger); border-color: #f5c6c2; }
-        .btn-modal.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
-
+        /* Restored Toast Notifications Styles */
         .toast-container {
             position: fixed; bottom: 24px; right: 24px;
             z-index: 1100; display: flex; flex-direction: column;
@@ -455,345 +399,367 @@
             display: flex; align-items: center; gap: 10px; font-size: 12.5px;
             animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .toast.toast-danger { background: #6b1d1d; border-color: #9c2e2e; }
-        .toast.toast-success { background: #114b34; border-color: #1c714f; }
+        .toast.toast-danger { background: var(--danger); border-color: var(--danger-border); }
+        .toast.toast-success { background: var(--success); border-color: var(--success-border); }
         @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* ══════════════════════════════════════
-           LOGOUT CONFIRMATION MODAL
-        ══════════════════════════════════════ */
-        .logout-modal-overlay {
-            position: fixed; inset: 0; background: rgba(6, 13, 31, 0.55);
-            backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center;
-            padding: 20px; z-index: 10000; opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease;
+        footer {
+            background: var(--surface-white); color: var(--text-muted);
+            border-top: 1px solid var(--border-subtle); padding: 20px 24px;
+            margin-top: auto; flex-shrink: 0; text-align: center;
         }
-        .logout-modal-overlay.is-open { opacity: 1; visibility: visible; }
-        .logout-modal {
-            width: 100%; max-width: 380px; background: var(--white);
-            border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(11,23,53,0.18), 0 4px 16px rgba(11,23,53,0.08);
-            padding: 28px; text-align: center; transform: translateY(14px) scale(0.96); opacity: 0;
-            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+        .footer-inner {
+            max-width: 1280px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; font-size: 12.5px;
         }
-        .logout-modal-overlay.is-open .logout-modal { transform: translateY(0) scale(1); opacity: 1; }
-        .logout-modal-icon { width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: flex; align-items: center; justify-content: center; }
-        .logout-modal-icon svg { width: 24px; height: 24px; }
-        .logout-modal h3 { font-size: 17px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
-        .logout-modal p { font-size: 14px; color: var(--text-mid); line-height: 1.6; margin-bottom: 24px; }
-        .logout-modal-actions { display: flex; gap: 10px; }
-        .logout-modal-btn { flex: 1; padding: 11px 16px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid transparent; transition: all 0.2s ease; }
-        .logout-modal-btn-no { background: var(--off-white); border-color: var(--border); color: var(--text-mid); }
-        .logout-modal-btn-no:hover { background: var(--border); }
-        .logout-modal-btn-yes { background: var(--danger); color: var(--white); box-shadow: 0 4px 14px rgba(192, 57, 43, 0.28); }
-        .logout-modal-btn-yes:hover { background: #a5301f; transform: translateY(-1px); }
+        .footer-brand { font-weight: 700; color: var(--text-primary); }
 
-        @media (max-width: 760px) {
-            .modal-overlay {
-                padding: 12px;
-            }
-            .modal-box {
-                width: min(100%, calc(100vw - 24px));
-                max-height: 96vh;
-            }
-            .modal-footer {
-                align-items: stretch;
-                justify-content: center;
-            }
-            .modal-info {
-                width: 100%;
-            }
-            .modal-actions {
-                width: 100%;
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-            .btn-modal {
-                justify-content: center;
-                width: 100%;
-                min-width: 0;
-            }
+        @media (max-width: 1024px) {
+            .admin-sidebar { position: fixed; transform: translateX(-100%); transition: transform 0.3s ease; box-shadow: var(--shadow-lg); }
+            .admin-sidebar.open { transform: translateX(0); }
+            .mobile-toggle { display: flex; }
+            .page-header-wrapper { padding: 24px 20px; }
+            .page-content { padding: 0 20px 32px; }
+            .connect-form-inline { grid-template-columns: 1fr; }
         }
-
-        footer { background: var(--navy-950); color: var(--text-muted); padding: 20px 24px; margin-top: auto; text-align: center; }
-        .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; }
     </style>
 </head>
 <body>
+{% include '_flash_toasts.html' %}
 
-<!-- ══ NAV ═══════════════════════════════════════════════════ -->
-<nav>
-    <div class="nav-inner">
-        <!-- Brand -->
-        <a class="nav-brand" href="/admin">
-            <div class="brand-logo-wrap">
-                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo">
+<aside class="admin-sidebar" id="adminSidebar">
+    <a href="{{ url_for('admin_dashboard') }}" class="sidebar-header">
+        <div class="brand-logo-wrap">
+            <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo" onerror="this.style.display='none'">
+        </div>
+        <div class="brand-text-block">
+            <div class="brand-name">Home Detection Security</div>
+            <div class="brand-sub">Admin Panel</div>
+        </div>
+    </a>
+    <ul class="nav-links">
+        <li>
+            <a href="{{ url_for('admin_dashboard') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_cctv') }}" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                CCTV Monitor
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_reports') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Reports
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_users') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Users
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_request') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Request
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_logs') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Admin Logs
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin_system') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Settings
+            </a>
+        </li>
+    </ul>
+
+    <!-- Sidebar Profile Footer with Pop-up Logout -->
+    <div class="sidebar-profile-container" id="sidebarProfileContainer">
+        <div class="sidebar-profile-dropdown" id="sidebarProfileDropdown">
+            <a href="{{ url_for('logout') }}" class="nav-logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Log Out
+            </a>
+        </div>
+        <button class="sidebar-profile-btn" id="sidebarProfileBtn" type="button">
+            <div class="sidebar-profile-info">
+                <div class="sidebar-profile-avatar">A</div>
+                <div class="sidebar-profile-text">
+                    <div class="sidebar-profile-name">Administrator</div>
+                    <div class="sidebar-profile-role">System Admin</div>
+                </div>
             </div>
-            <div class="brand-text-block">
-                <div class="brand-name">Home Detection <em>Security</em></div>
-                <div class="brand-sub">Admin Panel</div>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+    </div>
+</aside>
+
+<!-- Mobile Nav Toggle -->
+<button class="mobile-toggle" id="mobileToggle" title="Toggle Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<main class="main-content">
+    
+    <div class="page-header-wrapper">
+        <div class="page-header-left">
+            <div class="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
             </div>
-        </a>
-
-        <!-- Live clock -->
-        <div class="nav-clock">
-            <span class="nav-clock-dot"></span>
-            <span class="nav-clock-label">Live</span>
-            <div class="nav-clock-sep"></div>
-            <span class="nav-clock-time" id="adminClock">--:--:--</span>
+            <div>
+                <h1 class="page-title">Live CCTV Monitor</h1>
+                <p class="page-subtitle">View and manage network camera streams across the village</p>
+            </div>
         </div>
-
-        <button class="menu-toggle" id="menuToggleBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-
-        <!-- Dynamic Nav Links with Reports Included -->
-        <ul class="nav-links" id="navLinksList">
-            <li>
-                <a href="/admin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="/admin/cctv" class="active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                    CCTV Monitor
-                </a>
-            </li>
-            <!-- 🌐 ADDED REPORTS LINK -->
-            <li>
-                <a href="/admin/reports">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    Reports
-                </a>
-            </li>
-            <li>
-                <a href="/admin/users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    Users
-                </a>
-            </li>
-            <li>
-                <a href="/admin/request">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    Request
-                </a>
-            </li>
-            <li>
-                <a href="/admin/logs">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Admin Logs
-                </a>
-            </li>
-            <li>
-                <a href="/admin/system">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    Settings
-                </a>
-            </li>
-            <li>
-                <a href="/logout" class="nav-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Logout
-                </a>
-            </li>
-        </ul>
+        <span class="badge badge-success">● Network Active</span>
     </div>
-</nav>
 
-<!-- ══ TOOLBAR & VISIBILITY FILTERS ═════════════════════════ -->
-<div class="toolbar">
-    <div class="toolbar-left">
-        <span class="toolbar-label">Layout</span>
-        <div class="layout-btns">
-            <button class="layout-btn" data-layout="layout-1" title="Single view"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="16" height="16" rx="1"/></svg></button>
-            <button class="layout-btn active" data-layout="layout-2x2" title="2x2 grid"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg></button>
-            <button class="layout-btn" data-layout="layout-3x3" title="3x3 grid"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="7.5" y="1" width="5" height="5" rx="0.5"/><rect x="14" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="7.5" width="5" height="5" rx="0.5"/><rect x="7.5" y="7.5" width="5" height="5" rx="0.5"/><rect x="14" y="7.5" width="5" height="5" rx="0.5"/><rect x="1" y="14" width="5" height="5" rx="0.5"/><rect x="7.5" y="14" width="5" height="5" rx="0.5"/><rect x="14" y="14" width="5" height="5" rx="0.5"/></svg></button>
-        </div>
+    <div class="page-content">
 
-        <div class="toolbar-divider"></div>
-
-        <span class="toolbar-label">Visibility Filter</span>
-        <div class="filter-btns">
-            <button class="filter-btn active" onclick="filterCams('all', event)">All</button>
-            <button class="filter-btn" onclick="filterCams('public', event)">🌐 Public Only</button>
-            <button class="filter-btn" onclick="filterCams('private', event)">🔒 Private Only</button>
-        </div>
-
-        <div class="toolbar-divider"></div>
-
-        <div class="cam-count">
-            <span id="onlineCount">{% if cameras %}{{ cameras|selectattr('status','equalto','online')|list|length }}{% else %}5{% endif %}</span>
-            / {% if cameras %}{{ cameras|length }}{% else %}6{% endif %} online
-        </div>
-    </div>
-    <div class="toolbar-right">
-        <button class="toggle-btn on" id="toggleLabels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>Labels</button>
-        <button class="toggle-btn on" id="toggleTimestamp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timestamp</button>
-        <button class="toggle-btn on" id="toggleScanlines"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Scanlines</button>
-    </div>
-</div>
-
-<!-- ══ CONNECT CAMERA PANEL WITH PUBLIC ACCESS SELECTOR ════ -->
-<div class="add-camera-panel">
-    <div class="card-header">
-        <div class="card-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        </div>
-        <div>
-            <div class="card-header-text">Connect a Network Camera</div>
-            <div class="card-header-sub">Configure camera stream URL source and public visibility permissions.</div>
-        </div>
-    </div>
-    <form action="/add_camera" method="POST" class="add-form">
-        <div class="field">
-            <label for="cam-name">Camera Name</label>
-            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door Main Cam" required>
-        </div>
-        <div class="field">
-            <label for="cam-zone">Zone / Location</label>
-            <input id="cam-zone" type="text" name="zone" list="existingZones" placeholder="e.g. Gate 1, Clubhouse, North Perimeter" required>
-            <datalist id="existingZones">
-                {% if available_zones %}
-                    {% for z in available_zones %}
-                    <option value="{{ z }}">
-                    {% endfor %}
-                {% else %}
-                    <option value="Gate 1 (Main Entrance)">
-                    <option value="North Perimeter Fence">
-                    <option value="Clubhouse & Amenities">
-                {% endif %}
-            </datalist>
-        </div>
-        <div class="field">
-            <label for="cam-url">RTSP / HTTP Stream URL</label>
-            <input id="cam-url" type="text" name="source" placeholder="rtsp://user:password@ip_address:port/stream" required>
-        </div>
-        <div class="field" style="max-width: 220px;">
-            <label for="cam-visibility">Public Visibility</label>
-            <select id="cam-visibility" name="is_public">
-                <option value="true">🌐 Public (All Homeowners)</option>
-            </select>
-        </div>
-        <button type="submit" class="btn-add">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Camera
-        </button>
-    </form>
-</div>
-
-<!-- ══ CAMERA WALL ══════════════════════════════════════════ -->
-<div class="camera-wall layout-2x2" id="cameraWall">
-
-    {% if cameras %}
-        {% for cam in cameras %}
-        <div class="cam-tile {{ 'offline' if cam.status != 'online' else '' }} {{ 'motion' if cam.motion_detected else '' }}"
-             data-cam-id="{{ cam.id }}" 
-             data-cam-name="{{ cam.name }}"
-             data-cam-status="{{ cam.status }}" 
-             data-stream-url="{{ cam.stream_url }}"
-             data-is-public="{{ 'true' if cam.is_public else 'false' }}"
-             onclick="openModal(this)">
-            <div class="cam-feed">
-                {% if cam.status == 'online' %}
-                    <img class="stream" src="{{ url_for('video_feed', camera_id=cam.id) }}" alt="{{ cam.name }} feed"
-                         onerror="this.parentElement.innerHTML='<div class=\'offline-placeholder\'><svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'1.5\'><path d=\'M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10\'/></svg><p>Stream unavailable</p></div>'">
-                {% else %}
-                    <div class="offline-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
-                        <p>Camera Offline</p>
+        <div class="top-form-card">
+            <div class="card-header" style="padding: 14px 24px; border-bottom: 1px solid var(--border-subtle);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="card-header-icon" style="width: 30px; height: 30px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                     </div>
-                {% endif %}
-            </div>
-
-            <!-- HUD TOP -->
-            <div class="cam-hud-top">
-                <div>
-                    <div class="cam-name">{{ cam.name | upper }}</div>
-                    <div class="cam-id">CAM-{{ cam.id }}</div>
+                    <div>
+                        <div class="card-title-text" style="font-size: 14.5px;">Connect a Camera</div>
+                        <div class="card-header-sub" style="font-size: 11.5px;">Add RTSP stream to surveillance grid</div>
+                    </div>
                 </div>
-                
-                <div class="cam-hud-actions" style="display:flex; align-items:center; gap:6px;">
-                    <!-- Public/Private Toggle Button -->
-                    <form action="/admin/cameras/{{ cam.id }}/toggle_public" method="POST" style="margin:0;" onclick="event.stopPropagation();">
-                        <button type="submit" class="btn-toggle-public" title="Toggle Public Visibility">
-                            {% if cam.is_public %}🌐 Public{% else %}🔒 Private{% endif %}
+            </div>
+            <div class="top-form-body">
+                <form id="addCameraForm" action="{{ url_for('add_camera') }}" method="POST">
+                    <div class="connect-form-inline">
+                        <div class="field">
+                            <label for="cam-name">Camera Name</label>
+                            <input id="cam-name" type="text" name="name" placeholder="e.g. Front Gate" required>
+                        </div>
+                        <!-- Restored Zone / Location field -->
+                        <div class="field">
+                            <label for="cam-zone">Zone / Location</label>
+                            <input id="cam-zone" type="text" name="zone" list="existingZones" placeholder="e.g. Gate 1, Clubhouse" required>
+                            <datalist id="existingZones">
+                                {% if available_zones %}
+                                    {% for z in available_zones %}
+                                    <option value="{{ z }}">
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Gate 1 (Main Entrance)">
+                                    <option value="North Perimeter Fence">
+                                    <option value="Clubhouse & Amenities">
+                                {% endif %}
+                            </datalist>
+                        </div>
+                        <div class="field">
+                            <label for="cam-url">Stream URL</label>
+                            <input id="cam-url" type="text" name="source" placeholder="rtsp://ip:port/stream" required>
+                        </div>
+                        <div class="field">
+                            <label for="cam-visibility">Public Visibility</label>
+                            <select id="cam-visibility" name="is_public">
+                                <option value="true">🌐 Public (All Homeowners)</option>
+                                <option value="false">🔒 Private (Admins Only)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" id="btnTriggerAdd">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Add Camera
                         </button>
-                    </form>
-
-                    <form action="/delete_camera/{{ cam.id }}" method="POST" class="cam-delete-form" onsubmit="return confirm('Remove camera {{ cam.name }}?');" onclick="event.stopPropagation();">
-                        <button type="submit" class="btn-delete" title="Delete camera">✕</button>
-                    </form>
-
-                    <div class="cam-status {{ 'status-recording' if cam.is_recording else 'status-live' if cam.status == 'online' else 'status-offline' }}">
-                        <div class="cam-status-dot"></div>
-                        <span class="cam-status-label">{{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}</span>
-                    </div>                    
-                </div>
+                    </div>
+                </form>
             </div>
-
-            <!-- HUD BOTTOM -->
-            <div class="cam-hud-bottom">
-                <div style="display:flex; flex-direction:column; gap:2px;">
-                    <span class="public-badge {{ 'is-public' if cam.is_public else 'is-private' }}">
-                        {{ 'Public Viewable' if cam.is_public else 'Admin Only' }}
-                    </span>
-                    <div class="cam-timestamp" id="ts-{{ cam.id }}"></div>
-                </div>
-                <div style="font-size:9.5px;font-family:var(--font-mono);color:rgba(255,255,255,0.38);">{{ cam.location or '' }}</div>
-            </div>
-            <div class="motion-badge">⚡ Motion</div>
-            <div class="crosshair"></div>
         </div>
-        {% endfor %}        
-    {% endif %}
 
-</div>
+        <div class="monitor-section-wrap">
+            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="layout-btns">
+                            <button class="layout-btn" data-layout="layout-1" title="Single view"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="16" height="16" rx="1"/></svg></button>
+                            <button class="layout-btn active" data-layout="layout-2x2" title="2x2 grid"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg></button>
+                            <button class="layout-btn" data-layout="layout-3x3" title="3x3 grid"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="7.5" y="1" width="5" height="5" rx="0.5"/><rect x="14" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="7.5" width="5" height="5" rx="0.5"/><rect x="7.5" y="7.5" width="5" height="5" rx="0.5"/><rect x="14" y="7.5" width="5" height="5" rx="0.5"/><rect x="1" y="14" width="5" height="5" rx="0.5"/><rect x="7.5" y="14" width="5" height="5" rx="0.5"/><rect x="14" y="14" width="5" height="5" rx="0.5"/></svg></button>
+                        </div>
+                        <div class="toolbar-divider"></div>
+                        <div class="filter-btns">
+                            <button class="filter-btn active" onclick="filterCams('all', event)">All Feeds</button>
+                            <button class="filter-btn" onclick="filterCams('public', event)">🌐 Public</button>
+                            <button class="filter-btn" onclick="filterCams('private', event)">🔒 Private</button>
+                        </div>
+                        <div class="toolbar-divider"></div>
+                        <div class="cam-count">
+                            <span id="onlineCount">{% if cameras %}{{ cameras|selectattr('status','equalto','online')|list|length }}{% else %}0{% endif %}</span>
+                            / {% if cameras %}{{ cameras|length }}{% else %}0{% endif %} Online
+                        </div>
+                    </div>
+                    
+                    <div class="toolbar-right">
+                        <button class="toggle-btn on" id="toggleLabels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>Labels</button>
+                        <button class="toggle-btn on" id="toggleTimestamp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timestamp</button>
+                    </div>
+                </div>
 
-<!-- ══ FOOTER ═══════════════════════════════════════════════ -->
-<footer>
-    <div class="footer-inner">
-        <span class="footer-brand">Home Detection <em>Security</em></span>
-        <span>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</span>
+                <!-- Camera Grid Area -->
+                <div class="camera-wall-container" style="padding: 24px;">
+                    {% if cameras %}
+                        <div class="camera-wall layout-2x2" id="cameraWall">
+                            {% for cam in cameras %}
+                            <div class="cam-tile {{ 'offline' if cam.status != 'online' else '' }} {{ 'motion' if cam.motion_detected else '' }}"
+                                 data-cam-id="{{ cam.id }}" 
+                                 data-cam-name="{{ cam.name }}"
+                                 data-cam-status="{{ cam.status }}" 
+                                 data-stream-url="{{ cam.stream_url }}"
+                                 data-is-public="{{ 'true' if cam.is_public else 'false' }}"
+                                 onclick="openModal(this)">
+                                <div class="cam-feed">
+                                    {% if cam.status == 'online' %}
+                                        <img class="stream" src="{{ url_for('video_feed', camera_id=cam.id) }}" alt="{{ cam.name }} feed" onerror="this.parentElement.innerHTML='<div class=\'offline-placeholder\' style=\'color: #2a3555; text-align: center;\'><svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'1.5\' style=\'width:36px; height:36px; margin-bottom:8px; opacity:0.5;\'><path d=\'M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10\'/></svg><p style=\'font-size: 11px; font-family: var(--font-mono); opacity: 0.5;\'>Stream unavailable</p></div>'">
+                                    {% else %}
+                                        <div class="offline-placeholder" style="color: #2a3555; text-align: center;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px; height:36px; margin-bottom:8px; opacity:0.5;"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg>
+                                            <p style="font-size: 11px; font-family: var(--font-mono); opacity: 0.5;">Camera Offline</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="cam-hud-top">
+                                    <div>
+                                        <div class="cam-name">{{ cam.name | upper }}</div>
+                                        <div class="cam-id">CAM-{{ cam.id }}</div>
+                                    </div>
+                                    
+                                    <div class="cam-hud-actions">
+                                        <form action="/admin/cameras/{{ cam.id }}/toggle_public" method="POST" style="margin:0;" onclick="event.stopPropagation();">
+                                            <button type="submit" class="btn-toggle-public" title="Toggle Public Visibility">
+                                                {% if cam.is_public %}🌐 Public{% else %}🔒 Private{% endif %}
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Remove camera {{ cam.name }}?');" onclick="event.stopPropagation();">
+                                            <button type="submit" class="btn-delete" title="Delete camera">✕</button>
+                                        </form>
+
+                                        <!-- Restored Recording status integration -->
+                                        <div class="cam-status {{ 'status-recording' if cam.is_recording else 'status-live' if cam.status == 'online' else 'status-offline' }}">
+                                            <div class="cam-status-dot"></div>
+                                            <span class="cam-status-label">{{ 'REC' if cam.is_recording else 'LIVE' if cam.status == 'online' else 'OFFLINE' }}</span>
+                                        </div>                    
+                                    </div>
+                                </div>
+
+                                <div class="cam-hud-bottom">
+                                    <div style="display:flex; flex-direction:column; gap:4px;">
+                                        <span class="public-badge {{ 'is-public' if cam.is_public else 'is-private' }}">
+                                            {{ 'Public Viewable' if cam.is_public else 'Admin Only' }}
+                                        </span>
+                                        <div class="cam-timestamp" id="ts-{{ cam.id }}"></div>
+                                    </div>
+                                    <!-- Restored location display on tile HUD bottom -->
+                                    <div style="font-size:10px;font-family:var(--font-mono);color:rgba(255,255,255,0.6);">{{ cam.location or '' }}</div>
+                                </div>
+                                
+                                <!-- Restored motion badge & crosshair -->
+                                <div class="motion-badge">⚡ Motion</div>
+                                <div class="crosshair"></div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+                            </div>
+                            <h3 class="empty-title">No Cameras Connected</h3>
+                            <p class="empty-body">Your surveillance grid is currently empty. Use the "Connect a Camera" form at the top of the page to add your first RTSP stream to the network.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
     </div>
-</footer>
 
-<!-- ══ TOAST NOTIFICATIONS ══════════════════════════════════ -->
+    <footer>
+        <div class="footer-inner">
+            <span class="footer-brand">Home Detection Security</span>
+            <div>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</div>
+        </div>
+    </footer>
+</main>
+
+<!-- Restored Toast Notifications Container -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- ══ CAMERA PREVIEW MODAL ═════════════════════════════════ -->
+<div class="modal-overlay" id="confirmAddModal">
+    <div class="modal-box-small">
+        <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <h3 class="modal-title-sm">Confirm Connection</h3>
+        <p class="modal-desc-sm">Are you sure you want to connect this camera stream to the village network?</p>
+        <div class="modal-actions-sm">
+            <button type="button" class="btn-modal-sm btn-modal-cancel" id="btnCancelAdd">Cancel</button>
+            <button type="button" class="btn-modal-sm btn-modal-confirm" id="btnConfirmAdd">Yes, Connect</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="camModal" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box">
-        <div class="modal-header">
-            <div class="modal-title">
-                <div class="cam-status status-live" id="modalStatusPill">
+    <div class="modal-box-large">
+        <div class="modal-header-lg">
+            <div class="modal-title-lg">
+                <div class="cam-status status-live" id="modalStatusPill" style="padding: 6px 12px; font-size: 11px;">
                     <div class="cam-status-dot"></div>
                     <span id="modalStatusText">LIVE</span>
                 </div>
-                <span class="modal-title-text" id="modalCamName">Camera</span>
+                <span class="modal-title-text" id="modalCamName">Camera Name</span>
                 <small id="modalCamId"></small>
             </div>
             <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
         <div class="modal-feed">
             <img id="modalStream" src="" alt="Camera feed" onerror="this.style.display='none';">
+            <!-- Restored Canvas for Virtual Lines -->
             <canvas id="modalLineCanvas" width="1280" height="720"></canvas>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer-lg">
             <div class="modal-info" id="modalInfo">—</div>
-            <div class="modal-actions">
-                <a href="#" id="modalRecordLink" class="btn-modal">
+            <div class="modal-actions-lg">
+                <button onclick="closeModal()" class="btn-modal-action">
+                    Close View
+                </button>
+                
+                <!-- Restored View Recordings button -->
+                <a href="#" id="modalRecordLink" class="btn-modal-action">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
                     View Recordings
                 </a>
-                <button id="modalVirtualLinesBtn" class="btn-modal">
+
+                <!-- Restored Virtual Lines Button -->
+                <button id="modalVirtualLinesBtn" class="btn-modal-action">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17L9 11L13 15L21 7"/><path d="M21 7H15M21 7V13"/></svg>
                     Edit Lines
                 </button>
-                <button onclick="snapshotCam()" class="btn-modal primary">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+
+                <button onclick="snapshotCam()" class="btn-modal-action primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     Snapshot
                 </button>
-                <button id="modalToggleRec" class="btn-modal danger">
+
+                <!-- Restored Start Recording button -->
+                <button id="modalToggleRec" class="btn-modal-action danger">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
                     Start Recording
                 </button>
@@ -802,58 +768,58 @@
     </div>
 </div>
 
-<!-- ══ LOGOUT CONFIRMATION MODAL ═══════════════════════════ -->
-<div class="logout-modal-overlay" id="logoutModalOverlay" role="dialog" aria-modal="true">
-    <div class="logout-modal">
-        <div class="logout-modal-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </div>
-        <h3>Confirm Logout</h3>
-        <p>Are you sure you want to log out of the admin panel?</p>
-        <div class="logout-modal-actions">
-            <button type="button" class="logout-modal-btn logout-modal-btn-no" id="logoutModalNo">No</button>
-            <button type="button" class="logout-modal-btn logout-modal-btn-yes" id="logoutModalYes">Yes</button>
-        </div>
-    </div>
-</div>
-
 <script>
-    // ═════════════════════════════════════════════════════════
-    // RESPONSIVE MENU DRAWER
-    // ═════════════════════════════════════════════════════════
-    const menuToggleBtn = document.getElementById('menuToggleBtn');
-    const navLinksList = document.getElementById('navLinksList');
-
-    if (menuToggleBtn && navLinksList) {
-        menuToggleBtn.addEventListener('click', (e) => {
+    // Navigation Toggle Logic
+    const mobileToggle = document.getElementById('mobileToggle');
+    const adminSidebar = document.getElementById('adminSidebar');
+    if (mobileToggle && adminSidebar) {
+        mobileToggle.addEventListener('click', (e) => {
             e.stopPropagation();
-            navLinksList.classList.toggle('show');
+            adminSidebar.classList.toggle('open');
         });
-        document.addEventListener('click', () => navLinksList.classList.remove('show'));
-    }
-
-    // ═════════════════════════════════════════════════════════
-    // VISIBILITY FILTER LOGIC
-    // ═════════════════════════════════════════════════════════
-    function filterCams(type, event) {
-        const tiles = document.querySelectorAll('.cam-tile');
-        const buttons = document.querySelectorAll('.filter-btn');
-
-        buttons.forEach(btn => btn.classList.remove('active'));
-        if (event && event.target) event.target.classList.add('active');
-
-        tiles.forEach(tile => {
-            const isPublic = tile.dataset.isPublic === 'true';
-            if (type === 'all') tile.style.display = 'flex';
-            else if (type === 'public' && isPublic) tile.style.display = 'flex';
-            else if (type === 'private' && !isPublic) tile.style.display = 'flex';
-            else tile.style.display = 'none';
+        document.addEventListener('click', (e) => {
+            if (!adminSidebar.contains(e.target) && !mobileToggle.contains(e.target)) {
+                adminSidebar.classList.remove('open');
+            }
         });
     }
 
-    // ═════════════════════════════════════════════════════════
-    // TOAST NOTIFICATIONS
-    // ═════════════════════════════════════════════════════════
+    const profileBtn = document.getElementById('sidebarProfileBtn');
+    const profileDropdown = document.getElementById('sidebarProfileDropdown');
+    if (profileBtn && profileDropdown) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', () => {
+            profileDropdown.classList.remove('open');
+        });
+    }
+
+    // Add Form Confirmation Modal
+    const addForm = document.getElementById('addCameraForm');
+    const confirmAddModal = document.getElementById('confirmAddModal');
+    const btnCancelAdd = document.getElementById('btnCancelAdd');
+    const btnConfirmAdd = document.getElementById('btnConfirmAdd');
+    
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            confirmAddModal.classList.add('is-open');
+        });
+    }
+    if (btnCancelAdd) {
+        btnCancelAdd.addEventListener('click', function() {
+            confirmAddModal.classList.remove('is-open');
+        });
+    }
+    if (btnConfirmAdd) {
+        btnConfirmAdd.addEventListener('click', function() {
+            addForm.submit();
+        });
+    }
+
+    // Restored Toast Logic
     function showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
         if (!container) return;
@@ -866,20 +832,6 @@
         setTimeout(() => toast.remove(), 4000);
     }
 
-    // ═════════════════════════════════════════════════════════
-    // SYSTEM CLOCK & PANEL TIMESTAMPS
-    // ═════════════════════════════════════════════════════════
-    function updateClock() {
-        const now = new Date();
-        const clockEl = document.getElementById('adminClock');
-        if (clockEl) {
-            clockEl.textContent = [now.getHours(), now.getMinutes(), now.getSeconds()]
-                .map(n => String(n).padStart(2, '0')).join(':');
-        }
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
-
     function updateTimestamps() {
         const ts = new Date().toLocaleString('en-PH', {
             year: 'numeric', month: '2-digit', day: '2-digit',
@@ -890,12 +842,8 @@
     updateTimestamps();
     setInterval(updateTimestamps, 1000);
 
-    // ═════════════════════════════════════════════════════════
-    // VIEW GRID SWITCHER
-    // ═════════════════════════════════════════════════════════
     const layoutBtns = document.querySelectorAll('.layout-btn');
     const wall = document.getElementById('cameraWall');
-    
     if (layoutBtns && wall) {
         layoutBtns.forEach(btn => btn.addEventListener('click', () => {
             layoutBtns.forEach(b => b.classList.remove('active'));
@@ -904,9 +852,22 @@
         }));
     }
 
-    // ═════════════════════════════════════════════════════════
-    // HUD GRAPHIC TOGGLES
-    // ═════════════════════════════════════════════════════════
+    function filterCams(type, event) {
+        const tiles = document.querySelectorAll('.cam-tile');
+        if (!tiles.length) return;
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        if (event && event.target) event.target.classList.add('active');
+
+        tiles.forEach(tile => {
+            const isPublic = tile.dataset.isPublic === 'true';
+            if (type === 'all') tile.style.display = 'flex';
+            else if (type === 'public' && isPublic) tile.style.display = 'flex';
+            else if (type === 'private' && !isPublic) tile.style.display = 'flex';
+            else tile.style.display = 'none';
+        });
+    }
+
     let labelsOn = true;
     document.getElementById('toggleLabels')?.addEventListener('click', function() {
         labelsOn = !labelsOn;
@@ -921,32 +882,17 @@
         this.classList.toggle('on', tsOn);
     });
 
-    let slOn = true;
-    const slStyle = document.createElement('style');
-    document.head.appendChild(slStyle);
-    document.getElementById('toggleScanlines')?.addEventListener('click', function() {
-        slOn = !slOn;
-        slStyle.textContent = slOn ? '' : '.cam-feed::after { display: none !important; }';
-        this.classList.toggle('on', slOn);
-    });
-
-    // ═════════════════════════════════════════════════════════
-    // POPUP MODAL LOGIC
-    // ═════════════════════════════════════════════════════════
     let currentCamId = null;
-
     function openModal(tile) {
         currentCamId = tile.dataset.camId;
-        const name = tile.dataset.camName;
-        const status = tile.dataset.camStatus;
-        const streamUrl = tile.dataset.streamUrl;
-
-        document.getElementById('modalCamName').textContent = name;
+        document.getElementById('modalCamName').textContent = tile.dataset.camName;
         document.getElementById('modalCamId').textContent = 'CAM-' + currentCamId;
         
+        const status = tile.dataset.camStatus;
         const modalStream = document.getElementById('modalStream');
-        if (status === 'online' && streamUrl) {
-            modalStream.src = streamUrl;
+        
+        if (status === 'online' && tile.dataset.streamUrl) {
+            modalStream.src = tile.dataset.streamUrl;
             modalStream.style.display = 'block';
         } else {
             modalStream.src = '';
@@ -954,19 +900,24 @@
         }
 
         document.getElementById('modalInfo').textContent = `ID: ${currentCamId}  ·  Status: ${status.toUpperCase()}`;
-        document.getElementById('modalRecordLink').href = '/recordings?cam=' + currentCamId;
         
+        // Restored View Recordings link update
+        const recordLink = document.getElementById('modalRecordLink');
+        if (recordLink) recordLink.href = '/recordings?cam=' + currentCamId;
+
         const pill = document.getElementById('modalStatusPill');
         pill.className = 'cam-status ' + (status === 'online' ? 'status-live' : 'status-offline');
         document.getElementById('modalStatusText').textContent = status === 'online' ? 'LIVE' : 'OFFLINE';
         
         loadCameraVirtualLines(currentCamId);
-        document.getElementById('camModal').classList.add('open');
+        document.getElementById('camModal').classList.add('is-open');
     }
 
     function closeModal() {
-        document.getElementById('camModal').classList.remove('open');
+        document.getElementById('camModal').classList.remove('is-open');
         document.getElementById('modalStream').src = '';
+        
+        // Restored canvas wipe logic
         if (modalLineCanvas) {
             const ctx = modalLineCanvas.getContext('2d');
             ctx.clearRect(0, 0, modalLineCanvas.width, modalLineCanvas.height);
@@ -978,6 +929,7 @@
         currentCamId = null;
     }
 
+    // Restored Dynamic Polling UI logic
     function updateCameraStatus(statusData) {
         const statuses = statusData.cameras || {};
         document.querySelectorAll('.cam-tile').forEach(tile => {
@@ -999,7 +951,7 @@
                 if (connected) {
                     feed.innerHTML = `<img class="stream" src="${tile.dataset.streamUrl}" alt="${tile.dataset.camName} feed">`;
                 } else {
-                    feed.innerHTML = '<div class="offline-placeholder"><p>Camera Offline</p></div>';
+                    feed.innerHTML = '<div class="offline-placeholder" style="color: #2a3555; text-align: center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px; height:36px; margin-bottom:8px; opacity:0.5;"><path d="M1 1l22 22M17 17H1V7l5-2m3 0h9a2 2 0 0 1 2 2v10"/></svg><p style="font-size: 11px; font-family: var(--font-mono); opacity: 0.5;">Camera Offline</p></div>';
                 }
             }
         });
@@ -1018,8 +970,16 @@
     refreshCameraStatus();
     setInterval(refreshCameraStatus, 3000);
 
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.addEventListener('keydown', e => { 
+        if (e.key === 'Escape') {
+            closeModal();
+            confirmAddModal?.classList.remove('is-open');
+        }
+    });
 
+    // ═════════════════════════════════════════════════════════
+    // RESTORED VIRTUAL LINES LOGIC
+    // ═════════════════════════════════════════════════════════
     let modalVirtualLines = [];
     let modalLineDraft = [];
     let modalLineEditorActive = false;
@@ -1082,7 +1042,9 @@
         const btn = document.getElementById('modalVirtualLinesBtn');
         if (btn) {
             btn.classList.toggle('primary', enabled);
-            btn.textContent = enabled ? 'Done Drawing' : 'Edit Lines';
+            btn.innerHTML = enabled 
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Done Drawing' 
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17L9 11L13 15L21 7"/><path d="M21 7H15M21 7V13"/></svg> Edit Lines';
         }
         if (!enabled) modalLineDraft = [];
         drawVirtualLines();
@@ -1153,6 +1115,7 @@
         setModalEditorState(!modalLineEditorActive);
     });
 
+    // Restored Snapshot Functionality
     async function snapshotCam() {
         if (!currentCamId) {
             showToast('Choose a camera first.', 'info');
@@ -1170,31 +1133,12 @@
         }
     }
 
+    // Restored Toggle Recording
     document.getElementById('modalToggleRec')?.addEventListener('click', function() {
         showToast('Recording state toggled.', 'success');
     });
 
-    // ═════════════════════════════════════════════════════════
-    // LOGOUT MODAL LOGIC
-    // ═════════════════════════════════════════════════════════
-    (function () {
-        const overlay = document.getElementById('logoutModalOverlay');
-        const yesBtn = document.getElementById('logoutModalYes');
-        const noBtn = document.getElementById('logoutModalNo');
-        let pendingHref = null;
-
-        document.querySelectorAll('a.nav-logout').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                pendingHref = link.getAttribute('href');
-                overlay.classList.add('is-open');
-            });
-        });
-
-        yesBtn?.addEventListener('click', () => { if (pendingHref) window.location.href = pendingHref; });
-        noBtn?.addEventListener('click', () => overlay.classList.remove('is-open'));
-        overlay?.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('is-open'); });
-    })();
 </script>
+{% include '_logout_modal.html' %}
 </body>
 </html>

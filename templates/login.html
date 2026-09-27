@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In — Home Detection Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <!-- Matched exactly to admin_dashboard typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,17 +29,20 @@
             --danger-bg: #fef2f1;
             --emerald-500: #10b981;
             --primary-glow: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(11, 23, 53, 0) 70%);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             min-height: 100vh;
             display: flex;
             background: var(--white);
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ── LEFT PANEL (Upgraded with glowing cyber-aesthetics) ──────────────── */
+        /* ── LEFT PANEL ───────────────────────────────────── */
         .left-panel {
             width: 55%;
             background: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-900) 100%);
@@ -51,7 +55,6 @@
             box-shadow: 4px 0 24px rgba(5, 11, 26, 0.15);
         }
 
-        /* Glowing Decorative Orbs */
         .left-panel::before {
             content: '';
             position: absolute;
@@ -86,7 +89,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Subtle cyber-grid texture */
         .left-panel-grid {
             position: absolute;
             inset: 0;
@@ -97,7 +99,6 @@
             pointer-events: none;
         }
 
-        /* Brand in top-left */
         .left-brand {
             display: flex;
             align-items: center;
@@ -142,7 +143,6 @@
             margin-top: 2px;
         }
 
-        /* Hero copy */
         .left-hero {
             position: relative;
             z-index: 2;
@@ -173,7 +173,6 @@
             position: relative;
         }
 
-        /* Pulsing indicator animation */
         .left-eyebrow-dot::after {
             content: '';
             position: absolute;
@@ -189,9 +188,9 @@
         }
 
         .left-headline {
-            font-family: 'Playfair Display', Georgia, serif;
+            font-family: var(--font-sans);
             font-size: 48px;
-            font-weight: 700;
+            font-weight: 800;
             line-height: 1.08;
             color: var(--white);
             letter-spacing: -0.02em;
@@ -216,7 +215,6 @@
             margin-bottom: 40px;
         }
 
-        /* Feature list */
         .feature-list { display: flex; flex-direction: column; gap: 16px; }
 
         .feature-item {
@@ -248,7 +246,6 @@
             color: rgba(255,255,255,0.6);
         }
 
-        /* Bottom strip */
         .left-footer {
             position: relative; z-index: 2;
             display: flex; align-items: center; gap: 10px;
@@ -269,7 +266,7 @@
 
         .security-badge svg { width: 13px; height: 13px; color: var(--emerald-500); }
 
-        /* ── RIGHT PANEL (Forms & Routing) ─────────────────────────────────── */
+        /* ── RIGHT PANEL ───────────────────────────────────── */
         .right-panel {
             width: 45%;
             display: flex;
@@ -285,10 +282,8 @@
             animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Right brand (mobile / small) — hidden on desktop */
         .right-brand-mobile { display: none; }
 
-        /* Greeting */
         .right-greeting {
             font-size: 11px; font-weight: 600;
             letter-spacing: 0.1em; text-transform: uppercase;
@@ -297,7 +292,7 @@
         }
 
         .right-title {
-            font-family: 'Playfair Display', Georgia, serif;
+            font-family: var(--font-sans);
             font-size: 30px; font-weight: 700;
             color: var(--text-dark);
             letter-spacing: -0.02em;
@@ -312,7 +307,6 @@
             line-height: 1.5;
         }
 
-        /* Flash message alerts */
         .flash {
             display: flex; align-items: center; gap: 9px;
             padding: 11px 14px;
@@ -338,10 +332,8 @@
         }
         @keyframes flash-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* Divider */
         .form-divider { height: 1px; background: var(--border); margin: 24px 0; }
 
-        /* Fields */
         .field { margin-bottom: 18px; }
 
         .field label {
@@ -351,7 +343,6 @@
             letter-spacing: 0.02em;
         }
 
-        /* Label row wrapper to align Label & Forgot Password Link */
         .label-row {
             display: flex;
             justify-content: space-between;
@@ -382,6 +373,30 @@
             pointer-events: none;
         }
 
+        .password-toggle {
+            position: absolute;
+            right: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease;
+        }
+        
+        .password-toggle:hover {
+            color: var(--navy-600);
+        }
+
+        .password-toggle svg {
+            width: 16px; height: 16px;
+        }
+
         .field input {
             width: 100%;
             background: var(--off-white);
@@ -389,21 +404,35 @@
             border-radius: 8px;
             padding: 11px 13px 11px 40px;
             font-size: 13.5px;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             color: var(--text-dark);
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
         }
 
+        #password { padding-right: 40px; }
         .field input::placeholder { color: var(--text-muted); }
-
         .field input:focus {
             border-color: var(--navy-600);
             box-shadow: 0 0 0 3px var(--navy-100);
             background: var(--white);
         }
 
-        /* Submit Button */
+        /* Error States */
+        .input-error {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 0 3px var(--danger-bg) !important;
+        }
+
+        .error-message {
+            display: none;
+            color: var(--danger);
+            font-size: 11.5px;
+            font-weight: 500;
+            margin-top: 6px;
+            letter-spacing: 0.01em;
+        }
+
         .btn-submit {
             width: 100%;
             background: var(--navy-800);
@@ -412,7 +441,7 @@
             padding: 12px;
             border-radius: 8px;
             font-size: 14px; font-weight: 600;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             cursor: pointer;
             letter-spacing: -0.01em;
             transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
@@ -425,7 +454,6 @@
         .btn-submit:hover { background: var(--navy-950); box-shadow: 0 6px 22px rgba(13,27,62,0.35); transform: translateY(-1px); }
         .btn-submit:active { transform: translateY(0); }
 
-        /* Footer link */
         .right-footer {
             margin-top: 28px;
             padding-top: 22px;
@@ -443,7 +471,6 @@
 
         .right-footer a:hover { color: var(--navy-800); text-decoration: underline; }
 
-        /* ── RESPONSIVE ─────────────────────────────────────── */
         @media (max-width: 840px) {
             body { flex-direction: column; }
             .left-panel { display: none; }
@@ -462,27 +489,14 @@
             .right-brand-mobile .mob-name { font-size: 14px; font-weight: 700; color: var(--text-dark); }
         }
 
-        /* Animations */
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes fadeInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
     </style>
 </head>
@@ -493,7 +507,6 @@
         <div class="left-panel-grid"></div>
         <div class="left-circle-mid"></div>
 
-        <!-- Brand -->
         <div class="left-brand">
             <div class="left-logo-box">
                 <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
@@ -504,7 +517,6 @@
             </div>
         </div>
 
-        <!-- Hero -->
         <div class="left-hero">
             <div class="left-eyebrow">
                 <span class="left-eyebrow-dot"></span>
@@ -538,14 +550,19 @@
             </div>
         </div>
 
-        <!-- Bottom strip with glow indicator icons -->
-        <div class="left-footer">
+           <div class="left-footer">
             <div class="security-badge">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
                 Eusebio Bliss Village 1
             </div>
             <div class="security-badge">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
                 24 / 7 monitoring
             </div>
         </div>
@@ -555,7 +572,6 @@
     <div class="right-panel">
         <div class="right-inner">
 
-            <!-- Mobile brand -->
             <div class="right-brand-mobile">
                 <div class="mob-logo">
                     <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
@@ -580,18 +596,17 @@
                 {% endif %}
             {% endwith %}
 
-            <!-- Form -->
-            <form method="POST">
+            <form method="POST" id="loginForm">
                 <div class="field">
                     <label for="email" style="margin-bottom: 7px;">Email address</label>
                     <div class="field-wrap">
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         <input type="email" id="email" name="email" placeholder="you@example.com" required>
                     </div>
+                    <div id="emailError" class="error-message">Please enter a properly formatted email address.</div>
                 </div>
 
                 <div class="field">
-                    <!-- Updated: Added Forgot password link alongside the label -->
                     <div class="label-row">
                         <label for="password">Password</label>
                         <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot password?</a>
@@ -599,6 +614,16 @@
                     <div class="field-wrap">
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <input type="password" id="password" name="password" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
+                            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg id="eyeOffIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -614,5 +639,73 @@
         </div>
     </div>
 
+    <!-- Frontend UI Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- 1. Password Visibility Toggle ---
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            const eyeOffIcon = document.getElementById('eyeOffIcon');
+
+            togglePassword.addEventListener('click', () => {
+                const isPassword = passwordInput.getAttribute('type') === 'password';
+                
+                // Toggle type
+                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                
+                // Toggle SVGs
+                eyeIcon.style.display = isPassword ? 'none' : 'block';
+                eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+            });
+
+            // --- 2. Email Validation Logic ---
+            const loginForm = document.getElementById('loginForm');
+            const emailInput = document.getElementById('email');
+            const emailError = document.getElementById('emailError');
+
+            // Strict regex checking for format: text@text.text
+            function validateEmail(email) {
+                const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return regex.test(String(email).toLowerCase());
+            }
+
+            function handleEmailValidation() {
+                const emailValue = emailInput.value.trim();
+                
+                // If empty, HTML5 'required' will handle it. We only validate format if there's text.
+                if (emailValue.length > 0 && !validateEmail(emailValue)) {
+                    emailInput.classList.add('input-error');
+                    emailError.style.display = 'block';
+                    return false;
+                } else {
+                    emailInput.classList.remove('input-error');
+                    emailError.style.display = 'none';
+                    return true;
+                }
+            }
+
+            // Clean up error state dynamically if the user corrects their input
+            emailInput.addEventListener('input', () => {
+                if (emailInput.classList.contains('input-error')) {
+                    handleEmailValidation();
+                }
+            });
+
+            // Validate right when the user clicks out of the input
+            emailInput.addEventListener('blur', handleEmailValidation);
+
+            // Prevent form submission if validation fails
+            loginForm.addEventListener('submit', (event) => {
+                const isEmailValid = handleEmailValidation();
+                if (!isEmailValid) {
+                    event.preventDefault(); // Stop form submission
+                    emailInput.focus();     // Bring attention back to email field
+                }
+            });
+
+        });
+    </script>
 </body>
 </html>

@@ -75,7 +75,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 MODEL_PATH = 'models/best.pt' # main
-MODEL_PATH_OBJECT = 'models/yolo26n.pt'  # secondary
+MODEL_PATH_OBJECT = 'models/yolo26m.pt'  # secondary
 BASE_RECORDINGS_DIR = "users_data"
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -1563,7 +1563,7 @@ def index():
     recording_requests = RecordingRequest.query.filter_by(user_id=current_user.id).order_by(RecordingRequest.created_at.desc()).all()
     
     return render_template(
-        'index.html',
+        'user_dashboard.html',
         cameras=user_cameras,
         incidents_this_month=incidents_this_month,
         alerts_this_week=alerts_this_week,
@@ -1616,6 +1616,17 @@ def download_recording_request(request_id):
         return 'Recording is not available.', 404
     return send_file(recording_request.video_path, as_attachment=True, download_name=recording_request.video_filename)
 
+@app.route('/user_request')
+@login_required
+def user_request():
+    cameras = Camera.query.filter(
+        or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
+    ).order_by(Camera.id).all()
+    requests = RecordingRequest.query.filter_by(user_id=current_user.id).order_by(
+        RecordingRequest.created_at.desc()
+    ).all()
+    return render_template('user_request.html', cameras=cameras, requests=requests)
+
 @app.route('/cctv')
 @login_required
 def cctv():
@@ -1638,7 +1649,7 @@ def cctv():
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
     
-    return render_template('cctv.html', cameras=user_cameras)
+    return render_template('user_cctv.html', cameras=user_cameras)
 
 
 @app.route('/admin')
@@ -2495,7 +2506,7 @@ def settings():
         
         return redirect(url_for('settings'))
         
-    return render_template('settings.html', settings=user_settings, known_faces=known_faces_list)
+    return render_template('user_system.html', settings=user_settings, known_faces=known_faces_list)
 
 
 @app.route('/update_profile', methods=['POST'])
@@ -2595,7 +2606,7 @@ def recordings_page():
 @app.route('/events')
 @login_required
 def events_page():
-    return render_template('events.html')
+    return render_template('user_event.html')
 
 @app.route('/api/recordings', methods=['GET'])
 @login_required

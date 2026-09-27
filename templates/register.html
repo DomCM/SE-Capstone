@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account — Home Detection Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght=0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Playfair+Display:ital,wght=0,700;1,700&display=swap" rel="stylesheet">
+    <!-- Matched exactly to admin_dashboard and login typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -29,10 +30,13 @@
             --success:   #1a7a4a;
             --success-bg:#edfaf3;
             --primary-glow: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(11, 23, 53, 0) 70%);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             height: 100vh;
             min-height: 100vh;
             display: flex;
@@ -55,7 +59,6 @@
             box-shadow: 4px 0 24px rgba(5, 11, 26, 0.15);
         }
 
-        /* Glowing Decorative Orbs (Same pop-up colors as Login/Logout) */
         .left-panel::before {
             content: '';
             position: absolute;
@@ -90,7 +93,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Subtle cyber-grid texture */
         .left-panel-grid {
             position: absolute;
             inset: 0;
@@ -101,7 +103,6 @@
             pointer-events: none;
         }
 
-        /* Brand in top-left */
         .left-brand {
             display: flex;
             align-items: center;
@@ -146,7 +147,6 @@
             margin-top: 2px;
         }
 
-        /* Hero copy */
         .left-hero {
             position: relative;
             z-index: 2;
@@ -192,9 +192,9 @@
         }
 
         .left-headline {
-            font-family: 'Playfair Display', Georgia, serif;
+            font-family: var(--font-sans);
             font-size: 48px;
-            font-weight: 700;
+            font-weight: 800;
             line-height: 1.08;
             color: var(--white);
             letter-spacing: -0.02em;
@@ -219,7 +219,6 @@
             margin-bottom: 36px;
         }
 
-        /* Steps list styling */
         .steps-list { display: flex; flex-direction: column; gap: 18px; }
 
         .step-item {
@@ -259,7 +258,6 @@
             line-height: 1.45;
         }
 
-        /* Bottom strip with location badges */
         .left-footer {
             position: relative; z-index: 2;
             display: flex; align-items: center; gap: 10px;
@@ -290,7 +288,7 @@
             justify-content: center;
             padding: 48px 56px;
             background: var(--white);
-            overflow-y: auto; /* Standard scroll strictly on the right side */
+            overflow-y: auto; 
         }
 
         .right-inner { 
@@ -299,10 +297,8 @@
             animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Right brand (mobile / small) — hidden on desktop */
         .right-brand-mobile { display: none; }
 
-        /* Greeting */
         .right-greeting {
             font-size: 11px; font-weight: 600;
             letter-spacing: 0.1em; text-transform: uppercase;
@@ -311,7 +307,7 @@
         }
 
         .right-title {
-            font-family: 'Playfair Display', Georgia, serif;
+            font-family: var(--font-sans);
             font-size: 30px; font-weight: 700;
             color: var(--text-dark);
             letter-spacing: -0.02em;
@@ -326,7 +322,6 @@
             line-height: 1.5;
         }
 
-        /* Form sections partition */
         .form-section-label {
             font-size: 10px; font-weight: 700;
             letter-spacing: 0.1em; text-transform: uppercase;
@@ -343,7 +338,6 @@
             background: var(--border);
         }
 
-        /* Flash message alerts */
         .flash {
             display: flex; align-items: center; gap: 9px;
             padding: 11px 14px;
@@ -355,14 +349,12 @@
         .flash svg { width: 15px; height: 15px; flex-shrink: 0; }
         .flash-danger { background: var(--danger-bg); border: 1px solid #f5a89e; color: var(--danger); }
 
-        /* Multi-column grid rows */
         .field-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 14px;
         }
 
-        /* Fields styling */
         .field { margin-bottom: 18px; }
 
         .field label {
@@ -383,6 +375,30 @@
             pointer-events: none;
         }
 
+        .password-toggle {
+            position: absolute;
+            right: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease;
+        }
+        
+        .password-toggle:hover {
+            color: var(--navy-600);
+        }
+
+        .password-toggle svg {
+            width: 16px; height: 16px;
+        }
+
         .field input, .field select {
             width: 100%;
             background: var(--off-white);
@@ -390,11 +406,16 @@
             border-radius: 8px;
             padding: 11px 13px 11px 40px;
             font-size: 13.5px;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             color: var(--text-dark);
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
             appearance: none;
+        }
+
+        /* Prevent text flowing under eye icon */
+        #password, #confirm_password {
+            padding-right: 40px;
         }
 
         .field input::placeholder { color: var(--text-muted); }
@@ -415,9 +436,16 @@
             background: var(--danger-bg);
         }
 
-        /* Dropdown select wraps */
-        .select-wrap { position: relative; }
+        .error-message {
+            display: none;
+            color: var(--danger);
+            font-size: 11.5px;
+            font-weight: 500;
+            margin-top: 6px;
+            letter-spacing: 0.01em;
+        }
 
+        .select-wrap { position: relative; }
         .select-wrap::after {
             content: '';
             position: absolute;
@@ -428,10 +456,8 @@
             border-top: 5px solid var(--text-muted);
             pointer-events: none;
         }
-
         .select-wrap select { cursor: pointer; }
 
-        /* Read-only Account Role field (auto-assigned, not user-editable) */
         .field-static {
             width: 100%;
             display: flex;
@@ -441,7 +467,7 @@
             border-radius: 8px;
             padding: 11px 13px 11px 40px;
             font-size: 13.5px;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             color: var(--text-mid);
             min-height: 41px;
             cursor: not-allowed;
@@ -490,7 +516,6 @@
             color: var(--text-muted);
             transition: color 0.2s;
         }
-
         .req-item.met { color: var(--success); }
 
         .req-dot {
@@ -519,7 +544,7 @@
             padding: 12px;
             border-radius: 8px;
             font-size: 14px; font-weight: 600;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
             cursor: pointer;
             letter-spacing: -0.01em;
             transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
@@ -533,7 +558,6 @@
         .btn-submit:active { transform: translateY(0); }
         .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        /* Footer link */
         .right-footer {
             margin-top: 28px;
             padding-top: 22px;
@@ -591,27 +615,14 @@
             .right-footer { margin-top: 22px; padding-top: 18px; font-size: 12px; }
         }
 
-        /* Animations */
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes fadeInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
     </style>
 </head>
@@ -622,10 +633,9 @@
         <div class="left-panel-grid"></div>
         <div class="left-circle-mid"></div>
 
-        <!-- Brand -->
         <div class="left-brand">
             <div class="left-logo-box">
-                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="EBVHA Logo">
+                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
             </div>
             <div>
                 <div class="left-brand-name">Home Detection Security</div>
@@ -633,7 +643,6 @@
             </div>
         </div>
 
-        <!-- Hero -->
         <div class="left-hero">
             <div class="left-eyebrow">
                 <span class="left-eyebrow-dot"></span>
@@ -671,7 +680,6 @@
             </div>
         </div>
 
-        <!-- Bottom strip with location badges -->
         <div class="left-footer">
             <div class="security-badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -694,10 +702,9 @@
     <div class="right-panel">
         <div class="right-inner">
 
-            <!-- Mobile brand -->
             <div class="right-brand-mobile">
                 <div class="mob-logo">
-                    <img src="eblogo.jpg" alt="HDS Logo">
+                    <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="HDS Logo">
                 </div>
                 <span class="mob-name">Home Detection Security</span>
             </div>
@@ -706,7 +713,6 @@
             <h2 class="right-title">Create your account</h2>
             <p class="right-subtitle">Fill in the details below to set up your security dashboard.</p>
 
-            <!-- Flash messages (Jinja2 / Flask) -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -728,14 +734,15 @@
                         <label for="first_name">First Name</label>
                         <div class="field-wrap">
                             <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            <input type="text" id="first_name" name="first_name" placeholder="Juan" required autocomplete="given-name">
+                            <!-- Pattern prevents empty spaces only -->
+                            <input type="text" id="first_name" name="first_name" placeholder="Juan" required pattern=".*\S+.*" title="Please enter a valid first name" autocomplete="given-name">
                         </div>
                     </div>
                     <div class="field">
                         <label for="last_name">Last Name</label>
                         <div class="field-wrap">
                             <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            <input type="text" id="last_name" name="last_name" placeholder="dela Cruz" required autocomplete="family-name">
+                            <input type="text" id="last_name" name="last_name" placeholder="dela Cruz" required pattern=".*\S+.*" title="Please enter a valid last name" autocomplete="family-name">
                         </div>
                     </div>
                 </div>
@@ -744,7 +751,7 @@
                     <label for="username">Username</label>
                     <div class="field-wrap">
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.52 19c.64-2.2 1.84-3 3.22-3h6.52c1.38 0 2.58.8 3.22 3"/><circle cx="12" cy="10" r="3"/><circle cx="12" cy="12" r="10"/></svg>
-                        <input type="text" id="username" name="username" placeholder="juandelacruz" required autocomplete="username" minlength="3">
+                        <input type="text" id="username" name="username" placeholder="juandelacruz" required pattern=".*\S+.*" autocomplete="username" minlength="3">
                     </div>
                 </div>
 
@@ -754,6 +761,7 @@
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
                     </div>
+                    <div id="emailError" class="error-message">Please enter a properly formatted email address.</div>
                 </div>
 
                 <!-- LOCATION -->
@@ -764,7 +772,7 @@
                         <label for="building_number">Building / Unit No.</label>
                         <div class="field-wrap">
                             <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                            <input type="text" id="building_number" name="building_number" placeholder="Blk 4 Lot 12" required>
+                            <input type="text" id="building_number" name="building_number" placeholder="Blk 4 Lot 12" pattern=".*\S+.*" required>
                         </div>
                     </div>
                     <div class="field">
@@ -780,7 +788,7 @@
                     <label for="street_address">Street / Subdivision</label>
                     <div class="field-wrap">
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 14 8 14s8-8.75 8-14a8 8 0 0 0-8-8z"/></svg>
-                        <input type="text" id="street_address" name="street_address" placeholder="123 Rizal St., Barangay San Jose" required>
+                        <input type="text" id="street_address" name="street_address" placeholder="123 Rizal St., Barangay San Jose" pattern=".*\S+.*" required>
                     </div>
                 </div>
 
@@ -809,7 +817,7 @@
                             <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                             <div class="field-static" id="role-display">Homeowner</div>
                         </div>
-                        -- Role is fixed for self-registration; admin/privileged roles are assigned only via the admin panel
+                        <!-\- Role is fixed for self-registration; admin/privileged roles are assigned only via the admin panel -\->
                         <input type="hidden" id="role" name="role" value="homeowner">
                     </div>
                 </div>-->
@@ -822,6 +830,11 @@
                     <div class="field-wrap">
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <input type="password" id="password" name="password" placeholder="••••••••••••" required autocomplete="new-password" minlength="12">
+                        <!-- Password Visibility Toggle -->
+                        <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
+                            <svg id="eyeIcon1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg id="eyeOffIcon1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
                     </div>
                     <!-- Strength bar -->
                     <div class="pw-strength-bar" id="strengthBar">
@@ -831,6 +844,7 @@
                         <div class="pw-seg" id="seg4"></div>
                     </div>
                     <div class="pw-label" id="strengthLabel">Enter a password</div>
+                    
                     <!-- Requirements -->
                     <div class="pw-reqs" id="pwReqs">
                         <div class="req-item" id="req-len">
@@ -865,6 +879,11 @@
                     <div class="field-wrap">
                         <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••••••" required autocomplete="new-password">
+                        <!-- Confirm Password Visibility Toggle -->
+                        <button type="button" class="password-toggle" id="toggleConfirmPassword" aria-label="Toggle password visibility">
+                            <svg id="eyeIcon2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg id="eyeOffIcon2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
                     </div>
                     <div class="pw-label" id="matchLabel" style="margin-top:6px;"></div>
                 </div>
@@ -883,12 +902,58 @@
 
     <!-- ── DYNAMIC LOGIC AND VALIDATIONS ──────────────────── -->
     <script>
+        // -- Elements for Password Requirements --
         const pwInput = document.getElementById('password');
         const confirmInput = document.getElementById('confirm_password');
         const strengthLabel = document.getElementById('strengthLabel');
         const matchLabel = document.getElementById('matchLabel');
         const segs = [document.getElementById('seg1'), document.getElementById('seg2'), document.getElementById('seg3'), document.getElementById('seg4')];
 
+        // -- Setup Password Visibility Toggles --
+        function setupToggle(toggleId, inputEl, eyeIconId, eyeOffIconId) {
+            const toggleBtn = document.getElementById(toggleId);
+            const eyeIcon = document.getElementById(eyeIconId);
+            const eyeOffIcon = document.getElementById(eyeOffIconId);
+
+            toggleBtn.addEventListener('click', () => {
+                const isPassword = inputEl.getAttribute('type') === 'password';
+                inputEl.setAttribute('type', isPassword ? 'text' : 'password');
+                eyeIcon.style.display = isPassword ? 'none' : 'block';
+                eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+            });
+        }
+        setupToggle('togglePassword', pwInput, 'eyeIcon1', 'eyeOffIcon1');
+        setupToggle('toggleConfirmPassword', confirmInput, 'eyeIcon2', 'eyeOffIcon2');
+
+        // -- Setup Email Validation --
+        const emailInput = document.getElementById('email');
+        const emailError = document.getElementById('emailError');
+
+        function validateEmail(email) {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return regex.test(String(email).toLowerCase());
+        }
+
+        function handleEmailValidation() {
+            const emailValue = emailInput.value.trim();
+            // Allow empty string to be caught by native HTML5 "required"
+            if (emailValue.length > 0 && !validateEmail(emailValue)) {
+                emailInput.classList.add('invalid');
+                emailError.style.display = 'block';
+                return false;
+            } else {
+                emailInput.classList.remove('invalid');
+                emailError.style.display = 'none';
+                return true;
+            }
+        }
+
+        emailInput.addEventListener('input', () => {
+            if (emailInput.classList.contains('invalid')) handleEmailValidation();
+        });
+        emailInput.addEventListener('blur', handleEmailValidation);
+
+        // -- Password Requirement Rules --
         const reqs = {
             len:     { el: document.getElementById('req-len'),     test: v => v.length >= 12 },
             upper:   { el: document.getElementById('req-upper'),   test: v => /[A-Z]/.test(v) },
@@ -953,24 +1018,43 @@
         pwInput.addEventListener('input', () => { evaluatePassword(pwInput.value); evaluateMatch(); });
         confirmInput.addEventListener('input', evaluateMatch);
 
-        // Client-side validation before post submission
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
+        // -- Client-side Form Validation Check Before Submission --
+        const registerForm = document.getElementById('registerForm');
+        
+        registerForm.addEventListener('submit', function(e) {
+            let isValid = true;
+            let focusTarget = null;
+
+            // 1. Validate Email
+            if (!handleEmailValidation()) {
+                isValid = false;
+                focusTarget = emailInput;
+            }
+
+            // 2. Validate Password Requirements
             const pw = pwInput.value;
             const allMet = Object.values(reqs).every(r => r.test(pw));
             if (!allMet) {
-                e.preventDefault();
+                isValid = false;
                 strengthLabel.textContent = 'Please meet all password requirements';
                 strengthLabel.style.color = 'var(--danger)';
-                pwInput.focus();
-                return;
+                if (!focusTarget) focusTarget = pwInput;
             }
+
+            // 3. Validate Password Match
             if (pwInput.value !== confirmInput.value) {
-                e.preventDefault();
+                isValid = false;
                 matchLabel.textContent = 'Passwords do not match';
                 matchLabel.style.color = 'var(--danger)';
-                confirmInput.focus();
+                if (!focusTarget) focusTarget = confirmInput;
+            }
+
+            // Execute preventDefault if anything failed and shift focus
+            if (!isValid) {
+                e.preventDefault();
+                if (focusTarget) focusTarget.focus();
             }
         });
     </script>
 </body>
-</html> 
+</html>

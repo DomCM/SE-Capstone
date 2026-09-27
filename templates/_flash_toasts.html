@@ -21,7 +21,9 @@
         box-shadow: 0 8px 24px rgba(11,23,53,0.16);
         font: 500 12.5px/1.5 Inter, sans-serif;
         animation: flash-toast-in 0.25s ease-out;
+        transition: opacity 0.25s ease, transform 0.25s ease;
     }
+    .flash-toast.is-leaving { opacity: 0; transform: translateX(12px); }
     .flash-toast-danger { background: #6b1d1d; border-color: #9c2e2e; }
     .flash-toast-success { background: #114b34; border-color: #1c714f; }
     @keyframes flash-toast-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
@@ -42,3 +44,11 @@
     </div>
     {% endif %}
 {% endwith %}
+<script>
+    document.querySelectorAll('.flash-toast').forEach(toast => {
+        window.setTimeout(() => {
+            toast.classList.add('is-leaving');
+            window.setTimeout(() => toast.remove(), 250);
+        }, 4500);
+    });
+</script>

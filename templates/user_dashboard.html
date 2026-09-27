@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard — Home Detection Security</title>
+    <!-- Modern Inter & JetBrains Mono typography matching user_cctv.html -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            height: 100%;
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+        }
+
+        :root {
+            /* Shared Dashboard Color Palette & Design Tokens matching user_cctv.html */
+            --navy-950:  #060d1f;
+            --navy-900:  #0b1735;
+            --navy-800:  #0d1b3e;
+            --navy-700:  #152352;
+            --navy-600:  #1e3170;
+            --navy-50:   #f0f4fd;
+            --white:     #ffffff;
+            --off-white: #f8fafc;
+            --background:#f1f5f9;
+            --border:    #e2e8f0;
+            
+            /* Status & Accent Colors */
+            --text-dark: #0f172a;
+            --text-mid:  #334155;
+            --text-muted:#64748b;
+            --danger:    #dc2626;
+            --danger-bg: #fef2f2;
+            --success:   #16a34a;
+            --success-bg:#f0fdf4;
+            --amber:     #d97706;
+            --amber-bg:  #fffbeb;
+            --brand-blue:#2563eb;
+            --brand-blue-bg:#eff6ff;
+            
+            /* Shadows & Radii */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 6px rgba(15, 23, 42, 0.02);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.05), 0 10px 15px rgba(15, 23, 42, 0.03);
+            --shadow-hover: 0 10px 25px rgba(15, 23, 42, 0.08);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--text-dark);
+            font-size: 14px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation Bar - 100% Identical to user_cctv.html */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 32px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex-shrink: 0; }
+
+        .brand-logo-wrap {
+            width: 40px; height: 40px;
+            background: var(--navy-900);
+            border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            color: white;
+            overflow: hidden;
+        }
+        .brand-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+
+        .brand-text-block { line-height: 1.2; }
+        .brand-name { font-size: 16px; font-weight: 700; color: var(--navy-950); }
+        .brand-sub { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+        .nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px; font-weight: 500;
+            color: var(--text-mid);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .nav-links a svg { width: 18px; height: 18px; color: var(--text-muted); transition: color 0.2s ease; }
+        .nav-links a:hover { background: var(--navy-50); color: var(--navy-900); }
+        .nav-links a:hover svg { color: var(--navy-600); }
+        .nav-links a.active { background: var(--white); color: var(--navy-900); font-weight: 600; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+        .nav-links a.active svg { color: var(--navy-600); }
+        .nav-logout:hover { background: var(--danger-bg) !important; color: var(--danger) !important; }
+        .nav-logout:hover svg { color: var(--danger) !important; }
+
+        .page {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 32px 32px 80px;
+            width: 100%;
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--navy-950);
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-badges {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .status-badge-success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-dot-active {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+        }
+
+        .flash {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            font-size: 13.5px;
+            font-weight: 500;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .flash svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .flash-danger  { background: var(--danger-bg);  border: 1px solid #fecaca; color: var(--danger); }
+        .flash-success { background: var(--success-bg); border: 1px solid #bbf7d0; color: var(--success); }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 22px 24px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-icon svg { width: 26px; height: 26px; }
+        .stat-icon.navy { background: var(--navy-50); color: var(--navy-600); }
+        .stat-icon.amber { background: var(--amber-bg); color: var(--amber); }
+        .stat-icon.danger { background: var(--danger-bg); color: var(--danger); }
+        .stat-icon.success { background: var(--success-bg); color: var(--success); }
+
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-value { font-size: 28px; font-weight: 800; color: var(--navy-950); line-height: 1.1; letter-spacing: -0.02em; }
+        .stat-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 4px; }
+
+        .card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            gap: 16px;
+            flex-wrap: wrap;
+            background: var(--white);
+        }
+
+        .card-header-main { display: flex; align-items: center; gap: 14px; }
+        .card-header-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--navy-50);
+            color: var(--navy-600);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .card-header-icon svg { width: 20px; height: 20px; }
+        .card-title { font-size: 17px; font-weight: 700; color: var(--navy-950); }
+        .card-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+
+        .card-body { padding: 24px; }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .cam-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cam-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .cam-header {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: var(--white);
+        }
+
+        .cam-name-row { display: flex; align-items: center; gap: 10px; }
+        .cam-status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); }
+        .cam-name { font-size: 15px; font-weight: 700; color: var(--navy-900); }
+
+        .cam-actions { display: flex; gap: 6px; align-items: center; }
+
+        .btn-rec {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 10.5px; font-weight: 700;
+            letter-spacing: 0.05em;
+            background: var(--white);
+            border: 1px solid var(--border);
+            color: var(--text-mid);
+            padding: 6px 11px; border-radius: var(--radius-sm);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .btn-rec svg { width: 10px; height: 10px; }
+        .btn-rec:hover { background: var(--danger-bg); border-color: #f5a89e; color: var(--danger); }
+        .btn-rec.recording {
+            background: var(--danger-bg); border-color: #e07a72; color: var(--danger);
+            animation: rec-pulse 1.5s infinite;
+        }
+        @keyframes rec-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.25); }
+            50%      { box-shadow: 0 0 0 4px rgba(192,57,43,0); }
+        }
+
+        .btn-remove {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 11.5px; font-weight: 500;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 11px; border-radius: var(--radius-sm);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .btn-remove svg { width: 12px; height: 12px; }
+        .btn-remove:hover { background: var(--danger-bg); border-color: #f5a89e; color: var(--danger); }
+
+        .cam-video {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            background: var(--navy-950);
+            overflow: hidden;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cam-video img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .cam-video-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(5, 11, 26, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+        .cam-footer {
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid var(--border);
+            background: var(--off-white);
+            margin-top: auto;
+        }
+
+        .cam-meta {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cam-meta svg { width: 12px; height: 12px; }
+
+        .add-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field.flex-1 { flex: 1; min-width: 240px; }
+        .field.flex-2 { flex: 2; min-width: 280px; }
+
+        .field label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-mid);
+        }
+
+        .field input, .field select {
+            background: var(--off-white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            font-size: 13.5px;
+            font-family: var(--font-sans);
+            color: var(--text-dark);
+            outline: none;
+            transition: all 0.15s ease;
+            width: 100%;
+        }
+
+        .field input::placeholder { color: var(--text-muted); }
+
+        .field input:focus, .field select:focus {
+            border-color: var(--navy-600);
+            box-shadow: 0 0 0 3px var(--navy-50);
+            background: var(--white);
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--navy-900);
+            color: var(--white);
+            border: none;
+            padding: 11px 22px;
+            border-radius: var(--radius-md);
+            font-size: 13.5px;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 6px rgba(11, 23, 53, 0.12);
+            white-space: nowrap;
+        }
+
+        .btn-primary svg { width: 16px; height: 16px; }
+
+        .btn-primary:hover {
+            background: var(--navy-950);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(11, 23, 53, 0.2);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13.5px;
+        }
+
+        .custom-table th {
+            background: var(--off-white);
+            color: var(--text-mid);
+            font-weight: 600;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .custom-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dark);
+            vertical-align: middle;
+        }
+
+        .custom-table tr:last-child td { border-bottom: none; }
+        .custom-table tr:hover td { background: var(--off-white); }
+
+        .badge-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-type-motion { background: var(--amber-bg); color: var(--amber); border: 1px solid #fde68a; }
+        .badge-type-info   { background: var(--brand-blue-bg); color: var(--brand-blue); border: 1px solid #bfdbfe; }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 56px 24px;
+            background: var(--white);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+
+        .empty-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-md);
+            background: var(--navy-50);
+            color: var(--navy-600);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .empty-icon svg { width: 28px; height: 28px; }
+        .empty-title { font-size: 16px; font-weight: 700; color: var(--navy-950); margin-bottom: 6px; }
+        .empty-body { font-size: 13.5px; color: var(--text-muted); max-width: 380px; line-height: 1.5; }
+
+        footer {
+            background: transparent;
+            color: var(--text-muted);
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            margin-top: auto;
+        }
+
+        /* Logout Confirmation Modal Overlay - 100% Identical to user_cctv.html */
+        .logout-modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .logout-modal-overlay.is-open { opacity: 1; visibility: visible; }
+        .logout-modal {
+            width: 100%; max-width: 400px; background: var(--white); border-radius: var(--radius-lg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); padding: 32px; text-align: center;
+            transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .logout-modal-overlay.is-open .logout-modal { transform: translateY(0) scale(1); opacity: 1; }
+        .logout-modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+        .logout-modal-btn {
+            flex: 1; padding: 12px 20px; border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.2s ease;
+        }
+        .logout-modal-btn-no { background: var(--background); color: var(--text-dark); border: 1px solid var(--border); }
+        .logout-modal-btn-no:hover { background: var(--border); }
+        .logout-modal-btn-yes { background: var(--danger); color: var(--white); }
+        .logout-modal-btn-yes:hover { background: #b91c1c; }
+
+        @media (max-width: 1024px) {
+            .nav-inner { padding: 16px 24px; flex-wrap: wrap; height: auto; gap: 16px; }
+            .nav-links { width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: 8px; margin-top: 8px; }
+            .page { padding: 24px 24px 60px; }
+            .camera-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Copied Top Navigation Bar from user_cctv.html -->
+    <nav>
+        <div class="nav-inner">
+            <a class="nav-brand" href="{{ url_for('index') }}">
+                <div class="brand-logo-wrap">
+                    <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="Logo" onerror="this.style.display='none';">
+                </div>
+                <div class="brand-text-block">
+                    <div class="brand-name">Home Detection Security</div>
+                    <div class="brand-sub">Eusebio Bliss Village 1</div>
+                </div>
+            </a>
+
+            <ul class="nav-links">
+                <li>
+                    <a href="{{ url_for('index') }}" class="active">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('cctv') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        CCTV Monitor
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('events_page') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        Event Log
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('user_request') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Request Recording
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('settings') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Settings
+                    </a>
+                </li>
+                <li>
+                    <button type="button" class="nav-logout" onclick="openLogoutModal()" style="background:transparent; border:none; cursor:pointer; font-family:var(--font-sans); display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:var(--radius-md); font-size:14px; font-weight:500; color:var(--text-mid); transition:all 0.2s ease;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--text-muted);"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Logout
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="page">
+        <header class="page-header">
+            <div>
+                <h1 class="page-title">
+                    Welcome back, {{ current_user.full_name or current_user.username or 'Homeowner' }}
+                </h1>
+                <p class="page-subtitle">Monitored live status and home security feeds</p>
+            </div>
+            
+            </div>
+        </header>
+
+        <section class="analytics-grid">
+            <div class="stat-card">
+                <div class="stat-icon navy">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ cameras|length if cameras else 0 }}</div>
+                    <div class="stat-label">Active Cameras</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon amber">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ pending_requests|length if pending_requests else 0 }}</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon danger">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ events|length if events else 0 }}</div>
+                    <div class="stat-label">Total Detections</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ high_severity_alerts or 0 }}</div>
+                    <div class="stat-label">High Severity Alerts</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Add Camera Card -->
+        <section class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Add a Network Camera</h2>
+                        <p class="card-subtitle">Connect any RTSP or HTTP camera stream installed at your home</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_camera') }}" method="POST" class="add-form">
+                    <div class="field flex-1">
+                        <label for="cam-name">Camera Name</label>
+                        <input id="cam-name" type="text" name="name" placeholder="e.g. Front Door" required>
+                    </div>
+                    <div class="field flex-1">
+                        <label for="cam-zone">Zone / Location</label>
+                        <input id="cam-zone" type="text" name="zone" list="existingZones" placeholder="e.g. Main Entrance, Backyard" required>
+                        <datalist id="existingZones">
+                            {% if available_zones %}
+                                {% for z in available_zones %}
+                                <option value="{{ z }}">
+                                {% endfor %}
+                            {% else %}
+                                <option value="Main Entrance">
+                                <option value="Backyard Perimeter">
+                                <option value="Garage">
+                            {% endif %}
+                        </datalist>
+                    </div>
+                    <div class="field flex-2">
+                        <label for="cam-url">RTSP / HTTP Stream URL</label>
+                        <input id="cam-url" type="text" name="source" placeholder="rtsp://user:password@ip_address:port/stream" required>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Camera
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section id="cameras-section" class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Live Camera Feeds</h2>
+                        <p class="card-subtitle">Real-time CCTV security monitoring</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                {% if cameras and cameras|length > 0 %}
+                    <div class="camera-grid">
+                        {% for cam in cameras %}
+                            <div class="cam-card">
+                                <div class="cam-header">
+                                    <div class="cam-name-row">
+                                        <span class="cam-status-dot"></span>
+                                        <span class="cam-name">{{ cam.name or cam.camera_name or ('Camera #' ~ cam.id) }}</span>
+                                    </div>
+                                    <div class="cam-actions">
+                                        <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;">
+                                            <button type="submit" class="btn-remove">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                <div class="cam-video">
+                                    <div class="cam-video-badge">
+                                        <span class="live-dot"></span>
+                                        LIVE
+                                    </div>
+                                    <img src="{{ url_for('video_feed', camera_id=cam.id) }}" 
+                                         alt="Camera Stream"
+                                         onerror="this.onerror=null; this.src='https://placehold.co/600x337/0b1735/ffffff?text=Camera+Offline';">
+                                </div>
+                                <div class="cam-footer">
+                                    <span class="cam-meta">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        <span>Active Stream</span>
+                                    </span>
+                                    <span class="cam-meta" style="font-family: var(--font-sans);">ID: CAM-00{{ cam.id }} • {{ cam.location or cam.zone or 'Main Perimeter' }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </div>
+                        <h3 class="empty-title">No Active Camera Feeds</h3>
+                        <p class="empty-body">You do not have any registered camera streams assigned to your account. Request camera access using the form above.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section id="events-section" class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Recent Detection Events</h2>
+                        <p class="card-subtitle">Security log of detected motion and activity</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body" style="padding: 0;">
+                {% if events and events|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Event ID</th>
+                                    <th>Camera</th>
+                                    <th>Event Description</th>
+                                    <th>Timestamp</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% include '_flash_toasts.html' %}
+                                {% for event in events %}
+                                    <tr>
+                                        <td style="font-family: var(--font-mono); font-weight: 600;">#EV-{{ event.id }}</td>
+                                        <td><strong>{{ event.camera_name or ('Camera #' ~ event.camera_id) }}</strong></td>
+                                        <td>{{ event.description or 'Motion detected in zone' }}</td>
+                                        <td style="font-family: var(--font-mono); color: var(--text-muted);">{{ event.timestamp or 'N/A' }}</td>
+                                        <td>
+                                            <span class="badge-type badge-type-motion">
+                                                Motion Detected
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state" style="border: none; border-radius: 0; grid-column: auto;">
+                        <div class="empty-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <h3 class="empty-title">No Recent Events</h3>
+                        <p class="empty-body">There are no recorded security detection events or motion logs for your account at this time.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</div>
+    </footer>
+
+    <!-- Logout Confirmation Modal Overlay - 100% Identical to user_cctv.html -->
+    <div class="logout-modal-overlay" id="logoutModalOverlay">
+        <div class="logout-modal">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 700; color: var(--navy-950); margin-bottom: 8px;">Confirm Logout</h3>
+            <p style="font-size: 15px; color: var(--text-muted);">Are you sure you want to log out of the surveillance system?</p>
+            <div class="logout-modal-actions">
+                <button type="button" class="logout-modal-btn logout-modal-btn-no" onclick="closeLogoutModal()">Cancel</button>
+                <a href="{{ url_for('logout') }}" class="logout-modal-btn logout-modal-btn-yes" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">Yes, Log Out</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logout Confirmation Modal Logic matching user_cctv.html
+        function openLogoutModal() {
+            const overlay = document.getElementById('logoutModalOverlay');
+            if (overlay) {
+                overlay.classList.add('is-open');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeLogoutModal() {
+            const overlay = document.getElementById('logoutModalOverlay');
+            if (overlay) {
+                overlay.classList.remove('is-open');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const logoutOverlay = document.getElementById('logoutModalOverlay');
+                if (logoutOverlay && logoutOverlay.classList.contains('is-open')) {
+                    closeLogoutModal();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
