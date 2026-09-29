@@ -8,7 +8,7 @@ Dockerfile
 last.pt
 yolov8n.pt
 yolo26n.pt
-
+yolo26m.pt
 best.pt
 bite.txt
 main - Copy.py

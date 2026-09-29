@@ -1797,8 +1797,12 @@ def admin_cctv():
 @app.route('/admin/users')
 @admin_required
 def admin_users():
-    users = User.query.order_by(User.id).all()
-    return render_template('admin_users.html', users=users, message=None)
+    include_archived = request.args.get('include_archived') == '1'
+    users_query = User.query
+    if not include_archived:
+        users_query = users_query.filter_by(archived_at=None)
+    users = users_query.order_by(User.id).all()
+    return render_template('admin_users.html', users=users, include_archived=include_archived, message=None)
 
 
 @app.route('/admin/users/create', methods=['POST'])
