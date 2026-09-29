@@ -229,17 +229,6 @@
             transition: background 0.15s ease; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
         }
         .btn-filter:hover { background: var(--navy-800); }
-        .btn-clear {
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            background: var(--surface-white); color: var(--text-secondary);
-            border: 1px solid var(--border-subtle);
-            padding: 10px 20px; border-radius: var(--radius-sm);
-            font-size: 14px; font-weight: 600; font-family: var(--font-sans);
-            cursor: pointer; height: 42px; text-decoration: none;
-            transition: all 0.15s ease;
-        }
-        .btn-clear:hover { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger); }
-
         .table-container { overflow-x: auto; width: 100%; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         thead th {
@@ -422,7 +411,6 @@
                     <input type="date" name="to" value="{{ request.args.get('to', '') }}">
                 </div>
                 <button type="submit" class="btn-filter">Filter</button>
-                <button type="button" class="btn-clear" onclick="if(confirm('Are you sure you want to clear all log data? This action cannot be undone.')) { fetch('{{ url_for('admin_clear_events') }}', { method: 'POST' }).then(() => { window.location.href = '{{ url_for('admin_logs') }}'; }); }">Clear Data</button>
             </div>
         </form>
 

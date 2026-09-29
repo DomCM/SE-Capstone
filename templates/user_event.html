@@ -467,9 +467,9 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 Refresh Log
             </button>
-            <button class="btn-action btn-danger-outline" onclick="openClearAllModal()">
+            <button class="btn-action btn-danger-outline" onclick="openClearPrivateEventsModal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                Clear All Logs
+                Clear Private Events
             </button>
         </div>
     </div>
@@ -623,16 +623,16 @@
 </div>
 
 <!-- Clear All Logs Confirmation Modal -->
-<div class="modal-overlay" id="clearAllModalOverlay">
+<div class="modal-overlay" id="clearPrivateEventsModalOverlay">
     <div class="confirm-modal">
         <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </div>
-        <h3 style="font-size: 18px; font-weight: 700; color: var(--navy-950); margin-bottom: 6px;">Clear Event History</h3>
-        <p style="font-size: 14px; color: var(--text-muted);">Are you sure you want to permanently clear all security events from the log? This action cannot be undone.</p>
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--navy-950); margin-bottom: 6px;">Clear Private Camera Events</h3>
+        <p style="font-size: 14px; color: var(--text-muted);">This permanently clears events from private cameras owned by your account. Public-camera events and audit records will be kept.</p>
         <div class="confirm-actions">
-            <button type="button" class="confirm-btn confirm-btn-no" onclick="closeClearAllModal()">Cancel</button>
-            <button type="button" class="confirm-btn confirm-btn-yes" onclick="executeClearAllEvents()">Clear All Logs</button>
+            <button type="button" class="confirm-btn confirm-btn-no" onclick="closeClearPrivateEventsModal()">Cancel</button>
+            <button type="button" class="confirm-btn confirm-btn-yes" onclick="executeClearPrivateEvents()">Clear Private Events</button>
         </div>
     </div>
 </div>
@@ -751,24 +751,29 @@
         showToast('Selected event record has been deleted.');
     }
 
-    /* Clear All Logs Modal Controls */
-    function openClearAllModal() {
-        document.getElementById('clearAllModalOverlay').classList.add('is-open');
+    /* Private Camera Events Clear Controls */
+    function openClearPrivateEventsModal() {
+        document.getElementById('clearPrivateEventsModalOverlay').classList.add('is-open');
     }
 
-    function closeClearAllModal() {
-        document.getElementById('clearAllModalOverlay').classList.remove('is-open');
+    function closeClearPrivateEventsModal() {
+        document.getElementById('clearPrivateEventsModalOverlay').classList.remove('is-open');
     }
 
-    async function executeClearAllEvents() {
+    async function executeClearPrivateEvents() {
         try {
-            await fetch('/api/clear_all_events', { method: 'POST' });
-        } catch(e) {}
-        const tbody = document.getElementById('eventsTableBody');
-        if (tbody) tbody.innerHTML = '';
-        closeClearAllModal();
-        checkEmptyState();
-        showToast('All security event logs have been cleared.');
+            const response = await fetch('/api/clear_private_events', { method: 'POST' });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Unable to clear private events');
+            (result.cleared_event_ids || []).forEach(eventId => {
+                document.getElementById(`event-row-${eventId}`)?.remove();
+            });
+            closeClearPrivateEventsModal();
+            checkEmptyState();
+            showToast(`${result.cleared_count || 0} private camera event(s) cleared.`);
+        } catch (error) {
+            showToast('Unable to clear private camera events.');
+        }
     }
 
     function showToast(msg) {
@@ -812,9 +817,9 @@
             if (deleteModal && deleteModal.classList.contains('is-open')) {
                 closeDeleteModal();
             }
-            const clearModal = document.getElementById('clearAllModalOverlay');
+            const clearModal = document.getElementById('clearPrivateEventsModalOverlay');
             if (clearModal && clearModal.classList.contains('is-open')) {
-                closeClearAllModal();
+                closeClearPrivateEventsModal();
             }
         }
     });

@@ -2731,17 +2731,33 @@ def delete_event(event_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/clear_all_events', methods=['POST'])
+@app.route('/api/clear_private_events', methods=['POST'])
 @login_required
-def api_clear_all_events():
+def api_clear_private_events():
     try:
-        EventLog.query.filter(
+        private_camera_ids = db.session.query(Camera.id).filter(
+            Camera.user_id == current_user.id,
+            Camera.is_public.is_(False),
+        )
+        private_events = EventLog.query.filter(
             EventLog.user_id == current_user.id,
-            ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
-        ).delete(synchronize_session=False)
+            EventLog.camera_id.in_(private_camera_ids),
+            or_(
+                EventLog.event_type.is_(None),
+                ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
+            ),
+        )
+        cleared_event_ids = [event_id for (event_id,) in private_events.with_entities(EventLog.id).all()]
+        cleared_count = private_events.delete(synchronize_session=False)
         db.session.commit()
-        return jsonify({"success": True, "message": "All security events cleared"})
+        return jsonify({
+            "success": True,
+            "message": "Private camera events cleared",
+            "cleared_count": cleared_count,
+            "cleared_event_ids": cleared_event_ids,
+        })
     except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 # --- INITIALIZATION ---
