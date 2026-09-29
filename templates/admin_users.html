@@ -73,6 +73,8 @@
             font-family: var(--font-sans);
             background: var(--bg-main);
             color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
             min-height: 100vh;
             font-size: 14px;
             line-height: 1.5;
@@ -156,7 +158,7 @@
         }
         .mobile-toggle svg { width: 24px; height: 24px; }
 
-        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+        .main-content { flex: 1; min-width: 0; min-height: 0; height: 100vh; display: flex; flex-direction: column; position: relative; }
 
         .page-header-wrapper {
             background: var(--bg-main);
@@ -175,7 +177,7 @@
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
         .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
 
-        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
+        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
 
         .add-card-compact {
             background: var(--surface-white); border: 1px solid var(--border-subtle);
@@ -232,8 +234,10 @@
         .table-card {
             background: var(--surface-white); border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: visible;
-            display: flex; flex-direction: column; flex: 1;
+            display: flex; flex-direction: column; flex: 1; min-height: 0;
         }
+
+        .table-scroll-region { flex: 1; min-height: 0; overflow: auto; }
 
         table { width: 100%; border-collapse: collapse; }
         thead { background: var(--off-white); }
@@ -282,7 +286,7 @@
             position: absolute; right: 0; top: calc(100% + 4px);
             background: var(--surface-white); border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
-            display: none; flex-direction: column; min-width: 150px; z-index: 50; overflow: hidden;
+            display: none; flex-direction: column; min-width: 150px; max-height: calc(100vh - 16px); z-index: 1200; overflow-y: auto;
             padding: 4px;
         }
         .action-dropdown-menu.open { display: flex; }
@@ -521,7 +525,7 @@
                 </button>
             </div>
 
-            <div style="overflow-x:auto;">
+            <div class="table-scroll-region">
                 <table id="usersTable">
                     <thead>
                         <tr>
@@ -713,23 +717,47 @@
     }
 
     // Actions Dropdown Logic
+    function closeActionDropdowns() {
+        document.querySelectorAll('.action-dropdown-menu').forEach(menu => {
+            menu.classList.remove('open');
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.visibility = '';
+        });
+    }
+
     function toggleActionDropdown(event, button) {
         event.stopPropagation();
         const menu = button.nextElementSibling;
         const isOpen = menu.classList.contains('open');
-        
-        // Close all other open dropdowns first
-        document.querySelectorAll('.action-dropdown-menu').forEach(m => m.classList.remove('open'));
-        
-        if (!isOpen) {
-            menu.classList.add('open');
-        }
+        closeActionDropdowns();
+        if (isOpen) return;
+
+        menu.classList.add('open');
+        menu.style.position = 'fixed';
+        menu.style.top = '0';
+        menu.style.left = '0';
+        menu.style.right = 'auto';
+        menu.style.visibility = 'hidden';
+        const triggerRect = button.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        const top = triggerRect.bottom + menuRect.height + 4 <= window.innerHeight
+            ? triggerRect.bottom + 4
+            : Math.max(8, triggerRect.top - menuRect.height - 4);
+        const left = Math.max(8, Math.min(triggerRect.right - menuRect.width, window.innerWidth - menuRect.width - 8));
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+        menu.style.visibility = '';
     }
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', () => {
-        document.querySelectorAll('.action-dropdown-menu').forEach(m => m.classList.remove('open'));
+        closeActionDropdowns();
     });
+    window.addEventListener('scroll', closeActionDropdowns, true);
+    window.addEventListener('resize', closeActionDropdowns);
 
     function showToast(msg, type = 'success') {
         const container = document.getElementById('toastContainer');

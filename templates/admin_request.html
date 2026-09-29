@@ -73,6 +73,8 @@
             font-family: var(--font-sans);
             background: var(--bg-main);
             color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
             min-height: 100vh;
             font-size: 14px;
             line-height: 1.5;
@@ -170,7 +172,7 @@
         /* ══════════════════════════════════════
            MAIN CONTENT AREA
         ══════════════════════════════════════ */
-        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+        .main-content { flex: 1; min-width: 0; min-height: 0; height: 100vh; display: flex; flex-direction: column; position: relative; }
 
         .page-header-wrapper {
             background: var(--bg-main);
@@ -189,7 +191,7 @@
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
         .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
 
-        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
+        .page-content { padding: 0 28px 40px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 24px; width: 100%; max-width: 1600px; margin: 0 auto; }
 
         /* Stat Grid */
         .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
@@ -217,7 +219,7 @@
         .card {
             background: var(--surface-white); border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden;
-            display: flex; flex-direction: column; width: 100%;
+            display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%;
         }
         .card-header {
             background: var(--surface-white); padding: 20px 24px;
@@ -242,7 +244,7 @@
         .filter-tab.active { background: var(--navy-900); color: #fff; border-color: var(--navy-900); }
 
         /* Table Styling */
-        .table-responsive { width: 100%; overflow-x: auto; }
+        .table-responsive { width: 100%; flex: 1; min-height: 0; overflow: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         thead { background: var(--bg-main); }
         thead th {
@@ -293,7 +295,7 @@
             position: absolute; right: 0; top: calc(100% + 6px);
             background: var(--surface-white); border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md); box-shadow: var(--shadow-md);
-            min-width: 170px; display: none; flex-direction: column; overflow: hidden; z-index: 50;
+            min-width: 170px; max-height: calc(100vh - 16px); display: none; flex-direction: column; overflow-y: auto; z-index: 1200;
         }
         .actions-dropdown-menu.open { display: flex; }
         
@@ -791,20 +793,46 @@
     }
 
     // Actions Menu Toggle
+    function closeActionMenus() {
+        document.querySelectorAll('.actions-dropdown-menu').forEach(menu => {
+            menu.classList.remove('open');
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.visibility = '';
+        });
+    }
+
     function toggleActionMenu(event, menuId) {
         event.stopPropagation();
         const targetMenu = document.getElementById(menuId);
-        document.querySelectorAll('.actions-dropdown-menu').forEach(menu => {
-            if (menu !== targetMenu) menu.classList.remove('open');
-        });
-        if (targetMenu) {
-            targetMenu.classList.toggle('open');
-        }
+        const wasOpen = targetMenu?.classList.contains('open');
+        closeActionMenus();
+        if (!targetMenu || wasOpen) return;
+
+        targetMenu.classList.add('open');
+        targetMenu.style.position = 'fixed';
+        targetMenu.style.top = '0';
+        targetMenu.style.left = '0';
+        targetMenu.style.right = 'auto';
+        targetMenu.style.visibility = 'hidden';
+        const triggerRect = event.currentTarget.getBoundingClientRect();
+        const menuRect = targetMenu.getBoundingClientRect();
+        const top = triggerRect.bottom + menuRect.height + 6 <= window.innerHeight
+            ? triggerRect.bottom + 6
+            : Math.max(8, triggerRect.top - menuRect.height - 6);
+        const left = Math.max(8, Math.min(triggerRect.right - menuRect.width, window.innerWidth - menuRect.width - 8));
+        targetMenu.style.top = `${top}px`;
+        targetMenu.style.left = `${left}px`;
+        targetMenu.style.visibility = '';
     }
 
     document.addEventListener('click', () => {
-        document.querySelectorAll('.actions-dropdown-menu').forEach(menu => menu.classList.remove('open'));
+        closeActionMenus();
     });
+    window.addEventListener('scroll', closeActionMenus, true);
+    window.addEventListener('resize', closeActionMenus);
 
     // Modals Handlers
     function closeModal(modalId) {

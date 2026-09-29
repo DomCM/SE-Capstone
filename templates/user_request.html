@@ -266,11 +266,11 @@
     <div class="nav-inner">
         <a class="nav-brand" href="{{ url_for('index') }}">
             <div class="brand-logo-wrap">
-                <img src="" alt="Logo" onerror="this.style.display='none'">
+                <img src="{{ url_for('static', filename='eblogo.jpg') }}" alt="Logo" onerror="this.style.display='none';">
             </div>
             <div class="brand-text-block">
                 <div class="brand-name">Home Detection Security</div>
-                <div class="brand-sub">Monitoring System</div>
+                <div class="brand-sub">Eusebio Bliss Village 1</div>
             </div>
         </a>
 
@@ -284,7 +284,7 @@
             <li>
                 <a href="{{ url_for('cctv') }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                    Live Monitor
+                    CCTV Monitor
                 </a>
             </li>
             <li>
