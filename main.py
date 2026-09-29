@@ -1291,6 +1291,14 @@ def admin_required(view_func):
     return wrapped
 
 
+@app.context_processor
+def inject_admin_pending_request_count():
+    pending_count = 0
+    if current_user.is_authenticated and is_admin_user(current_user):
+        pending_count = RecordingRequest.query.filter_by(status='pending').count()
+    return {'admin_pending_request_count': pending_count}
+
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -2314,7 +2322,7 @@ def add_camera():
         source=source,
         name=name,
         zone=zone,
-        is_public=is_admin_user(current_user) or request.form.get('is_public') == 'true',
+        is_public=request.form.get('is_public', 'false').lower() == 'true',
     )
     db.session.add(new_cam)
     db.session.commit()
