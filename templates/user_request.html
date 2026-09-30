@@ -205,6 +205,14 @@
         .custom-table tr:last-child td { border-bottom: none; }
         .custom-table tr:hover td { background: var(--off-white); }
 
+        .btn-view-footage {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 8px 12px; border-radius: var(--radius-sm); background: var(--navy-900);
+            color: var(--white); font-size: 12px; font-weight: 600; text-decoration: none;
+            white-space: nowrap; transition: background 0.15s ease;
+        }
+        .btn-view-footage:hover { background: var(--navy-700); }
+
         .empty-state {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 80px 24px; background: var(--white); text-align: center;
@@ -361,9 +369,15 @@
                     </div>
                 </div>
 
-                <div class="field">
-                    <label for="time-range">Time Range</label>
-                    <input id="time-range" type="text" name="time_range" placeholder="For example, 2:00 PM to 3:00 PM" required>
+                <div class="form-row">
+                    <div class="field">
+                        <label for="start-time">Start Time</label>
+                        <input id="start-time" type="time" name="start_time" required>
+                    </div>
+                    <div class="field">
+                        <label for="end-time">End Time</label>
+                        <input id="end-time" type="time" name="end_time" required>
+                    </div>
                 </div>
 
                 <div class="field">
@@ -404,6 +418,7 @@
                         <th>Date Needed</th>
                         <th>Time Range</th>
                         <th>Status</th>
+                        <th>Footage</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -415,11 +430,18 @@
                             <td>{{ recording_request.date_needed }}</td>
                             <td>{{ recording_request.time_range }}</td>
                             <td>{{ recording_request.status|capitalize }}</td>
+                            <td>
+                                {% if recording_request.status == 'fulfilled' and recording_request.video_path %}
+                                <a class="btn-view-footage" href="{{ url_for('view_recording_request', request_id=recording_request.id) }}" target="_blank" rel="noopener">View Footage</a>
+                                {% else %}
+                                <span>Not available yet</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                     <tr>
-                        <td colspan="5" style="padding: 0; background: var(--white);">
+                        <td colspan="6" style="padding: 0; background: var(--white);">
                             <div class="empty-state">
                                 <div class="empty-icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -496,6 +518,22 @@
             if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
         });
     })();
+
+    const startTimeInput = document.getElementById('start-time');
+    const endTimeInput = document.getElementById('end-time');
+
+    function validateRequestTimeRange() {
+        if (!startTimeInput || !endTimeInput) return;
+        endTimeInput.min = startTimeInput.value;
+        endTimeInput.setCustomValidity(
+            startTimeInput.value && endTimeInput.value && endTimeInput.value <= startTimeInput.value
+                ? 'End time must be later than start time.'
+                : ''
+        );
+    }
+
+    startTimeInput?.addEventListener('input', validateRequestTimeRange);
+    endTimeInput?.addEventListener('input', validateRequestTimeRange);
 </script>
 </body>
 </html>

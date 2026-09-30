@@ -1586,28 +1586,42 @@ def index():
 def create_recording_request():
     camera_id = request.form.get('camera_id', type=int)
     date_needed = request.form.get('date_needed', '').strip()
-    time_range = request.form.get('time_range', '').strip()
+    start_time = request.form.get('start_time', '').strip()
+    end_time = request.form.get('end_time', '').strip()
     reason = request.form.get('reason', '').strip()
     camera = Camera.query.filter(
         Camera.id == camera_id,
         or_(Camera.user_id == current_user.id, Camera.is_public.is_(True)),
     ).first()
 
-    if not camera or not date_needed or not time_range or not reason:
-        flash('Camera, date, time range, and reason are required.', 'danger')
-        return redirect(url_for('index'))
+    if not camera or not date_needed or not start_time or not end_time or not reason:
+        flash('Camera, date, start time, end time, and reason are required.', 'danger')
+        return redirect(url_for('user_request'))
 
     try:
         datetime.strptime(date_needed, '%Y-%m-%d')
     except ValueError:
         flash('Please provide a valid request date.', 'danger')
-        return redirect(url_for('index'))
+        return redirect(url_for('user_request'))
+
+    try:
+        parsed_start_time = datetime.strptime(start_time, '%H:%M')
+        parsed_end_time = datetime.strptime(end_time, '%H:%M')
+        if parsed_start_time.strftime('%H:%M') != start_time or parsed_end_time.strftime('%H:%M') != end_time:
+            raise ValueError
+    except ValueError:
+        flash('Please provide valid start and end times.', 'danger')
+        return redirect(url_for('user_request'))
+
+    if parsed_end_time <= parsed_start_time:
+        flash('End time must be later than start time.', 'danger')
+        return redirect(url_for('user_request'))
 
     recording_request = RecordingRequest(
         user_id=current_user.id,
         camera_id=camera.id,
         date_needed=date_needed,
-        time_range=time_range[:100],
+        time_range=f'{start_time} - {end_time}',
         reason=reason[:1000],
     )
     db.session.add(recording_request)
@@ -1623,6 +1637,20 @@ def download_recording_request(request_id):
     if recording_request.status != 'fulfilled' or not recording_request.video_path or not os.path.isfile(recording_request.video_path):
         return 'Recording is not available.', 404
     return send_file(recording_request.video_path, as_attachment=True, download_name=recording_request.video_filename)
+
+
+@app.route('/recording_requests/<int:request_id>/view')
+@login_required
+def view_recording_request(request_id):
+    recording_request = RecordingRequest.query.filter_by(id=request_id, user_id=current_user.id).first_or_404()
+    if recording_request.status != 'fulfilled' or not recording_request.video_path or not os.path.isfile(recording_request.video_path):
+        return 'Recording is not available.', 404
+    return send_file(
+        recording_request.video_path,
+        as_attachment=False,
+        download_name=recording_request.video_filename,
+        conditional=True,
+    )
 
 @app.route('/user_request')
 @login_required
