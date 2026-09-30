@@ -19,6 +19,7 @@ import hashlib
 import secrets
 import gc
 import math
+import re
 import torch
 from html import escape
 from urllib.parse import urlsplit, urlunsplit
@@ -2557,6 +2558,14 @@ def update_profile():
 
     if not username or not email:
         flash('Username and email are required.', 'danger')
+        return redirect(url_for('settings'))
+
+    email_format = re.compile(
+        r"[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
+        r"@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}"
+    )
+    if not email_format.fullmatch(email):
+        flash('Enter a valid email address.', 'danger')
         return redirect(url_for('settings'))
 
     username_taken = User.query.filter(User.username == username, User.id != current_user.id).first()
