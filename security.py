@@ -4,6 +4,7 @@ import os
 import secrets
 import smtplib
 from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import pyotp
@@ -123,13 +124,18 @@ def get_or_create_totp_secret(user):
     return secret
 
 
-def send_security_email(user, subject, body):
+def send_security_email(user, subject, body, html_body=None):
     sender = app.config['SMTP_USERNAME']
     password = app.config['SMTP_PASSWORD']
     if not sender or not password:
         return False
     try:
-        message = MIMEText(body, 'plain')
+        if html_body:
+            message = MIMEMultipart('alternative')
+            message.attach(MIMEText(body, 'plain'))
+            message.attach(MIMEText(html_body, 'html'))
+        else:
+            message = MIMEText(body, 'plain')
         message['From'], message['To'], message['Subject'] = sender, user.email, subject
         with smtplib.SMTP(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
             server.starttls()
@@ -148,6 +154,21 @@ def create_email_otp(user):
                                 expires_at=datetime.utcnow() + timedelta(minutes=3)))
     db.session.commit()
     return code
+
+
+def create_password_reset_token(user):
+    OtpChallenge.query.filter_by(
+        user_id=user.id, purpose='password_reset_link', used_at=None
+    ).update({'used_at': datetime.utcnow()})
+    token = secrets.token_urlsafe(32)
+    db.session.add(OtpChallenge(
+        user_id=user.id,
+        purpose='password_reset_link',
+        code_hash=hashlib.sha256(token.encode()).hexdigest(),
+        expires_at=datetime.utcnow() + timedelta(hours=1),
+    ))
+    db.session.commit()
+    return token
 
 
 def create_login_email_otp(user):

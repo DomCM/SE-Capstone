@@ -69,6 +69,7 @@ app.config['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.environ.get('SMTP_PORT', '587'))
 app.config['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 app.config['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
+app.config['PUBLIC_BASE_URL'] = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -312,7 +313,8 @@ ADMIN_EMAILS = [email.strip().lower() for email in os.environ.get('ADMIN_EMAILS'
 from security import (
     get_user_role, is_admin_user, get_client_ip, record_audit_event,
     get_dashboard_target, encrypt_totp_secret, decrypt_totp_secret,
-    get_or_create_totp_secret, send_security_email, create_email_otp, create_login_email_otp,
+    get_or_create_totp_secret, send_security_email,
+    create_login_email_otp, create_password_reset_token,
     clear_vision_events_for_user,
     ensure_database_schema, create_admin_user,
     AUDIT_EVENT_TYPES,
@@ -1305,27 +1307,53 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         user = User.query.filter_by(email=email).first()
-        if user:
-            code = create_email_otp(user)
+        if user and user.archived_at is None:
+            token = create_password_reset_token(user)
+            reset_path = url_for('reset_password', token=token)
+            public_base_url = app.config.get('PUBLIC_BASE_URL')
+            reset_url = (
+                f'{public_base_url}{reset_path}'
+                if public_base_url
+                else url_for('reset_password', token=token, _external=True)
+            )
             send_security_email(
                 user,
-                'Home Detection Security password reset code',
-                f'Your password reset code is {code}. It expires in 3 minutes.',
+                'Reset your Home Detection Security password',
+                (
+                    'A password reset link was requested for your Home Detection Security account. '
+                    'Use this link within 1 hour to choose a new password:\n\n'
+                    f'{reset_url}\n\n'
+                    'If you did not request this change, ignore this email. Your password will not change.'
+                ),
+                html_body=render_template(
+                    'password_reset_email.html',
+                    username=user.username,
+                    reset_url=reset_url,
+                ),
             )
-        session['recovery_email'] = email
-        return redirect(url_for('verify_otp', purpose='password_reset'))
-    return render_template('forgot_password.html')
+        flash('If an active account matches that email, password reset instructions have been sent.', 'success')
+        return redirect(url_for('forgot_password'))
+    return render_template('password_reset_request.html')
+
+
+def find_password_reset_challenge(token):
+    if not token:
+        return None
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    return OtpChallenge.query.filter_by(
+        purpose='password_reset_link', code_hash=token_hash, used_at=None
+    ).first()
 
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
     purpose = request.args.get('purpose') or session.get('otp_purpose')
-    if purpose not in {'login', 'password_reset'}:
+    if purpose != 'login':
         return redirect(url_for('login'))
     session['otp_purpose'] = purpose
 
     pending_login_user = db.session.get(User, session.get('pending_login_user_id')) if purpose == 'login' else None
-    otp_email = pending_login_user.email if pending_login_user else session.get('recovery_email')
+    otp_email = pending_login_user.email if pending_login_user else None
 
     if request.method == 'POST':
         code = request.form.get('otp', '').strip()
@@ -1335,32 +1363,13 @@ def verify_otp():
                                    email=otp_email,
                                    legacy_otp=app.config.get('LEGACY_OTP', False))
 
-        if purpose == 'login':
-            user = pending_login_user
-            if app.config.get('LEGACY_OTP'):
-                # Legacy path: validate against the user's TOTP secret
-                secret = decrypt_totp_secret(user.totp_secret) if user else None
-                valid = bool(user and user.totp_enabled and secret and pyotp.TOTP(secret).verify(code))
-            else:
-                # Default path: validate against the emailed OtpChallenge
-                challenge = OtpChallenge.query.filter_by(
-                    user_id=user.id if user else 0, purpose='login', used_at=None
-                ).order_by(OtpChallenge.created_at.desc()).first() if user else None
-                valid = bool(
-                    challenge and challenge.expires_at > datetime.utcnow()
-                    and challenge.attempts < 5
-                    and check_password_hash(challenge.code_hash, code)
-                )
-                if challenge:
-                    challenge.attempts += 1
-                    if valid:
-                        challenge.used_at = datetime.utcnow()
-                    db.session.commit()
+        user = pending_login_user
+        if app.config.get('LEGACY_OTP'):
+            secret = decrypt_totp_secret(user.totp_secret) if user else None
+            valid = bool(user and user.totp_enabled and secret and pyotp.TOTP(secret).verify(code))
         else:
-            email = session.get('recovery_email')
-            user = User.query.filter_by(email=email).first() if email else None
             challenge = OtpChallenge.query.filter_by(
-                user_id=user.id if user else 0, purpose='password_reset', used_at=None
+                user_id=user.id if user else 0, purpose='login', used_at=None
             ).order_by(OtpChallenge.created_at.desc()).first() if user else None
             valid = bool(
                 challenge and challenge.expires_at > datetime.utcnow()
@@ -1374,16 +1383,12 @@ def verify_otp():
                 db.session.commit()
 
         if valid and user and user.archived_at is None:
-            if purpose == 'login':
-                user.last_login = datetime.utcnow()
-                db.session.commit()
-                login_user(user)
-                session.pop('pending_login_user_id', None)
-                session.pop('otp_purpose', None)
-                return redirect(url_for(get_dashboard_target(user)))
-            session['password_reset_user_id'] = user.id
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            login_user(user)
+            session.pop('pending_login_user_id', None)
             session.pop('otp_purpose', None)
-            return redirect(url_for('reset_password'))
+            return redirect(url_for(get_dashboard_target(user)))
 
         flash('That verification code is invalid or expired.', 'danger')
 
@@ -1394,20 +1399,26 @@ def verify_otp():
 
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
-    user = db.session.get(User, session.get('password_reset_user_id'))
-    if not user:
+    token = (request.values.get('token') or '').strip()
+    challenge = find_password_reset_challenge(token)
+    if not challenge or challenge.expires_at <= datetime.utcnow():
+        flash('That password reset link is invalid or expired. Request a new one.', 'danger')
+        return redirect(url_for('forgot_password'))
+    user = db.session.get(User, challenge.user_id)
+    if not user or user.archived_at is not None:
+        flash('That password reset link is invalid or expired. Request a new one.', 'danger')
         return redirect(url_for('forgot_password'))
     if request.method == 'POST':
         password = request.form.get('password', '')
         confirmation = request.form.get('confirm_password', '')
         if len(password) < 12 or password != confirmation:
             flash('Use a strong password and make sure both fields match.', 'danger')
-            return render_template('reset_password.html')
+            return render_template('reset_password.html', token=token)
         user.password = generate_password_hash(password)
+        challenge.used_at = datetime.utcnow()
         db.session.commit()
-        session.pop('password_reset_user_id', None)
         return redirect(url_for('password_success'))
-    return render_template('reset_password.html')
+    return render_template('reset_password.html', token=token)
 
 
 @app.route('/password-success')
