@@ -264,6 +264,7 @@
         .badge-active { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
         .badge-banned { background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger-border); }
         .badge-archived { background: var(--amber-bg); color: #92400e; border: 1px solid var(--amber-border); }
+        .badge-pending { background: var(--accent-blue-bg); color: var(--accent-blue); border: 1px solid #bfdbfe; }
         tbody tr.archived-row { background: #fffbeb; }
         tbody tr.archived-row:hover { background: #fef3c7; }
 
@@ -556,6 +557,8 @@
                                 <td data-label="Status">
                                     {% if user.archived_at %}
                                         <span class="status-badge badge badge-archived">Archived</span>
+                                    {% elif not user.is_approved %}
+                                        <span class="status-badge badge badge-pending">Awaiting approval</span>
                                     {% else %}
                                         <span class="status-badge badge {{ 'badge-banned' if user.banned else 'badge-active' }}">
                                             {{ 'Banned' if user.banned else 'Active' }}
@@ -575,6 +578,15 @@
                                             <button type="button" class="action-dropdown-item" data-user-id="{{ user.id }}" data-action="restore">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><path d="M12 7v5l3 2"/></svg>
                                                 Restore
+                                            </button>
+                                            {% elif not user.is_approved %}
+                                            <button type="button" class="action-dropdown-item" data-user-id="{{ user.id }}" data-action="approve">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                                Approve
+                                            </button>
+                                            <button type="button" class="action-dropdown-item danger" data-user-id="{{ user.id }}" data-user-name="{{ user.username }}" data-action="delete">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                                Archive
                                             </button>
                                             {% else %}
                                             <button type="button" class="action-dropdown-item btn-toggle-role" data-user-id="{{ user.id }}" data-action="role">
@@ -858,6 +870,19 @@
         });
     }
 
+    function approveUser(button) {
+        fetch(`/admin/users/${button.dataset.userId}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})
+        }).then(response => {
+            if (!response.ok) throw new Error('Failed to approve user');
+            window.location.reload();
+        }).catch(() => {
+            showToast('Unable to approve user.', 'danger');
+        });
+    }
+
     document.addEventListener('click', function(event) {
         const button = event.target.closest('[data-action]');
         if (!button) return;
@@ -873,6 +898,8 @@
             promptDeleteUser(userId, userName);
         } else if (action === 'restore') {
             restoreUser(button);
+        } else if (action === 'approve') {
+            approveUser(button);
         }
     });
 

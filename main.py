@@ -1289,7 +1289,7 @@ def verify_otp():
                     challenge.used_at = datetime.utcnow()
                 db.session.commit()
 
-        if valid and user and user.archived_at is None:
+        if valid and user and user.archived_at is None and user.is_approved:
             user.last_login = datetime.utcnow()
             db.session.commit()
             login_user(user)
@@ -1387,6 +1387,7 @@ def register():
             email=email,
             password=generate_password_hash(password),
             role='user',
+            is_approved=False,
             totp_secret=(encrypt_totp_secret(pyotp.random_base32())
                          if app.config.get('LEGACY_OTP') else None),
         )
@@ -1402,10 +1403,8 @@ def register():
 
         record_audit_event(new_user.id, 'create', f"Created account for {new_user.username}", 'Auth', get_client_ip())
 
-        login_user(new_user)
-        if app.config.get('LEGACY_OTP'):
-            return redirect(url_for('security_setup'))
-        return redirect(url_for(get_dashboard_target(new_user)))
+        flash('Your account was created and is awaiting admin approval. You can sign in after it has been approved.', 'success')
+        return redirect(url_for('login'))
     
     return render_template('register.html')
 
@@ -1421,6 +1420,9 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and user.archived_at is None and check_password_hash(user.password, password):
+            if not user.is_approved:
+                flash('Your account is awaiting admin approval.', 'danger')
+                return redirect(url_for('login'))
             if not app.config.get('LEGACY_OTP'):
                 session['pending_login_user_id'] = user.id
                 session['otp_purpose'] = 'login'
@@ -1814,6 +1816,24 @@ def admin_toggle_role(user_id):
     db.session.commit()
     record_audit_event(current_user.id, 'settings', f"Updated role for {user.username} to {new_role}", 'Admin', get_client_ip())
     flash(f'Role updated for {user.username}.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/approve', methods=['POST'])
+@admin_required
+def admin_approve_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.archived_at is not None:
+        flash('Archived accounts cannot be approved.', 'danger')
+        return redirect(url_for('admin_users'))
+    if user.is_approved:
+        flash(f'Account for {user.username} is already approved.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user.is_approved = True
+    db.session.commit()
+    record_audit_event(current_user.id, 'approve', f"Approved account for {user.username}", 'Admin', get_client_ip())
+    flash(f'Account for {user.username} approved.', 'success')
     return redirect(url_for('admin_users'))
 
 

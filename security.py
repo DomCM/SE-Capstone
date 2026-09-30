@@ -196,6 +196,7 @@ def ensure_database_schema():
         user_columns = {column['name'] for column in inspector.get_columns('user')}
         for name, definition in [
             ('role', "VARCHAR(20) NOT NULL DEFAULT 'user'"),
+            ('is_approved', 'BOOLEAN NOT NULL DEFAULT 1'),
             ('totp_secret', 'VARCHAR(500)'),
             ('totp_enabled', 'BOOLEAN NOT NULL DEFAULT 0'),
             ('archived_at', 'DATETIME'),
