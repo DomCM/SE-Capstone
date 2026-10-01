@@ -327,6 +327,19 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def safe_face_name(name):
+    safe_name = secure_filename((name or '').strip())
+    return safe_name[:100] if safe_name else ''
+
+
+def user_faces_directory(user_id):
+    return os.path.join(BASE_RECORDINGS_DIR, str(user_id), "known_faces")
+
+
+def invalidate_face_cache(user_id):
+    face_cache.pop(user_id, None)
+
+
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in VIDEO_EXTENSIONS
 
@@ -336,7 +349,7 @@ def get_user_face_data(user_id):
     if user_id in face_cache:
         return face_cache[user_id]
     
-    user_faces_dir = os.path.join(BASE_RECORDINGS_DIR, str(user_id), "known_faces")
+    user_faces_dir = user_faces_directory(user_id)
     known_encodings = []
     known_names = []
     
@@ -2496,10 +2509,25 @@ def gen_frames(user_id, camera):
 def settings():
     user_settings = Settings.query.filter_by(user_id=current_user.id).first()
     
-    user_faces_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "known_faces")
+    user_faces_dir = user_faces_directory(current_user.id)
     known_faces_list = []
+    known_face_details = []
     if os.path.exists(user_faces_dir):
-        known_faces_list = [name for name in os.listdir(user_faces_dir) if os.path.isdir(os.path.join(user_faces_dir, name))]
+        known_faces_list = sorted(
+            name for name in os.listdir(user_faces_dir)
+            if os.path.isdir(os.path.join(user_faces_dir, name))
+        )
+        known_face_details = [
+            {
+                'name': name,
+                'images': sorted(
+                    filename for filename in os.listdir(os.path.join(user_faces_dir, name))
+                    if allowed_file(filename)
+                    and os.path.isfile(os.path.join(user_faces_dir, name, filename))
+                ),
+            }
+            for name in known_faces_list
+        ]
 
     if request.method == 'POST':
         user_settings.yolo_enabled = 'yolo_enabled' in request.form
@@ -2525,7 +2553,12 @@ def settings():
         
         return redirect(url_for('settings'))
         
-    return render_template('user_system.html', settings=user_settings, known_faces=known_faces_list)
+    return render_template(
+        'user_system.html',
+        settings=user_settings,
+        known_faces=known_faces_list,
+        known_face_details=known_face_details,
+    )
 
 
 @app.route('/update_profile', methods=['POST'])
@@ -2561,57 +2594,161 @@ def update_profile():
 @app.route('/add_face', methods=['POST'])
 @login_required
 def add_face():
-    if 'file' not in request.files:
-        flash('No file part', 'danger')
+    return store_face_uploads(request.form.get('name'), request.files.getlist('file'))
+
+
+@app.route('/add_face_photo/<name>', methods=['POST'])
+@login_required
+def add_face_photo(name):
+    return store_face_uploads(name, request.files.getlist('file'))
+
+
+def store_face_uploads(name, uploads):
+    safe_name = safe_face_name(name)
+    if not safe_name:
+        flash('Enter a valid person name.', 'danger')
         return redirect(url_for('settings'))
-    
-    file = request.files['file']
-    name = request.form.get('name')
-    
-    if file.filename == '' or not name:
-        flash('No selected file or name missing', 'danger')
+
+    files = [upload for upload in uploads if upload and upload.filename]
+    if not files:
+        flash('Select at least one face photo to upload.', 'danger')
         return redirect(url_for('settings'))
-        
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        safe_name = secure_filename(name)
-        
-        save_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "known_faces", safe_name)
+
+    if any(not allowed_file(upload.filename) for upload in files):
+        flash('Invalid file type. Allowed: png, jpg, jpeg.', 'danger')
+        return redirect(url_for('settings'))
+
+    save_dir = os.path.join(user_faces_directory(current_user.id), safe_name)
+    saved_paths = []
+
+    def remove_saved_files():
+        for saved_path in saved_paths:
+            try:
+                os.remove(saved_path)
+            except FileNotFoundError:
+                continue
+            except OSError:
+                app.logger.exception('Unable to roll back uploaded face photo %s', saved_path)
+
+    try:
         os.makedirs(save_dir, exist_ok=True)
-        
-        file.save(os.path.join(save_dir, filename))
-        
-        global face_cache
-        if current_user.id in face_cache:
-            del face_cache[current_user.id]
-            
-        flash(f'Face for "{safe_name}" added successfully.', 'success')
-    else:
-        flash('Invalid file type. Allowed: png, jpg, jpeg', 'danger')
-        
+        for upload in files:
+            requested_filename = secure_filename(upload.filename)
+            if not requested_filename or not allowed_file(requested_filename):
+                raise ValueError('A selected filename is invalid.')
+
+            stem, extension = os.path.splitext(requested_filename)
+            filename = requested_filename
+            suffix = 1
+            while os.path.exists(os.path.join(save_dir, filename)):
+                filename = f'{stem}-{suffix}{extension}'
+                suffix += 1
+
+            destination = os.path.join(save_dir, filename)
+            upload.save(destination)
+            saved_paths.append(destination)
+    except ValueError as exc:
+        remove_saved_files()
+        flash(str(exc), 'danger')
+        return redirect(url_for('settings'))
+    except OSError:
+        app.logger.exception('Unable to save uploaded face photos for user %s', current_user.id)
+        remove_saved_files()
+        flash('Unable to save the selected face photos.', 'danger')
+        return redirect(url_for('settings'))
+
+    invalidate_face_cache(current_user.id)
+    flash(f'{len(saved_paths)} photo(s) added for "{safe_name}".', 'success')
     return redirect(url_for('settings'))
 
 @app.route('/delete_face/<name>', methods=['POST'])
 @login_required
 def delete_face(name):
-    safe_name = secure_filename(name)
-    face_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "known_faces", safe_name)
+    safe_name = safe_face_name(name)
+    if not safe_name:
+        flash('Face not found.', 'danger')
+        return redirect(url_for('settings'))
+
+    face_dir = os.path.join(user_faces_directory(current_user.id), safe_name)
     
-    if os.path.exists(face_dir):
+    if os.path.isdir(face_dir):
         try:
             shutil.rmtree(face_dir)
-            
-            global face_cache
-            if current_user.id in face_cache:
-                del face_cache[current_user.id]
-                
+            invalidate_face_cache(current_user.id)
             flash(f'Face "{safe_name}" deleted.', 'success')
-        except Exception as e:
-            flash(f'Error deleting face: {e}', 'danger')
+        except OSError:
+            app.logger.exception('Unable to delete face directory for user %s', current_user.id)
+            flash('Unable to delete this face profile.', 'danger')
     else:
         flash('Face not found.', 'danger')
         
     return redirect(url_for('settings'))
+
+
+@app.route('/delete_face_image/<name>/<filename>', methods=['POST'])
+@login_required
+def delete_face_image(name, filename):
+    safe_name = safe_face_name(name)
+    safe_filename = secure_filename(filename)
+    image_path = os.path.join(user_faces_directory(current_user.id), safe_name, safe_filename)
+
+    if not safe_name or not safe_filename or not allowed_file(safe_filename) or not os.path.isfile(image_path):
+        flash('Face photo not found.', 'danger')
+        return redirect(url_for('settings'))
+
+    try:
+        os.remove(image_path)
+        invalidate_face_cache(current_user.id)
+        flash(f'Photo "{safe_filename}" removed from "{safe_name}".', 'success')
+    except OSError:
+        app.logger.exception('Unable to delete face photo for user %s', current_user.id)
+        flash('Unable to delete this face photo.', 'danger')
+
+    return redirect(url_for('settings'))
+
+
+@app.route('/rename_face/<name>', methods=['POST'])
+@login_required
+def rename_face(name):
+    old_name = safe_face_name(name)
+    new_name = safe_face_name(request.form.get('new_name'))
+    if not old_name or not new_name:
+        flash('Enter a valid person name.', 'danger')
+        return redirect(url_for('settings'))
+
+    old_dir = os.path.join(user_faces_directory(current_user.id), old_name)
+    new_dir = os.path.join(user_faces_directory(current_user.id), new_name)
+    if not os.path.isdir(old_dir):
+        flash('Face not found.', 'danger')
+        return redirect(url_for('settings'))
+    if old_name == new_name:
+        flash('The person name is unchanged.', 'success')
+        return redirect(url_for('settings'))
+    if os.path.exists(new_dir):
+        flash('A person with that name already exists.', 'danger')
+        return redirect(url_for('settings'))
+
+    try:
+        os.rename(old_dir, new_dir)
+        invalidate_face_cache(current_user.id)
+        flash(f'Face profile renamed to "{new_name}".', 'success')
+    except OSError:
+        app.logger.exception('Unable to rename face profile for user %s', current_user.id)
+        flash('Unable to rename this face profile.', 'danger')
+
+    return redirect(url_for('settings'))
+
+
+@app.route('/known_face_image/<name>/<filename>')
+@login_required
+def face_image(name, filename):
+    safe_name = safe_face_name(name)
+    safe_filename = secure_filename(filename)
+    if not safe_name or not safe_filename or not allowed_file(safe_filename):
+        return '', 404
+
+    face_dir = os.path.join(user_faces_directory(current_user.id), safe_name)
+    return send_from_directory(face_dir, safe_filename)
 
 
 @app.route('/toggle_recording/<int:camera_id>', methods=['POST'])

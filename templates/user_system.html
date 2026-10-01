@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings — Home Detection Security</title>
-    <!-- Using only Inter font for a clean, modern, and readable look -->
+    <!-- Using Inter font for a clean, modern look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     
     <style>
@@ -17,12 +17,13 @@
         }
 
         :root {
-            /* Premium Navy & Neutral Palette matching Dashboard */
+            /* Premium Navy & Neutral Palette */
             --navy-950:  #060d1f;
             --navy-900:  #0b1735;
             --navy-800:  #0d1b3e;
             --navy-700:  #152352;
             --navy-600:  #1e3170;
+            --navy-100:  #e0e7ff;
             --navy-50:   #f0f4fd;
             --white:     #ffffff;
             --off-white: #f8fafc;
@@ -40,7 +41,7 @@
             --amber:     #d97706;
             --amber-bg:  #fffbeb;
             
-            /* Radii & Soft Shadows */
+            /* Radii & Shadows */
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 20px;
@@ -121,23 +122,6 @@
         .page-title { font-size: 28px; font-weight: 800; color: var(--navy-950); letter-spacing: -0.02em; line-height: 1.2; }
         .page-subtitle { font-size: 15px; color: var(--text-muted); margin-top: 6px; }
 
-        .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 8px 16px; border-radius: 999px;
-            font-size: 13px; font-weight: 600;
-        }
-        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid #bbf7d0; }
-
-        .flash {
-            display: flex; align-items: center; gap: 12px;
-            padding: 16px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500;
-            box-shadow: var(--shadow-sm); margin-bottom: -16px; 
-        }
-        .flash svg { width: 20px; height: 20px; flex-shrink: 0; }
-        .flash-danger  { background: var(--danger-bg);  border: 1px solid #fecaca; color: var(--danger); }
-        .flash-success { background: var(--success-bg); border: 1px solid #bbf7d0; color: var(--success); }
-
         .settings-content { max-width: 860px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 32px; }
 
         .card {
@@ -173,7 +157,7 @@
             outline: none; transition: all 0.2s ease; width: 100%;
         }
         .field input:focus, .field select:focus, .field textarea:focus {
-            border-color: var(--navy-400); box-shadow: 0 0 0 4px var(--navy-50); background: var(--white);
+            border-color: var(--navy-600); box-shadow: 0 0 0 4px var(--navy-50); background: var(--white);
         }
         .field input:disabled { background: var(--off-white); color: var(--text-muted); cursor: not-allowed; border-color: var(--border); }
 
@@ -212,23 +196,147 @@
         }
         .btn-secondary:hover { background: var(--off-white); border-color: var(--navy-200); }
 
-        .custom-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-        .custom-table th {
-            background: var(--off-white); color: var(--text-mid); font-weight: 600;
-            padding: 16px 32px; border-bottom: 1px solid var(--border); white-space: nowrap;
-        }
-        .custom-table td {
-            padding: 16px 32px; border-bottom: 1px solid var(--border); color: var(--text-dark); vertical-align: middle;
-        }
-        .custom-table tr:last-child td { border-bottom: none; }
-        .custom-table tr:hover td { background: var(--off-white); }
-
-        .btn-remove {
+        .btn-danger-ghost {
             display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
             background: transparent; border: none; color: var(--text-muted);
-            padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s ease;
+            padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s ease;
         }
-        .btn-remove:hover { background: var(--danger-bg); color: var(--danger); }
+        .btn-danger-ghost:hover { background: var(--danger-bg); color: var(--danger); }
+
+        /* Granular Face Cards Styling */
+        .person-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .person-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: var(--shadow-sm);
+        }
+        .person-header {
+            padding: 16px 20px;
+            background: var(--off-white);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .person-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .person-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--navy-100);
+            color: var(--navy-800);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .person-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .person-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--navy-950);
+        }
+        .photo-count-badge {
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--navy-50);
+            color: var(--navy-700);
+            border: 1px solid #c7d2fe;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+        .person-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Image Grid */
+        .gallery-grid {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 16px;
+        }
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--navy-50);
+            group: hover;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+        .gallery-item-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .gallery-item:hover .gallery-item-overlay {
+            opacity: 1;
+        }
+        .btn-delete-photo {
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .btn-delete-photo:hover {
+            background: #b91c1c;
+            transform: scale(1.1);
+        }
+
+        /* Add Photo inline block inside card */
+        .add-photo-drawer {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+        .add-photo-drawer.is-open {
+            display: block;
+        }
 
         /* Empty State */
         .empty-state {
@@ -248,6 +356,7 @@
             text-align: center; font-size: 13px; margin-top: auto;
         }
 
+        /* Modal styling */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10000;
@@ -255,7 +364,7 @@
         }
         .modal-overlay.is-open { opacity: 1; visibility: visible; }
         .modal-box {
-            width: 100%; max-width: 400px; background: var(--white); border-radius: var(--radius-lg);
+            width: 100%; max-width: 420px; background: var(--white); border-radius: var(--radius-lg);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); padding: 32px; text-align: center;
             transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -268,11 +377,11 @@
         .modal-icon-wrap.info { background: var(--navy-50); color: var(--navy-700); }
         
         .modal-title { font-size: 20px; font-weight: 700; color: var(--navy-950); margin-bottom: 8px; }
-        .modal-desc { font-size: 15px; color: var(--text-muted); }
+        .modal-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
         
         .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
         .btn-modal {
-            flex: 1; padding: 12px 20px; border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
+            flex: 1; padding: 12px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600;
             cursor: pointer; border: none; transition: all 0.2s ease;
         }
         .btn-modal-cancel { background: var(--background); color: var(--text-dark); border: 1px solid var(--border); }
@@ -290,7 +399,7 @@
         @media (max-width: 768px) {
             .form-row { flex-direction: column; gap: 0; }
             .page-header { flex-direction: column; align-items: flex-start; }
-            .header-right { width: 100%; justify-content: space-between; }
+            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
         }
     </style>
 </head>
@@ -355,8 +464,9 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">System Settings</h1>
-            <p class="page-subtitle">Configure user profile details, detection thresholds, and notification alerts.</p>
+            <p class="page-subtitle">Configure user profile details, detection thresholds, and facial database.</p>
         </div>
+    </div>
 
     <div class="settings-content">
 
@@ -403,7 +513,6 @@
                 <script>
                     const emailInput = document.getElementById('prof_email');
                     const emailError = document.getElementById('prof_email_error');
-                                        
                     let hasInteracted = false;
 
                     function validateProfileEmail() {
@@ -414,10 +523,7 @@
                         emailInput.style.borderColor = hasFormatError ? 'var(--danger)' : '';
                     }
 
-                    emailInput.addEventListener('input', () => {
-                        validateProfileEmail();
-                    });
-
+                    emailInput.addEventListener('input', validateProfileEmail);
                     emailInput.addEventListener('blur', () => {
                         hasInteracted = true;
                         validateProfileEmail();
@@ -442,7 +548,6 @@
             
             <div class="card-body">
                 <form method="POST" id="settingsForm">
-                    <!-- Toggles -->
                     <div class="toggle-row">
                         <div class="toggle-info">
                             <div class="toggle-label">Fire & Smoke Detection</div>
@@ -484,14 +589,11 @@
                     <div class="field" style="margin-bottom: 20px;">
                         <label for="critical_email_cooldown_minutes">Minimum Time Between Critical Emails (minutes)</label>
                         <input type="number" name="critical_email_cooldown_minutes" id="critical_email_cooldown_minutes" value="{{ settings.critical_email_cooldown_minutes or 15 }}" min="1" max="1440">
-                        <p class="field-sub">Repeated detections during this window are logged but do not send another email. The cooldown is shared across your cameras.</p>
                     </div>
 
-                    <!-- Number & Sliders -->
                     <div class="field">
                         <label>Frame Processing Interval</label>
                         <input type="number" name="frame_process_interval" value="{{ settings.frame_process_interval or 3 }}" min="1" max="30">
-                        <p class="field-sub">Process every N-th frame (e.g., 3 = every third frame). Higher values improve performance but slightly delay detection.</p>
                     </div>
 
                     <div class="field" style="margin-top: 24px;">
@@ -502,7 +604,6 @@
                                 oninput="document.getElementById('object-val').innerText = parseFloat(this.value).toFixed(2)">
                             <span id="object-val" class="range-val">{{ settings.object_detection_confidence or 0.5 }}</span>
                         </div>
-                        <p class="field-sub">Lower values detect more objects but increase false alarms. Higher values are stricter.</p>
                     </div>
 
                     <div class="field" style="margin-top: 24px;">
@@ -513,7 +614,6 @@
                                 oninput="document.getElementById('face-val').innerText = parseFloat(this.value).toFixed(2)">
                             <span id="face-val" class="range-val">{{ settings.face_recognition_confidence or 0.6 }}</span>
                         </div>
-                        <p class="field-sub">Lower values match faces more easily. Higher values require a near-perfect match.</p>
                     </div>
 
                     <button type="submit" class="btn-primary">
@@ -523,7 +623,7 @@
             </div>
         </div>
 
-        <!-- 3. Manage Known Faces -->
+        <!-- 3. Granular Known Faces Database -->
         <div class="card">
             <div class="card-header">
                 <div class="card-header-main">
@@ -532,78 +632,116 @@
                     </div>
                     <div>
                         <div class="card-header-text">Known Faces Database</div>
-                        <div class="card-header-sub">Add trusted individuals so the system recognizes them as safe.</div>
+                        <div class="card-header-sub">Manage saved individuals and control specific training photos per person.</div>
                     </div>
                 </div>
             </div>
 
             <div class="card-body">
-                <!-- Add form -->
-                <form action="{{ url_for('add_face') }}" method="POST" enctype="multipart/form-data" style="margin-bottom: 32px;">
-                    <label style="font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 12px; display: block;">Add New Person</label>
+                <!-- Global Add New Person form -->
+                <form action="{{ url_for('add_face') }}" method="POST" enctype="multipart/form-data" style="margin-bottom: 32px; background: var(--off-white); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                    <label style="font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 12px; display: block;">Register New Person</label>
                     <div class="form-row" style="align-items: flex-end;">
                         <div class="field" style="margin-bottom: 0;">
                             <label>Full Name</label>
                             <input type="text" name="name" placeholder="e.g. John Doe" required>
                         </div>
                         <div class="field" style="margin-bottom: 0;">
-                            <label>Face Photo (JPG/PNG)</label>
-                            <input type="file" name="file" accept=".jpg,.jpeg,.png" required style="padding: 9px 12px;">
+                            <label>Initial Face Photo(s)</label>
+                            <input type="file" name="file" accept=".jpg,.jpeg,.png" multiple required style="padding: 9px 12px;">
                         </div>
                         <div style="flex-shrink: 0;">
                             <button type="submit" class="btn-primary" style="margin-top: 0; width: auto;">
-                                Upload Photo
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Add Person
                             </button>
                         </div>
                     </div>
                 </form>
 
-                <!-- Faces List -->
-                <label style="font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 12px; display: block;">Currently Recognized People</label>
-                
-                <div style="border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;">
-                    <table class="custom-table">
-                        <thead style="display: none;">
-                            <tr>
-                                <th>Name</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if known_faces %}
-                                {% for name in known_faces %}
-                                <tr>
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 12px;">
-                                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--navy-100); color: var(--navy-800); display: flex; align-items: center; justify-content: center; font-weight: 700;">
-                                                {{ name[0] | upper }}
-                                            </div>
-                                            <span style="font-weight: 500;">{{ name }}</span>
-                                        </div>
-                                    </td>
-                                    <td style="text-align: right; width: 100px;">
-                                        <form action="{{ url_for('delete_face', name=name) }}" method="POST" onsubmit="return confirm('Delete facial data for {{ name }}?');" style="margin:0;">
-                                            <button type="submit" class="btn-remove">Remove</button>
-                                        </form>
-                                    </td>
-                                </tr>
+                <!-- Currently Recognized People Cards Grid -->
+                <label style="font-size: 14px; font-weight: 700; color: var(--navy-900); margin-bottom: 16px; display: block;">Recognized Individuals & Photo Datasets</label>
+
+                {% if known_face_details %}
+                    {% for person in known_face_details %}
+                    {% set person_name = person.name %}
+                    {% set person_images = person.images %}
+
+                    <div class="person-card">
+                        <!-- Card Header -->
+                        <div class="person-header">
+                            <div class="person-info">
+                                <div class="person-avatar">
+                                    {{ person_name[0] | upper }}
+                                </div>
+                                <div class="person-title-wrap">
+                                    <span class="person-name">{{ person_name }}</span>
+                                    <span class="photo-count-badge">
+                                        {{ person_images | length }} photo(s)
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="person-actions">
+                                <!-- Rename Action -->
+                                <button type="button" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="openRenameModal('{{ person_name }}')">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    Rename
+                                </button>
+                                <!-- Toggle Add Photo Drawer -->
+                                <button type="button" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="toggleAddPhotoDrawer('{{ loop.index }}')">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    Add Photo
+                                </button>
+                                <!-- Delete Person Action -->
+                                <button type="button" class="btn-danger-ghost" style="padding: 6px 12px; font-size: 12px;" onclick="openDeletePersonModal('{{ person_name }}')">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Expandable Drawer to Add Photos to this specific person -->
+                        <div class="add-photo-drawer" id="drawer-{{ loop.index }}">
+                            <form action="{{ url_for('add_face_photo', name=person_name) }}" method="POST" enctype="multipart/form-data">
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <input type="file" name="file" accept=".jpg,.jpeg,.png" multiple required style="flex: 1; padding: 8px 12px; background: white; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                                    <button type="submit" class="btn-primary" style="margin-top: 0; width: auto; height: 38px;">
+                                        Upload
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Granular Photo Thumbnails -->
+                        <div class="gallery-grid">
+                            {% if person_images %}
+                                {% for img in person_images %}
+                                <div class="gallery-item">
+                                    <img src="{{ url_for('face_image', name=person_name, filename=img) }}" alt="Face photo for {{ person_name }}">
+                                    <div class="gallery-item-overlay">
+                                        <button type="button" class="btn-delete-photo" title="Remove this photo" onclick="confirmDeleteImage('{{ person_name }}', '{{ img }}')">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
                                 {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="2" style="padding: 0; background: var(--white);">
-                                        <div class="empty-state">
-                                            <div class="empty-icon">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                            </div>
-                                            <p class="empty-title">No faces added</p>
-                                            <p class="empty-body">Upload a photo using the form above to add trusted people to your system.</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <div class="field-sub">
+                                    No photos are currently stored for this person.
+                                </div>
                             {% endif %}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="border: 1px solid var(--border); border-radius: var(--radius-md);">
+                        <div class="empty-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <p class="empty-title">No faces registered</p>
+                        <p class="empty-body">Register a new person using the form above to train your detection system.</p>
+                    </div>
+                {% endif %}
 
             </div>
         </div>
@@ -615,6 +753,60 @@
     <div>&copy; 2026 Home Detection Security Systems Inc. All rights reserved.</div>
 </footer>
 
+<!-- Modal: Delete Single Image -->
+<div class="modal-overlay" id="deleteImageModal">
+    <div class="modal-box">
+        <div class="modal-icon-wrap danger">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </div>
+        <h3 class="modal-title">Delete Image?</h3>
+        <p class="modal-desc" id="deleteImageModalDesc">Are you sure you want to remove this facial image from the training dataset?</p>
+        <form id="deleteImageForm" method="POST" action="">
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal('deleteImageModal')">Cancel</button>
+                <button type="submit" class="btn-modal btn-modal-danger">Remove Image</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Delete Person Entirely -->
+<div class="modal-overlay" id="deletePersonModal">
+    <div class="modal-box">
+        <div class="modal-icon-wrap danger">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+        </div>
+        <h3 class="modal-title">Remove Person Profile?</h3>
+        <p class="modal-desc" id="deletePersonModalDesc">This will delete all facial recognition samples for this person.</p>
+        <form id="deletePersonForm" method="POST" action="">
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal('deletePersonModal')">Cancel</button>
+                <button type="submit" class="btn-modal btn-modal-danger">Delete Person</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Rename Person -->
+<div class="modal-overlay" id="renamePersonModal">
+    <div class="modal-box">
+        <div class="modal-icon-wrap info">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <h3 class="modal-title">Rename Person</h3>
+        <form id="renamePersonForm" method="POST" action="">
+            <div class="field" style="text-align: left; margin-top: 16px;">
+                <label>New Name</label>
+                <input type="text" id="renameInput" name="new_name" required placeholder="e.g. John Smith">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal('renamePersonModal')">Cancel</button>
+                <button type="submit" class="btn-modal btn-modal-confirm">Save Name</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Profile Save Confirmation Modal -->
 <div class="modal-overlay" id="saveProfileModal">
     <div class="modal-box">
@@ -622,15 +814,15 @@
             <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         </div>
         <h3 class="modal-title">Save Profile Changes?</h3>
-        <p class="modal-desc">Are you sure you want to save these profile changes? This will update your personal details in the system.</p>
+        <p class="modal-desc">Are you sure you want to save these profile changes?</p>
         <div class="modal-actions">
-            <button type="button" class="btn-modal btn-modal-cancel" id="btnCloseSaveConfirm">Cancel</button>
+            <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal('saveProfileModal')">Cancel</button>
             <button type="button" class="btn-modal btn-modal-confirm" id="btnConfirmProfileSave">Yes, Save Changes</button>
         </div>
     </div>
 </div>
 
-<!-- Logout Confirmation Modal (Standardized from Dashboard) -->
+<!-- Logout Confirmation Modal -->
 <div class="modal-overlay" id="logoutModalOverlay">
     <div class="modal-box">
         <div class="modal-icon-wrap danger">
@@ -646,6 +838,57 @@
 </div>
 
 <script>
+    // Toggle Add Photo Drawer
+    function toggleAddPhotoDrawer(index) {
+        const drawer = document.getElementById(`drawer-${index}`);
+        if (drawer) {
+            drawer.classList.toggle('is-open');
+        }
+    }
+
+    // Modal Helper
+    function openModal(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Delete Specific Photo Modal Logic
+    function confirmDeleteImage(personName, filename) {
+        document.getElementById('deleteImageModalDesc').textContent = `Are you sure you want to remove photo "${filename}" for ${personName}?`;
+        const form = document.getElementById('deleteImageForm');
+        form.action = `/delete_face_image/${encodeURIComponent(personName)}/${encodeURIComponent(filename)}`;
+        openModal('deleteImageModal');
+    }
+
+    // Delete Entire Person Modal Logic
+    function openDeletePersonModal(personName) {
+        document.getElementById('deletePersonModalDesc').textContent = `Are you sure you want to completely remove ${personName} and all associated photos?`;
+        const form = document.getElementById('deletePersonForm');
+        form.action = `/delete_face/${encodeURIComponent(personName)}`;
+        openModal('deletePersonModal');
+    }
+
+    // Rename Person Modal Logic
+    function openRenameModal(personName) {
+        const input = document.getElementById('renameInput');
+        input.value = personName;
+        const form = document.getElementById('renamePersonForm');
+        form.action = `/rename_face/${encodeURIComponent(personName)}`;
+        openModal('renamePersonModal');
+        input.focus();
+    }
+
     // Profile View vs Edit Mode Logic
     const toggleBtn = document.getElementById('profileModeToggle');
     const toggleText = document.getElementById('toggleModeText');
@@ -654,92 +897,64 @@
 
     let isEditMode = false;
 
-    toggleBtn.addEventListener('click', () => {
-        isEditMode = !isEditMode;
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            isEditMode = !isEditMode;
+            profileInputs.forEach(input => { input.disabled = !isEditMode; });
 
-        profileInputs.forEach(input => {
-            input.disabled = !isEditMode;
+            if (isEditMode) {
+                toggleText.textContent = "Cancel Edit";
+                profileSaveContainer.style.display = 'block';
+                document.getElementById('prof_username').focus();
+            } else {
+                toggleText.textContent = "Edit Profile";
+                profileSaveContainer.style.display = 'none';
+            }
         });
+    }
 
-        if (isEditMode) {
-            toggleText.textContent = "Cancel Edit";
-            profileSaveContainer.style.display = 'block';
-            document.getElementById('prof_username').focus();
-        } else {
-            toggleText.textContent = "Edit Profile";
-            profileSaveContainer.style.display = 'none';
-        }
-    });
-
-    // Confirmation Modal Logic for Profile Save
-    const saveModal = document.getElementById('saveProfileModal');
+    // Save profile confirmation
     const btnOpenConfirm = document.getElementById('btnOpenSaveConfirm');
-    const btnCloseConfirm = document.getElementById('btnCloseSaveConfirm');
     const btnConfirmSave = document.getElementById('btnConfirmProfileSave');
     const profileForm = document.getElementById('profileForm');
 
-    btnOpenConfirm.addEventListener('click', () => {
-        saveModal.classList.add('is-open');
-        document.body.style.overflow = 'hidden'; 
-    });
+    if (btnOpenConfirm) {
+        btnOpenConfirm.addEventListener('click', () => openModal('saveProfileModal'));
+    }
 
-    btnCloseConfirm.addEventListener('click', () => {
-        saveModal.classList.remove('is-open');
-        document.body.style.overflow = '';
-    });
+    if (btnConfirmSave) {
+        btnConfirmSave.addEventListener('click', () => {
+            closeModal('saveProfileModal');
+            profileForm.requestSubmit();
+        });
+    }
 
-    btnConfirmSave.addEventListener('click', () => {
-        saveModal.classList.remove('is-open');
-        document.body.style.overflow = '';
-        profileForm.requestSubmit();
-    });
+    // Logout Modal Logic
+    function openLogoutModal() {
+        openModal('logoutModalOverlay');
+    }
 
-    // Standardized Modal Logout Logic
-    (function () {
-        var overlay = document.getElementById('logoutModalOverlay');
-        var yesBtn = document.getElementById('logoutModalYes');
-        var noBtn = document.getElementById('logoutModalNo');
-        if (!overlay || !yesBtn || !noBtn) return;
+    const logoutYes = document.getElementById('logoutModalYes');
+    const logoutNo = document.getElementById('logoutModalNo');
 
-        var pendingHref = null;
+    if (logoutYes) {
+        logoutYes.addEventListener('click', () => {
+            window.location.href = "{{ url_for('logout') }}";
+        });
+    }
+    if (logoutNo) {
+        logoutNo.addEventListener('click', () => closeModal('logoutModalOverlay'));
+    }
 
-        function openModal(href) {
-            pendingHref = href;
-            overlay.classList.add('is-open');
-            document.body.style.overflow = 'hidden'; 
-        }
-
-        function closeModal() {
-            overlay.classList.remove('is-open');
-            document.body.style.overflow = '';
-            pendingHref = null;
-        }
-
-        document.querySelectorAll('a.nav-logout').forEach(function (link) {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                openModal(link.getAttribute('href'));
+    // Close Modals on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay.is-open').forEach(m => {
+                m.classList.remove('is-open');
             });
-        });
-
-        yesBtn.addEventListener('click', function () {
-            if (pendingHref) window.location.href = pendingHref;
-        });
-
-        noBtn.addEventListener('click', closeModal);
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) closeModal();
-        });
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                if (overlay.classList.contains('is-open')) closeModal();
-                if (saveModal.classList.contains('is-open')) {
-                    saveModal.classList.remove('is-open');
-                    document.body.style.overflow = '';
-                }
-            }
-        });
-    })();
+            document.body.style.overflow = '';
+        }
+    });
 </script>
 </body>
 </html>
