@@ -20,6 +20,7 @@ import secrets
 import gc
 import math
 import re
+import stat
 import torch
 from urllib.parse import urlsplit, urlunsplit
 from importlib.metadata import PackageNotFoundError, version as package_version
@@ -42,7 +43,7 @@ load_dotenv()
 cv2.setNumThreads(1)
 
 from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
-from models import db, User, Camera, Settings, OtpChallenge, EventLog, RecordingRequest
+from models import db, User, Camera, Settings, SystemSettings, OtpChallenge, EventLog, RecordingRequest
 import security
 from io import BytesIO
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -56,6 +57,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from datetime import datetime, timedelta
 from sqlalchemy import inspect, text, or_
+from sqlalchemy.exc import SQLAlchemyError
 from cryptography.fernet import Fernet, InvalidToken
 import pyotp
 import qrcode
@@ -103,6 +105,9 @@ PROCESSING_INTERVAL_SECONDS = 0.1
 detection_pool = None
 face_recognition_lock = threading.Lock()
 email_alert_lock = threading.Lock()
+RETENTION_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
+_retention_cleanup_thread = None
+_retention_cleanup_wakeup = threading.Event()
 
 
 def is_human_detection_name(name):
@@ -300,6 +305,120 @@ def stream_scope_key(user_id, camera):
     """Share public sources globally; isolate private sources by owner."""
     source_key = normalize_camera_source(camera.source)
     return source_key if camera.is_public else (user_id, source_key)
+
+
+def get_system_settings():
+    settings = db.session.get(SystemSettings, 1)
+    if settings is None:
+        settings = SystemSettings(id=1)
+        db.session.add(settings)
+        db.session.commit()
+    return settings
+
+
+def cleanup_expired_recordings(now=None):
+    """Delete expired camera footage and fulfilled-request videos using separate policies."""
+    settings = get_system_settings()
+    current_time = time.time() if now is None else now
+    cutoffs = {
+        'camera': current_time - settings.recorded_footage_retention_days * 86400,
+        'request': current_time - settings.request_video_retention_days * 86400,
+    }
+    deleted = {'camera': 0, 'request': 0, 'failed': 0}
+    request_metadata_changed = False
+
+    try:
+        user_directories = list(os.scandir(BASE_RECORDINGS_DIR))
+    except FileNotFoundError:
+        return deleted
+    except OSError:
+        app.logger.exception('Unable to scan recordings directory %s', BASE_RECORDINGS_DIR)
+        return deleted
+
+    for user_directory in user_directories:
+        if not user_directory.name.isdecimal() or not user_directory.is_dir(follow_symlinks=False):
+            continue
+        recordings_directory = os.path.join(user_directory.path, 'recordings')
+        try:
+            if not stat.S_ISDIR(os.stat(recordings_directory, follow_symlinks=False).st_mode):
+                continue
+        except FileNotFoundError:
+            continue
+        except OSError:
+            app.logger.exception('Unable to inspect recordings directory %s', recordings_directory)
+            deleted['failed'] += 1
+            continue
+        try:
+            recording_files = list(os.scandir(recordings_directory))
+        except FileNotFoundError:
+            continue
+        except OSError:
+            app.logger.exception('Unable to scan recordings directory %s', recordings_directory)
+            deleted['failed'] += 1
+            continue
+
+        user_id = int(user_directory.name)
+        for recording_file in recording_files:
+            if not recording_file.is_file(follow_symlinks=False):
+                continue
+            filename = recording_file.name
+            request_match = re.fullmatch(r'request_(\d+)\.(?:mp4|avi|mkv|mov|webm)', filename, re.IGNORECASE)
+            if request_match:
+                category = 'request'
+            elif re.fullmatch(r'cam_\d+_\d{8}_\d{6}\.webm', filename, re.IGNORECASE):
+                category = 'camera'
+            else:
+                continue
+
+            try:
+                modified_at = recording_file.stat(follow_symlinks=False).st_mtime
+                if modified_at > cutoffs[category]:
+                    continue
+                os.remove(recording_file.path)
+            except OSError:
+                app.logger.exception('Unable to remove expired recording %s', recording_file.path)
+                deleted['failed'] += 1
+                continue
+
+            deleted[category] += 1
+            if category == 'request':
+                recording_request = RecordingRequest.query.filter_by(
+                    id=int(request_match.group(1)),
+                    user_id=user_id,
+                ).first()
+                if recording_request and recording_request.video_path:
+                    stored_path = os.path.normcase(os.path.abspath(recording_request.video_path))
+                    if stored_path == os.path.normcase(os.path.abspath(recording_file.path)):
+                        recording_request.video_path = None
+                        request_metadata_changed = True
+
+    if request_metadata_changed:
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception('Unable to update expired recording request metadata')
+            deleted['failed'] += 1
+
+    if deleted['camera'] or deleted['request']:
+        app.logger.info(
+            'Retention cleanup removed %s camera recording(s) and %s fulfilled-request video(s)',
+            deleted['camera'],
+            deleted['request'],
+        )
+    return deleted
+
+
+def retention_cleanup_worker():
+    while True:
+        _retention_cleanup_wakeup.wait(RETENTION_CLEANUP_INTERVAL_SECONDS)
+        _retention_cleanup_wakeup.clear()
+        with app.app_context():
+            try:
+                cleanup_expired_recordings()
+            except SQLAlchemyError:
+                db.session.rollback()
+                app.logger.exception('Retention cleanup could not load or save settings')
 
 #main
 
@@ -2196,6 +2315,7 @@ def admin_system():
         settings = Settings(user_id=current_user.id)
         db.session.add(settings)
         db.session.commit()
+    system_settings = get_system_settings()
 
     try:
         disk_usage = shutil.disk_usage(BASE_RECORDINGS_DIR)
@@ -2216,6 +2336,7 @@ def admin_system():
     return render_template(
         'admin_system.html',
         settings=settings,
+        system_settings=system_settings,
         storage_pct=storage_pct,
         storage_used=storage_used,
         storage_free=storage_free,
@@ -2235,14 +2356,30 @@ def admin_system():
 @app.route('/admin/system/save', methods=['POST'])
 @admin_required
 def admin_system_save():
+    system_settings = get_system_settings()
+    try:
+        recorded_footage_retention_days = int(request.form.get(
+            'retention_days',
+            system_settings.recorded_footage_retention_days,
+        ))
+        request_video_retention_days = int(request.form.get(
+            'request_video_retention_days',
+            system_settings.request_video_retention_days,
+        ))
+    except (TypeError, ValueError):
+        flash('Retention periods must be whole numbers between 1 and 365 days.', 'danger')
+        return redirect(url_for('admin_system'))
+    if not 1 <= recorded_footage_retention_days <= 365 or not 1 <= request_video_retention_days <= 365:
+        flash('Retention periods must be between 1 and 365 days.', 'danger')
+        return redirect(url_for('admin_system'))
+
     settings = Settings.query.filter_by(user_id=current_user.id).first()
     if not settings:
         settings = Settings(user_id=current_user.id)
         db.session.add(settings)
 
-    settings.max_storage_gb = int(request.form.get('max_storage_gb', 50))
-    settings.retention_days = int(request.form.get('retention_days', 30))
-    settings.recording_path = request.form.get('recording_path', './recordings')
+    system_settings.recorded_footage_retention_days = recorded_footage_retention_days
+    system_settings.request_video_retention_days = request_video_retention_days
 
     settings.allow_registration = 'allow_registration' in request.form
     settings.require_disclaimer = 'require_disclaimer' in request.form
@@ -2260,6 +2397,7 @@ def admin_system_save():
     record_audit_event(current_user.id, 'settings', 'Updated system settings', 'Admin', get_client_ip())
 
     refresh_stream_settings(settings)
+    _retention_cleanup_wakeup.set()
 
     flash('System settings updated.', 'success')
     return redirect(url_for('admin_system'))
@@ -2914,10 +3052,17 @@ def api_clear_private_events():
 
 # --- INITIALIZATION ---
 def init_app():
-    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES
+    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES, _retention_cleanup_thread
 
     with app.app_context():
         ensure_database_schema()
+        get_system_settings()
+        cleanup_expired_recordings()
+
+    if _retention_cleanup_thread is None or not _retention_cleanup_thread.is_alive():
+        _retention_cleanup_wakeup.clear()
+        _retention_cleanup_thread = threading.Thread(target=retention_cleanup_worker, daemon=True)
+        _retention_cleanup_thread.start()
 
     if yolo_model is None:
         yolo_model = YOLO(MODEL_PATH)

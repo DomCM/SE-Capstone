@@ -61,6 +61,12 @@ class Settings(db.Model):
     frame_process_interval = db.Column(db.Integer, default=3)
 
 
+class SystemSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True, default=1)
+    recorded_footage_retention_days = db.Column(db.Integer, nullable=False, default=30)
+    request_video_retention_days = db.Column(db.Integer, nullable=False, default=30)
+
+
 class OtpChallenge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

@@ -550,13 +550,13 @@
                         <div class="grid-2" style="margin-top: 24px;">
                             <div class="field-group">
                                 <label class="field-label">Recorded Footage Retention (Days)</label>
-                                <input type="number" name="retention_days" value="{{ settings.retention_days or 30 }}" min="1" max="365">
-                                <p class="field-hint">Recorded footage files are kept for this duration before automatic deletion.</p>
+                                <input type="number" name="retention_days" value="{{ system_settings.recorded_footage_retention_days }}" min="1" max="365" required>
+                                <p class="field-hint">Camera-recorded footage is automatically deleted after this many days. Applies system-wide.</p>
                             </div>
                             <div class="field-group">
-                                <label class="field-label">Event Snapshots Retention (Days)</label>
-                                <input type="number" name="snapshot_retention_days" value="{{ settings.snapshot_retention_days or 60 }}" min="1" max="365">
-                                <p class="field-hint">Image snapshots of security events are kept before automatic cleanup.</p>
+                                <label class="field-label">Uploaded Request Videos Retention (Days)</label>
+                                <input type="number" name="request_video_retention_days" value="{{ system_settings.request_video_retention_days }}" min="1" max="365" required>
+                                <p class="field-hint">Videos uploaded to fulfill recording requests are automatically deleted after this many days. Applies system-wide.</p>
                             </div>
                         </div>
                     </div>
