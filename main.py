@@ -550,6 +550,15 @@ def run_roi_detection(roi_tasks):
         return [detect_faces_in_chunk(*task) for task in roi_tasks]
 
 
+def get_people_without_usable_faces(roi_tasks, roi_results):
+    """Return detected person boxes for which face recognition produced no usable face."""
+    return [
+        task[1]
+        for task, results in zip(roi_tasks, roi_results)
+        if not results
+    ]
+
+
 def _build_alert_email_html(subject, body, image_frame=None):
     alert_title = 'CRITICAL ALERT' if str(subject).upper().startswith('CRITICAL') else 'SECURITY ALERT'
     timestamp = datetime.utcnow().strftime('%d %b %Y • %H:%M UTC')
@@ -1131,6 +1140,21 @@ class VideoStreamManager:
             try:
                 all_results = run_roi_detection(roi_tasks)
 
+                for bbox in get_people_without_usable_faces(roi_tasks, all_results):
+                    self.log_db_event(
+                        'PERSON DETECTED - FACE NOT VISIBLE OR USABLE',
+                        'A person was detected, but no usable face was available for recognition.',
+                        event_category='vision',
+                        detector='face',
+                        severity='medium',
+                        event_metadata={
+                            'camera_zone': self.camera_zone,
+                            'class': 'person',
+                            'face_status': 'unavailable',
+                        },
+                        snapshot_frame=annotated_frame,
+                    )
+
                 self.face_detections = []
                 for results_list in all_results:
                     for t, r, b, l, name in results_list:
@@ -1155,7 +1179,8 @@ class VideoStreamManager:
                                 event_category='vision',
                                 detector='face',
                                 severity='normal',
-                                event_metadata={'camera_zone': self.camera_zone, 'class': 'person', 'person_name': name}
+                                event_metadata={'camera_zone': self.camera_zone, 'class': 'person', 'person_name': name},
+                                snapshot_frame=annotated_frame,
                             )
 
             except Exception as e:

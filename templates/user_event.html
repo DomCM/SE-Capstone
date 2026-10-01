@@ -447,6 +447,7 @@
                 <option value="ALL">All Event Types</option>
                 <option value="CRITICAL ALERT">Critical Alert</option>
                 <option value="UNKNOWN FACE">Unknown Face</option>
+                <option value="PERSON DETECTED - FACE NOT VISIBLE OR USABLE">Face Not Visible / Usable</option>
                 <option value="PERSON DETECTED">Person Detected</option>
             </select>
 
@@ -495,6 +496,8 @@
                             {% set evt_upper = (event.type or event.event_type or 'NOTIFICATION')|upper %}
                             {% if 'CRITICAL' in evt_upper or 'UNKNOWN' in evt_upper or 'INTRUSION' in evt_upper %}
                                 <span class="event-badge badge-critical">Critical Alert</span>
+                            {% elif 'FACE NOT VISIBLE OR USABLE' in evt_upper %}
+                                <span class="event-badge badge-warning">Face Not Visible / Usable</span>
                             {% elif 'MOTION' in evt_upper or 'WARNING' in evt_upper %}
                                 <span class="event-badge badge-warning">Motion Warning</span>
                             {% elif 'GRANTED' in evt_upper or 'KNOWN' in evt_upper or 'RECOGNIZED' in evt_upper %}
@@ -681,7 +684,9 @@
             const rowCam = row.getAttribute('data-camera') || '';
 
             const matchesSearch = text.includes(query);
-            const matchesType = typeFilter === 'ALL' || rowType.includes(typeFilter.replace(' ', '_'));
+            const normalizedRowType = rowType.replace(/[_\s]+/g, ' ');
+            const normalizedTypeFilter = typeFilter.toUpperCase().replace(/[_\s]+/g, ' ');
+            const matchesType = typeFilter === 'ALL' || normalizedRowType.includes(normalizedTypeFilter);
             const matchesCam = cameraFilter === 'ALL' || rowCam.toLowerCase().includes(cameraFilter.toLowerCase());
 
             row.style.display = (matchesSearch && matchesType && matchesCam) ? '' : 'none';
