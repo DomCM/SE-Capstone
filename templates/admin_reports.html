@@ -266,6 +266,38 @@
         table.report-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); color: var(--text-primary); }
         table.report-table tr:nth-child(even) { background: var(--bg-main); }
 
+        .frequency-note {
+            margin-bottom: 16px; padding: 14px 18px; border: 1px solid var(--amber-border);
+            border-left: 4px solid var(--amber); border-radius: var(--radius-sm);
+            background: var(--amber-bg); color: var(--text-primary); font-weight: 600;
+        }
+        .analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .analytics-panel { min-width: 0; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-main); }
+        .analytics-panel h4 { margin-bottom: 14px; color: var(--navy-900); font-size: 13px; font-weight: 700; }
+        .risk-chart { display: flex; flex-direction: column; gap: 12px; }
+        .risk-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(80px, 2fr) 36px; align-items: center; gap: 10px; font-size: 12px; }
+        .risk-label { overflow: hidden; color: var(--text-secondary); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+        .risk-track { height: 12px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+        .risk-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--navy-600), var(--amber)); }
+        .risk-value { color: var(--text-primary); font-family: var(--font-mono); font-weight: 700; text-align: right; }
+        .severity-list { display: flex; flex-direction: column; gap: 12px; }
+        .severity-item { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 13px; }
+        .severity-item strong { margin-left: auto; color: var(--text-primary); font-family: var(--font-mono); }
+        .severity-swatch { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+        .hourly-panel { grid-column: 1 / -1; }
+        .hourly-viewport { overflow-x: auto; }
+        .hourly-chart { display: grid; grid-template-columns: repeat(24, minmax(22px, 1fr)); align-items: end; gap: 6px; min-width: 680px; height: 170px; padding-top: 8px; }
+        .hourly-column { display: flex; flex-direction: column; align-items: center; justify-content: end; gap: 7px; height: 100%; }
+        .hourly-bar-track { display: flex; align-items: end; width: 100%; height: 140px; }
+        .hourly-bar { width: 100%; min-height: 3px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--navy-400), var(--navy-900)); }
+        .hourly-label { color: var(--text-muted); font-family: var(--font-mono); font-size: 9px; white-space: nowrap; }
+        .analytics-empty { color: var(--text-muted); font-size: 12px; }
+        @media (max-width: 700px) {
+            .analytics-grid { grid-template-columns: 1fr; }
+            .hourly-panel { grid-column: auto; }
+            .risk-row { grid-template-columns: minmax(72px, 1fr) minmax(60px, 2fr) 32px; gap: 7px; }
+        }
+
         .report-signatures {
             display: flex; justify-content: space-between; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border-subtle);
             flex-wrap: wrap; gap: 24px;
@@ -580,7 +612,106 @@
 
             <!-- Restored Conditional Tables Logic based on Report Type -->
             {% if selected_type == 'frequency' %}
-            <!-- ALERT FREQUENCY ANALYTICS TABLE -->
+            <div class="frequency-note">
+                Patrol Priority Analytics: zones and cameras are ranked by anomaly intensity and elevated trigger load to support manual security patrol decisions.
+            </div>
+
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Priority Rank</th>
+                        <th>Assigned Zone / Location</th>
+                        <th>Camera Name</th>
+                        <th>Risk Score</th>
+                        <th>Priority Level</th>
+                        <th>Anomaly Flag</th>
+                        <th>Recommended Patrol Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if patrol_priority_summary %}
+                        {% for row in patrol_priority_summary %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ row.zone }}</strong></td>
+                            <td>{{ row.camera_name }}</td>
+                            <td><strong>{{ row.risk_score }}</strong></td>
+                            <td>
+                                {% if row.risk_level == 'High' %}
+                                    <strong style="color:var(--danger);">{{ row.risk_level }}</strong>
+                                {% elif row.risk_level == 'Medium' %}
+                                    <strong style="color:var(--amber);">{{ row.risk_level }}</strong>
+                                {% else %}
+                                    <strong style="color:var(--success);">{{ row.risk_level }}</strong>
+                                {% endif %}
+                            </td>
+                            <td>{% if row.anomaly_flag == 'Yes' %}<strong style="color:var(--danger);">{{ row.anomaly_flag }}</strong>{% else %}{{ row.anomaly_flag }}{% endif %}</td>
+                            <td>{{ row.patrol_recommendation }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="7" class="analytics-empty" style="text-align:center;">No patrol-priority data for the selected filters.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+
+            <div class="analytics-grid">
+                <section class="analytics-panel">
+                    <h4>Zone Risk Ranking</h4>
+                    {% set max_zone_score = zone_risk_chart|map(attribute='value')|list|max if zone_risk_chart else 1 %}
+                    <div class="risk-chart">
+                        {% for item in zone_risk_chart %}
+                        <div class="risk-row">
+                            <span class="risk-label" title="{{ item.label }}">{{ item.label }}</span>
+                            <div class="risk-track"><div class="risk-fill" style="width:{{ ((item.value / max_zone_score) * 100) if max_zone_score else 0 }}%"></div></div>
+                            <span class="risk-value">{{ item.value }}</span>
+                        </div>
+                        {% else %}
+                        <div class="analytics-empty">No zone-risk data for the selected filters.</div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="analytics-panel">
+                    <h4>Severity Breakdown</h4>
+                    {% if severity_chart %}
+                    <div class="severity-list">
+                        {% for item in severity_chart %}
+                        {% set severity_color = '#dc2626' if item.label == 'High' else '#d97706' if item.label == 'Warning' else '#059669' %}
+                        <div class="severity-item">
+                            <span class="severity-swatch" style="background:{{ severity_color }}"></span>
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="analytics-empty">No severity data for the selected filters.</div>
+                    {% endif %}
+                </section>
+
+                <section class="analytics-panel hourly-panel">
+                    <h4>Hourly Activity Trend</h4>
+                    {% if hourly_activity_chart %}
+                    {% set max_hour_value = hourly_activity_chart|map(attribute='value')|list|max %}
+                    <div class="hourly-viewport">
+                        <div class="hourly-chart">
+                            {% for item in hourly_activity_chart %}
+                            {% set bar_height = ((item.value / max_hour_value) * 100) if max_hour_value else 0 %}
+                            <div class="hourly-column" title="{{ item.label }}: {{ item.value }} event(s)">
+                                <div class="hourly-bar-track"><div class="hourly-bar" style="height:{{ bar_height }}%"></div></div>
+                                <span class="hourly-label">{{ item.label }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="analytics-empty">No hourly activity data for the selected filters.</div>
+                    {% endif %}
+                </section>
+            </div>
+
+            <!-- ALERT FREQUENCY SUMMARY TABLE -->
             <table class="report-table">
                 <thead>
                     <tr>
