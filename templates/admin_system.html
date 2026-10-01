@@ -538,11 +538,11 @@
                             <label class="field-label">Current Storage Usage</label>
                             <div class="storage-bar-wrap">
                                 <div class="storage-bar-track">
-                                    <div class="storage-bar-fill" style="width:{{ storage_pct or 25 }}%"></div>
+                                    <div class="storage-bar-fill" style="width:{{ storage_pct if storage_pct is not none else 0 }}%"></div>
                                 </div>
                                 <div class="storage-labels">
-                                    <span>{{ storage_used or '120 GB' }} used</span>
-                                    <span>{{ storage_free or '3.8 TB' }} free / {{ storage_total or '4.0 TB' }} total</span>
+                                    <span>{{ storage_used if storage_used is not none else 'Unavailable' }} used</span>
+                                    <span>{{ storage_free if storage_free is not none else 'Unavailable' }} free / {{ storage_total if storage_total is not none else 'Unavailable' }} total</span>
                                 </div>
                             </div>
                         </div>
@@ -611,22 +611,22 @@
                         <div class="info-grid">
                             <div>
                                 <div class="info-row">
-                                    <span class="info-label">Server Uptime</span>
-                                    <span class="info-val">{{ sys_info.uptime or '14 days, 6 hours' }}</span>
+                                    <span class="info-label">Application Uptime</span>
+                                    <span class="info-val">{{ sys_info.uptime if sys_info.uptime is not none else 'Unavailable' }}</span>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Storage Usage</span>
-                                    <span class="info-val">{{ storage_used or '120 GB' }} / {{ storage_total or '4.0 TB' }}</span>
+                                    <span class="info-label">Storage Volume Usage</span>
+                                    <span class="info-val">{{ storage_used if storage_used is not none else 'Unavailable' }} / {{ storage_total if storage_total is not none else 'Unavailable' }}</span>
                                 </div>
                             </div>
                             <div>
                                 <div class="info-row">
-                                    <span class="info-label">Connected Camera Count</span>
-                                    <span class="info-val">{{ sys_info.camera_count or '4 Active Cameras' }}</span>
+                                    <span class="info-label">Connected / Active Cameras</span>
+                                    <span class="info-val">{{ sys_info.camera_count if sys_info.camera_count is not none else 'Unavailable' }}</span>
                                 </div>
                                 <div class="info-row">
                                     <span class="info-label">Environment</span>
-                                    <span class="info-val">Python {{ sys_info.python_version or '3.10.x' }} / Flask {{ sys_info.flask_version or '2.2.x' }}</span>
+                                    <span class="info-val">Python {{ sys_info.python_version if sys_info.python_version is not none else 'Unavailable' }} / Flask {{ sys_info.flask_version if sys_info.flask_version is not none else 'Unavailable' }}</span>
                                 </div>
                             </div>
                         </div>

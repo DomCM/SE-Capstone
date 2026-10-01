@@ -22,6 +22,7 @@ import math
 import re
 import torch
 from urllib.parse import urlsplit, urlunsplit
+from importlib.metadata import PackageNotFoundError, version as package_version
 from multiprocessing import Pool, cpu_count
 from ultralytics import YOLO
 import face_recognition
@@ -78,6 +79,7 @@ login_manager.login_view = 'login'
 MODEL_PATH = 'models/best.pt' # main
 MODEL_PATH_OBJECT = 'models/yolo26m.pt'  # secondary
 BASE_RECORDINGS_DIR = "users_data"
+APP_STARTED_MONOTONIC = time.monotonic()
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 VIDEO_EXTENSIONS = {'mp4', 'avi', 'mkv', 'mov', 'webm'}
@@ -1731,6 +1733,21 @@ def get_available_zones():
     return zones
 
 
+def format_bytes(size_bytes):
+    value = float(size_bytes)
+    for unit in ('B', 'KB', 'MB', 'GB', 'TB', 'PB'):
+        if value < 1024 or unit == 'PB':
+            return f'{value:.1f} {unit}'
+        value /= 1024
+
+
+def format_app_uptime(seconds):
+    total_minutes = max(0, int(seconds // 60))
+    days, remaining_minutes = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(remaining_minutes, 60)
+    return f'{days}d {hours}h {minutes}m'
+
+
 @app.route('/admin/cctv')
 @admin_required
 def admin_cctv():
@@ -2167,14 +2184,37 @@ def admin_system():
         db.session.add(settings)
         db.session.commit()
 
+    try:
+        disk_usage = shutil.disk_usage(BASE_RECORDINGS_DIR)
+        storage_used = format_bytes(disk_usage.used)
+        storage_free = format_bytes(disk_usage.free)
+        storage_total = format_bytes(disk_usage.total)
+        storage_pct = round(disk_usage.used / disk_usage.total * 100, 1) if disk_usage.total else None
+    except OSError:
+        storage_used = storage_free = storage_total = storage_pct = None
+
+    active_cameras = Camera.query.filter_by(is_active=True).all()
+    connected_cameras = sum(1 for camera in active_cameras if camera_status(camera)[0])
+    try:
+        flask_version = package_version('Flask')
+    except PackageNotFoundError:
+        flask_version = None
+
     return render_template(
         'admin_system.html',
         settings=settings,
-        storage_pct=0,
-        storage_used='0 MB',
-        storage_free='0 MB',
-        storage_total='0 MB',
-        sys_info={'python_version': sys.version.split()[0], 'flask_version': 'unknown', 'cv2_version': cv2.__version__, 'uptime': 'Online', 'host': request.host},
+        storage_pct=storage_pct,
+        storage_used=storage_used,
+        storage_free=storage_free,
+        storage_total=storage_total,
+        sys_info={
+            'python_version': sys.version.split()[0],
+            'flask_version': flask_version,
+            'cv2_version': cv2.__version__,
+            'uptime': format_app_uptime(time.monotonic() - APP_STARTED_MONOTONIC),
+            'camera_count': f'{connected_cameras} / {len(active_cameras)} active',
+            'host': request.host,
+        },
         message=None,
     )
 
