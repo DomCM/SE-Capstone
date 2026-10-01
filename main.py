@@ -2908,7 +2908,25 @@ def recordings_page():
 @app.route('/events')
 @login_required
 def events_page():
-    return render_template('user_event.html')
+    cameras = Camera.query.filter(
+        or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
+    ).order_by(Camera.name, Camera.id).all()
+    events = get_user_vision_events(current_user.id)
+    event_items = [
+        {
+            'id': event.id,
+            'timestamp': event.timestamp.strftime('%H:%M:%S') if event.timestamp else '—',
+            'date': event.timestamp.strftime('%b %d, %Y') if event.timestamp else '',
+            'type': event.event_type or 'NOTIFICATION',
+            'event_type': event.event_type,
+            'camera': event.camera.name if event.camera else event.source_name or 'System',
+            'source_name': event.source_name,
+            'description': event.description,
+            'snapshot_url': None,
+        }
+        for event in events
+    ]
+    return render_template('user_event.html', cameras=cameras, events=event_items)
 
 @app.route('/api/recordings', methods=['GET'])
 @login_required
@@ -2939,20 +2957,25 @@ def api_recordings():
 @app.route('/api/events', methods=['GET'])
 @login_required
 def api_events():
-    events = EventLog.query.filter(
-        EventLog.user_id == current_user.id,
-        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
-    ).order_by(EventLog.timestamp.desc()).all()
+    events = get_user_vision_events(current_user.id)
     result = []
     for event in events:
         result.append({
             'id': event.id,
             'timestamp': event.timestamp.isoformat(),
+            'camera': event.camera.name if event.camera else event.source_name or 'System',
             'source_name': event.source_name,
             'event_type': event.event_type,
             'description': event.description
         })
     return jsonify(result)
+
+
+def get_user_vision_events(user_id):
+    return EventLog.query.filter(
+        EventLog.user_id == user_id,
+        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
+    ).order_by(EventLog.timestamp.desc()).all()
 
 @app.route('/recordings/<filename>')
 @login_required

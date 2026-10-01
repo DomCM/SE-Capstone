@@ -448,17 +448,13 @@
                 <option value="CRITICAL ALERT">Critical Alert</option>
                 <option value="UNKNOWN FACE">Unknown Face</option>
                 <option value="PERSON DETECTED">Person Detected</option>
-                <option value="MOTION DETECTED">Motion Detected</option>
-                <option value="ACCESS GRANTED">Access Granted</option>
             </select>
 
             <select class="select-filter" id="cameraFilter" onchange="filterEvents()">
                 <option value="ALL">All Cameras</option>
-                <option value="Front Door">Front Door</option>
-                <option value="Backyard">Backyard</option>
-                <option value="Garage">Garage</option>
-                <option value="Driveway">Driveway</option>
-                <option value="Living Room">Living Room</option>
+                {% for camera in cameras %}
+                <option value="{{ camera.name }}">{{ camera.name }}</option>
+                {% endfor %}
             </select>
         </div>
 
@@ -501,8 +497,8 @@
                                 <span class="event-badge badge-critical">Critical Alert</span>
                             {% elif 'MOTION' in evt_upper or 'WARNING' in evt_upper %}
                                 <span class="event-badge badge-warning">Motion Warning</span>
-                            {% elif 'GRANTED' in evt_upper or 'KNOWN' in evt_upper %}
-                                <span class="event-badge badge-success">Access Granted</span>
+                            {% elif 'GRANTED' in evt_upper or 'KNOWN' in evt_upper or 'RECOGNIZED' in evt_upper %}
+                                <span class="event-badge badge-success">Recognized</span>
                             {% else %}
                                 <span class="event-badge badge-info">{{ event.type or event.event_type }}</span>
                             {% endif %}
@@ -695,19 +691,7 @@
     }
 
     async function fetchEvents(isManualRefresh = false) {
-        try {
-            const res = await fetch('/api/events');
-            if (!res.ok) throw new Error('API request failed');
-            const data = await res.json();
-            if (isManualRefresh) {
-                showToast('Event log refreshed successfully.');
-            }
-        } catch (err) {
-            console.warn('Backend fetch note:', err);
-            if (isManualRefresh) {
-                showToast('Event log refreshed successfully.');
-            }
-        }
+        window.location.reload();
     }
 
     /* View Modal Controls */
