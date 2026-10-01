@@ -92,6 +92,7 @@ class EventLog(db.Model):
     detector = db.Column(db.String(30), nullable=True)
     severity = db.Column(db.String(30), nullable=True, default='normal')
     event_metadata = db.Column(db.Text, nullable=True)
+    snapshot_path = db.Column(db.String(255), nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
     actor_name = db.Column(db.String(150), nullable=True)
     actor_email = db.Column(db.String(150), nullable=True)

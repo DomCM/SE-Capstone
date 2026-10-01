@@ -234,6 +234,9 @@ def ensure_database_schema():
         if 'actor_email' not in event_log_columns:
             db.session.execute(text('ALTER TABLE event_log ADD COLUMN actor_email VARCHAR(150)'))
             db.session.commit()
+        if 'snapshot_path' not in event_log_columns:
+            db.session.execute(text('ALTER TABLE event_log ADD COLUMN snapshot_path VARCHAR(255)'))
+            db.session.commit()
         event_log_user_column = next(
             column for column in inspector.get_columns('event_log') if column['name'] == 'user_id'
         )
@@ -254,6 +257,7 @@ def ensure_database_schema():
                     detector VARCHAR(30),
                     severity VARCHAR(30),
                     event_metadata TEXT,
+                    snapshot_path VARCHAR(255),
                     ip_address VARCHAR(45),
                     actor_name VARCHAR(150),
                     actor_email VARCHAR(150),
@@ -265,10 +269,10 @@ def ensure_database_schema():
                 INSERT INTO event_log
                     (id, user_id, camera_id, timestamp, source_name, event_type,
                      description, confidence, event_category, detector, severity,
-                     event_metadata, ip_address, actor_name, actor_email)
+                     event_metadata, snapshot_path, ip_address, actor_name, actor_email)
                 SELECT id, user_id, camera_id, timestamp, source_name, event_type,
                        description, confidence, event_category, detector, severity,
-                       event_metadata, ip_address, actor_name, actor_email
+                       event_metadata, snapshot_path, ip_address, actor_name, actor_email
                 FROM event_log_legacy
             '''))
             db.session.execute(text('DROP TABLE event_log_legacy'))

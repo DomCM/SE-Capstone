@@ -435,7 +435,6 @@ from security import (
     get_dashboard_target, encrypt_totp_secret, decrypt_totp_secret,
     get_or_create_totp_secret, send_security_email,
     create_login_email_otp, create_password_reset_token,
-    clear_vision_events_for_user,
     ensure_database_schema, create_admin_user,
     AUDIT_EVENT_TYPES,
 )
@@ -790,7 +789,7 @@ class VideoStreamManager:
             except Exception:
                 continue
 
-    def _update_virtual_line_events(self, detections, virtual_lines):
+    def _update_virtual_line_events(self, detections, virtual_lines, snapshot_frame=None):
         """Check vehicle centers against configured virtual crossing lines."""
         if not virtual_lines or not detections:
             return
@@ -851,6 +850,7 @@ class VideoStreamManager:
                                 'direction': direction,
                                 'line_points': line_points,
                             },
+                            snapshot_frame=snapshot_frame,
                         )
             else:
                 self.vehicle_tracks.append({
@@ -1105,7 +1105,7 @@ class VideoStreamManager:
             if is_vehicle_class_name(name)
         ]
         try:
-            self._update_virtual_line_events(vehicle_detections, virtual_lines)
+            self._update_virtual_line_events(vehicle_detections, virtual_lines, annotated_frame)
         except Exception:
             pass
 
@@ -1144,7 +1144,8 @@ class VideoStreamManager:
                                 event_category='vision',
                                 detector='face',
                                 severity='high',
-                                event_metadata={'camera_zone': self.camera_zone, 'class': 'person'}
+                                event_metadata={'camera_zone': self.camera_zone, 'class': 'person'},
+                                snapshot_frame=annotated_frame,
                             )
                         else:
                             self.log_db_event(
@@ -1182,7 +1183,8 @@ class VideoStreamManager:
                 event_category='vision',
                 detector='yolo',
                 severity='critical',
-                event_metadata={'camera_zone': self.camera_zone, 'classes': detected_names}
+                event_metadata={'camera_zone': self.camera_zone, 'classes': detected_names},
+                snapshot_frame=annotated_frame,
             )
             class SettingsObj:
                 pass
@@ -1205,7 +1207,8 @@ class VideoStreamManager:
                 event_category='vision',
                 detector='yolo',
                 severity='medium',
-                event_metadata={'camera_zone': self.camera_zone, 'person_count': len(human_boxes)}
+                event_metadata={'camera_zone': self.camera_zone, 'person_count': len(human_boxes)},
+                snapshot_frame=annotated_frame,
             )
 
         self.crowd_alert_active = crowd_detected
@@ -1224,7 +1227,7 @@ class VideoStreamManager:
             self.recording_writer.release()
             self.recording_writer = None
 
-    def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None):
+    def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None, snapshot_frame=None):
         dedupe_key = (event_type, (desc or '')[:180])
         now = time.monotonic()
         last_logged = self._recent_event_cache.get(dedupe_key)
@@ -1244,6 +1247,21 @@ class VideoStreamManager:
         if event_metadata is None:
             event_metadata = {'camera_zone': getattr(self, 'camera_zone', self.camera_name)}
 
+        snapshot_bytes = None
+        if snapshot_frame is not None:
+            try:
+                frame_height, frame_width = snapshot_frame.shape[:2]
+                if frame_width > 1280:
+                    target_height = max(1, round(frame_height * 1280 / frame_width))
+                    snapshot_frame = cv2.resize(snapshot_frame, (1280, target_height), interpolation=cv2.INTER_AREA)
+                encoded, image = cv2.imencode('.jpg', snapshot_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                if encoded:
+                    snapshot_bytes = image.tobytes()
+                else:
+                    app.logger.error('Unable to encode snapshot for event %s', event_type)
+            except (AttributeError, cv2.error, ValueError):
+                app.logger.exception('Unable to prepare snapshot for event %s', event_type)
+
         with app.app_context():
             try:
                 log = EventLog(
@@ -1260,6 +1278,27 @@ class VideoStreamManager:
                 )
                 db.session.add(log)
                 db.session.commit()
+                if snapshot_bytes:
+                    snapshot_directory = os.path.join(BASE_RECORDINGS_DIR, str(self.user_id), 'event_snapshots')
+                    snapshot_filename = f'{log.id}.jpg'
+                    snapshot_path = os.path.join(snapshot_directory, snapshot_filename)
+                    temporary_path = f'{snapshot_path}.tmp'
+                    try:
+                        os.makedirs(snapshot_directory, exist_ok=True)
+                        with open(temporary_path, 'wb') as snapshot_file:
+                            snapshot_file.write(snapshot_bytes)
+                        os.replace(temporary_path, snapshot_path)
+                        log.snapshot_path = snapshot_filename
+                        db.session.commit()
+                    except OSError:
+                        if os.path.exists(temporary_path):
+                            os.remove(temporary_path)
+                        app.logger.exception('Unable to save snapshot for event %s', log.id)
+                    except SQLAlchemyError:
+                        db.session.rollback()
+                        if os.path.exists(snapshot_path):
+                            os.remove(snapshot_path)
+                        app.logger.exception('Unable to attach snapshot to event %s', log.id)
             finally:
                 db.session.remove()
 
@@ -2296,7 +2335,7 @@ def camera_snapshot(camera_id):
 @app.route('/admin/clear_events', methods=['POST'])
 @admin_required
 def admin_clear_events():
-    cleared_count = clear_vision_events_for_user()
+    cleared_count = clear_vision_events_and_snapshots()
     db.session.commit()
     record_audit_event(
         current_user.id, 'clear',
@@ -2420,7 +2459,7 @@ def admin_clear_recordings():
 @app.route('/admin/system/clear_events', methods=['POST'])
 @admin_required
 def admin_system_clear_events():
-    cleared_count = clear_vision_events_for_user()
+    cleared_count = clear_vision_events_and_snapshots()
     db.session.commit()
     record_audit_event(
         current_user.id, 'clear',
@@ -2447,7 +2486,7 @@ def admin_clear_faces():
 @app.route('/admin/system/factory_reset', methods=['POST'])
 @admin_required
 def admin_factory_reset():
-    cleared_count = clear_vision_events_for_user()
+    cleared_count = clear_vision_events_and_snapshots()
     Camera.query.delete()
     Settings.query.delete()
     db.session.commit()
@@ -2922,7 +2961,7 @@ def events_page():
             'camera': event.camera.name if event.camera else event.source_name or 'System',
             'source_name': event.source_name,
             'description': event.description,
-            'snapshot_url': None,
+            'snapshot_url': url_for('event_snapshot', event_id=event.id) if event.snapshot_path else None,
         }
         for event in events
     ]
@@ -2966,7 +3005,8 @@ def api_events():
             'camera': event.camera.name if event.camera else event.source_name or 'System',
             'source_name': event.source_name,
             'event_type': event.event_type,
-            'description': event.description
+            'description': event.description,
+            'snapshot_url': url_for('event_snapshot', event_id=event.id) if event.snapshot_path else None,
         })
     return jsonify(result)
 
@@ -3038,11 +3078,70 @@ def delete_event(event_id):
         return jsonify({"error": "Event not found"}), 404
     
     try:
+        snapshot_path = get_event_snapshot_path(event)
         db.session.delete(event)
         db.session.commit()
+        remove_event_snapshot_file(snapshot_path)
         return jsonify({"success": True, "message": "Event deleted"})
     except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+def clear_vision_events_and_snapshots(user_id=None):
+    events = EventLog.query.filter(
+        *([EventLog.user_id == user_id] if user_id is not None else []),
+        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
+    ).all()
+    snapshot_paths = [get_event_snapshot_path(event) for event in events]
+    event_query = EventLog.query.filter(
+        *([EventLog.user_id == user_id] if user_id is not None else []),
+        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
+    )
+    cleared_count = event_query.delete(synchronize_session=False)
+    db.session.commit()
+    for snapshot_path in snapshot_paths:
+        remove_event_snapshot_file(snapshot_path)
+    return cleared_count
+
+
+def get_event_snapshot_path(event):
+    if event.snapshot_path != f'{event.id}.jpg' or not str(event.user_id).isdecimal():
+        return None
+    return os.path.join(
+        BASE_RECORDINGS_DIR,
+        str(event.user_id),
+        'event_snapshots',
+        event.snapshot_path,
+    )
+
+
+def remove_event_snapshot_file(snapshot_path):
+    if not snapshot_path:
+        return
+    try:
+        os.remove(snapshot_path)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        app.logger.exception('Unable to remove event snapshot %s', snapshot_path)
+
+
+@app.route('/events/<int:event_id>/snapshot')
+@login_required
+def event_snapshot(event_id):
+    event = EventLog.query.filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    snapshot_path = get_event_snapshot_path(event)
+    if not snapshot_path or not os.path.isfile(snapshot_path):
+        return 'Snapshot is not available.', 404
+    try:
+        with open(snapshot_path, 'rb') as snapshot_file:
+            snapshot_bytes = snapshot_file.read()
+    except OSError:
+        app.logger.exception('Unable to read event snapshot %s', snapshot_path)
+        return 'Snapshot is not available.', 404
+    return send_file(BytesIO(snapshot_bytes), mimetype='image/jpeg', download_name=f'event-{event_id}.jpg')
+
 
 @app.route('/api/clear_private_events', methods=['POST'])
 @login_required
@@ -3060,9 +3159,13 @@ def api_clear_private_events():
                 ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
             ),
         )
-        cleared_event_ids = [event_id for (event_id,) in private_events.with_entities(EventLog.id).all()]
+        private_event_rows = private_events.all()
+        cleared_event_ids = [event.id for event in private_event_rows]
+        snapshot_paths = [get_event_snapshot_path(event) for event in private_event_rows]
         cleared_count = private_events.delete(synchronize_session=False)
         db.session.commit()
+        for snapshot_path in snapshot_paths:
+            remove_event_snapshot_file(snapshot_path)
         return jsonify({
             "success": True,
             "message": "Private camera events cleared",
