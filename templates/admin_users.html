@@ -450,10 +450,10 @@
         </div>
         <button class="sidebar-profile-btn" id="sidebarProfileBtn" type="button">
             <div class="sidebar-profile-info">
-                <div class="sidebar-profile-avatar">A</div>
+                <div class="sidebar-profile-avatar">{{ current_user.username[0]|upper }}</div>
                 <div class="sidebar-profile-text">
-                    <div class="sidebar-profile-name">Administrator</div>
-                    <div class="sidebar-profile-role">System Admin</div>
+                    <div class="sidebar-profile-name">{{ current_user.username }}</div>
+                    <div class="sidebar-profile-role">{{ current_user.role|capitalize }}</div>
                 </div>
             </div>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><polyline points="6 9 12 15 18 9"/></svg>

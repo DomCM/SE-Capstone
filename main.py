@@ -1851,17 +1851,14 @@ def cctv():
         or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
     ).order_by(Camera.id).all()
     for camera in cameras:
-        stream_owner_id = camera.user_id if camera.is_public else current_user.id
+        connected, recording = camera_status(camera)
         user_cameras.append({
             'id': camera.id,
             'name': camera.name,
             'location': '',
-            'status': 'online' if camera.is_active else 'offline',
+            'status': 'online' if connected else 'offline',
             'motion_detected': False,
-            'is_recording': bool(
-                active_user_streams.get(stream_owner_id, {}).get(camera.id)
-                and active_user_streams[stream_owner_id][camera.id].is_recording
-            ),
+            'is_recording': recording,
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
     
@@ -1874,7 +1871,7 @@ def admin_dashboard():
     total_users = User.query.count()
     total_cameras = Camera.query.count()
     active_cameras = Camera.query.filter_by(is_active=True).count()
-    total_events = EventLog.query.count()
+    total_events = EventLog.query.filter_by(event_category='vision').count()
     pending_requests_count = RecordingRequest.query.filter_by(status='pending').count()
 
     total_recordings = 0
@@ -1895,12 +1892,15 @@ def admin_dashboard():
         storage_used = f'{storage_used_bytes / (1024 * 1024 * 1024):.1f} GB'
 
     since = datetime.utcnow() - timedelta(days=1)
-    events_today = EventLog.query.filter(EventLog.timestamp >= since).count()
+    events_today = EventLog.query.filter(
+        EventLog.timestamp >= since,
+        EventLog.event_category == 'vision',
+    ).count()
     new_users_today = User.query.filter(User.created_at >= since).count()
 
     alert_events_today = EventLog.query.filter(
         EventLog.timestamp >= since,
-        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
+        EventLog.event_category == 'vision',
     ).all()
     zone_counts = {}
     hour_counts = {}

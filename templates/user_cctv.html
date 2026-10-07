@@ -279,8 +279,11 @@
             width: 8px; height: 8px; border-radius: 50%;
             background: var(--success);
             box-shadow: 0 0 8px var(--success);
+            flex: 0 0 auto;
         }
         .cam-status-pill.offline { background: var(--text-muted); box-shadow: none; }
+        .cam-status-text { color: var(--success); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; }
+        .cam-status-text.offline { color: var(--text-muted); }
 
         .cam-title-text {
             color: #f8fafc;
@@ -331,6 +334,18 @@
             object-fit: cover;
             display: block;
         }
+        .stream-offline-placeholder {
+            position: absolute;
+            inset: 0;
+            align-items: center;
+            justify-content: center;
+            background: #020617;
+            color: #94a3b8;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            z-index: 5;
+        }
+        .stream-offline-placeholder:not([hidden]) { display: flex; }
 
         /* HUD Overlays on Video */
         .hud-badge-container {
@@ -453,6 +468,7 @@
         .modal-title-group { display: flex; align-items: center; gap: 12px; }
         .modal-title { color: white; font-size: 16px; font-weight: 700; }
         .modal-subtitle { color: #94a3b8; font-size: 12px; font-family: var(--font-mono); }
+        #modalStatusDot.offline { background: var(--text-muted) !important; }
 
         .modal-body {
             position: relative;
@@ -677,10 +693,11 @@
     <div class="camera-grid-container grid-2" id="cameraGrid">
         {% if cameras %}
             {% for cam in cameras %}
-            <div class="cam-tile" id="cam-tile-{{ cam.id }}">
+            <div class="cam-tile" id="cam-tile-{{ cam.id }}" data-cam-id="{{ cam.id }}" data-cam-status="{{ cam.status }}" data-stream-url="{{ cam.stream_url }}">
                 <div class="cam-tile-header">
                     <div class="cam-title-info">
                         <span class="cam-status-pill {% if cam.status == 'offline' %}offline{% endif %}" id="pill-{{ cam.id }}"></span>
+                        <span class="cam-status-text {% if cam.status == 'offline' %}offline{% endif %}" id="status-{{ cam.id }}">{{ cam.status|upper }}</span>
                         <span class="cam-title-text">{{ cam.name }}</span>
                         <span class="cam-location-tag">{{ cam.location or ('CAM-' ~ cam.id) }}</span>
                     </div>
@@ -697,7 +714,7 @@
 
                 <div class="cam-video-viewport">
                     <div class="hud-badge-container">
-                        <span class="hud-pill"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block;animation:pulse-red 1.5s infinite;"></span>LIVE</span>
+                        <span class="hud-pill"><span id="feed-dot-{{ cam.id }}" style="width:6px;height:6px;border-radius:50%;background:{% if cam.status == 'online' %}#4ade80{% else %}#94a3b8{% endif %};display:inline-block;"></span><span id="feed-status-{{ cam.id }}">{{ cam.status|upper }}</span></span>
                         {% if cam.motion_detected %}
                         <span class="hud-pill motion-pill">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
@@ -709,13 +726,14 @@
                     <img
                         id="stream-img-{{ cam.id }}"
                         src="{{ url_for('video_feed', camera_id=cam.id) }}"
-                        onerror="this.onerror=null; this.src='https://placehold.co/640x360/0f172a/64748b?text=Stream+Offline';"
+                        onerror="showCameraOfflinePlaceholder({{ cam.id }})"
                         alt="{{ cam.name }} Feed"
                     />
+                    <div id="stream-placeholder-{{ cam.id }}" class="stream-offline-placeholder" hidden>Camera Offline</div>
                 </div>
 
                 <div class="cam-tile-footer">
-                    <span class="cam-hud-time" id="ts-{{ cam.id }}">LIVE • --:--:--</span>
+                    <span class="cam-hud-time" id="ts-{{ cam.id }}">{{ cam.status|upper }} • --:--:--</span>
                     <span class="cam-hud-time" style="color: #64748b;">30 FPS • 1080p</span>
                 </div>
             </div>
@@ -742,7 +760,7 @@
                 <span style="width:10px;height:10px;border-radius:50%;background:var(--success);display:inline-block;" id="modalStatusDot"></span>
                 <div>
                     <div class="modal-title" id="modalCamTitle">Camera Feed</div>
-                    <div class="modal-subtitle" id="modalCamSub">RTSP HD Stream • Live Transmission</div>
+                    <div class="modal-subtitle" id="modalCamSub">Camera status: Unknown</div>
                 </div>
             </div>
             <button class="icon-btn" onclick="closeCameraModal()">
@@ -792,7 +810,10 @@
     // Live Feed Timestamp Updater
     function updateTimestamps() {
         const ts = new Date().toTimeString().split(' ')[0];
-        document.querySelectorAll('[id^="ts-"]').forEach(el => el.textContent = 'LIVE • ' + ts);
+        document.querySelectorAll('.cam-tile').forEach(tile => {
+            const timestamp = document.getElementById('ts-' + tile.dataset.camId);
+            if (timestamp) timestamp.textContent = `${tile.dataset.camStatus.toUpperCase()} • ${ts}`;
+        });
     }
     updateTimestamps();
     setInterval(updateTimestamps, 1000);
@@ -874,6 +895,12 @@
 
         if (title) title.textContent = camName;
         if (modalImg) modalImg.src = streamUrl + '?t=' + new Date().getTime();
+        const tile = document.getElementById('cam-tile-' + camId);
+        const status = tile?.dataset.camStatus || 'offline';
+        const statusDot = document.getElementById('modalStatusDot');
+        if (statusDot) statusDot.classList.toggle('offline', status !== 'online');
+        const subtitle = document.getElementById('modalCamSub');
+        if (subtitle) subtitle.textContent = `Camera status: ${status.toUpperCase()}`;
 
         if (overlay) overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
@@ -915,28 +942,67 @@
         }, 3000);
     }
 
+    function showCameraOfflinePlaceholder(camId) {
+        const image = document.getElementById('stream-img-' + camId);
+        const placeholder = document.getElementById('stream-placeholder-' + camId);
+        if (image) image.dataset.streamError = 'true';
+        if (placeholder) placeholder.hidden = false;
+    }
+
+    function updateCameraStatus(cameraId, cameraStatus) {
+        const tile = document.getElementById('cam-tile-' + cameraId);
+        if (!tile) return;
+
+        const connected = Boolean(cameraStatus.connected);
+        const status = connected ? 'online' : 'offline';
+        const changed = tile.dataset.camStatus !== status;
+        tile.dataset.camStatus = status;
+
+        const pill = document.getElementById('pill-' + cameraId);
+        const label = document.getElementById('status-' + cameraId);
+        const feedStatus = document.getElementById('feed-status-' + cameraId);
+        const feedDot = document.getElementById('feed-dot-' + cameraId);
+        pill?.classList.toggle('offline', !connected);
+        label?.classList.toggle('offline', !connected);
+        if (label) label.textContent = status.toUpperCase();
+        if (feedStatus) feedStatus.textContent = status.toUpperCase();
+        if (feedDot) {
+            feedDot.style.background = connected ? '#4ade80' : '#94a3b8';
+            feedDot.style.animation = connected ? 'pulse-red 1.5s infinite' : 'none';
+        }
+
+        const image = document.getElementById('stream-img-' + cameraId);
+        const placeholder = document.getElementById('stream-placeholder-' + cameraId);
+        if (!connected) {
+            if (placeholder) placeholder.hidden = false;
+        } else {
+            if (placeholder) placeholder.hidden = true;
+            if (image && image.dataset.streamError) {
+                image.src = tile.dataset.streamUrl + '?t=' + Date.now();
+                delete image.dataset.streamError;
+            }
+        }
+
+        if (activeModalCamId === Number(cameraId)) {
+            const statusDot = document.getElementById('modalStatusDot');
+            if (statusDot) statusDot.classList.toggle('offline', !connected);
+            const subtitle = document.getElementById('modalCamSub');
+            if (subtitle) subtitle.textContent = `Camera status: ${status.toUpperCase()}`;
+        }
+    }
+
     // Real-time Camera Telemetry Polling
     async function pollCameraStatuses() {
         try {
-            const res = await fetch('/api/camera-status');
+            const res = await fetch('/api/camera-status', { cache: 'no-store' });
             if (!res.ok) return;
             const data = await res.json();
-            
-            const statuses = data.cameras || data;
-            if (statuses) {
-                Object.keys(statuses).forEach(id => {
-                    const cam = statuses[id];
-                    const pill = document.getElementById('pill-' + id);
-                    if (pill && cam) {
-                        const connected = cam.connected !== undefined ? cam.connected : (cam.status !== 'offline');
-                        pill.className = 'cam-status-pill ' + (!connected ? 'offline' : '');
-                    }
-                });
-            }
-        } catch (e) {
-            // Polling interval failure fallback
+            Object.entries(data.cameras || {}).forEach(([id, status]) => updateCameraStatus(id, status));
+        } catch (error) {
+            console.error('Unable to refresh camera statuses.', error);
         }
     }
+    pollCameraStatuses();
     setInterval(pollCameraStatuses, 5000);
 
     // Logout Confirmation Modal Logic
