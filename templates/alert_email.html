@@ -36,7 +36,7 @@
 
                     <tr>
                         <td style="padding:0 32px 20px;">
-                            <div style="font-size:32px;line-height:1.15;font-weight:700;color:#0b1735;letter-spacing:-0.03em;">Unexpected activity detected</div>
+                            <div style="font-size:32px;line-height:1.15;font-weight:700;color:#0b1735;letter-spacing:-0.03em;">{% if account_status %}Registration status: {{ account_status_label }}{% else %}Unexpected activity detected{% endif %}</div>
                             <div style="margin-top:10px;font-size:13px;color:#4a6db5;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">{{ timestamp }}</div>
                         </td>
                     </tr>
@@ -44,7 +44,8 @@
                     <tr>
                         <td style="padding:0 32px 8px;">
                             <div style="background:#f3f6ff;border:1px solid #e2e8f5;border-radius:14px;padding:18px 20px;">
-                                <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4a6db5;margin-bottom:12px;">Alert Summary</div>
+                                <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4a6db5;margin-bottom:12px;">{% if account_status %}Account Status Update{% else %}Alert Summary{% endif %}</div>
+                                {% if account_status %}<div style="font-size:14px;line-height:1.6;color:#3a4d70;margin-bottom:8px;">Hello {{ account_username }},</div>{% endif %}
                                 <div style="font-size:18px;line-height:1.6;color:#0b1735;font-weight:600;">{{ alert_message }}</div>
                             </div>
                         </td>
@@ -64,7 +65,11 @@
                     <tr>
                         <td style="padding:8px 32px 28px;">
                             <div style="border-top:1px solid #e2e8f5;padding-top:18px;font-size:13px;line-height:1.7;color:#3a4d70;">
+                                {% if account_status %}
+                                This message confirms the outcome of your account registration review. If you have questions, please contact your administrator.
+                                {% else %}
                                 Please review the live feed and confirm the status in your dashboard. If this activity looks unfamiliar, verify the camera zone and take appropriate action.
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

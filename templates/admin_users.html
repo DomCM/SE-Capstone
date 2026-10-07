@@ -317,6 +317,12 @@
             max-width: 420px; box-shadow: var(--shadow-lg); transform: translateY(10px);
             transition: transform 0.2s ease;
         }
+        .details-card { max-width: 520px; }
+        .details-card .modal-body { text-align: left; }
+        .details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 22px; }
+        .details-item { min-width: 0; }
+        .details-label { display: block; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+        .details-value { display: block; color: var(--text-primary); font-size: 14px; overflow-wrap: anywhere; }
         .modal-overlay.open .modal-card { transform: translateY(0); }
         .modal-body { padding: 32px 24px; text-align: center; }
         .modal-icon {
@@ -557,6 +563,8 @@
                                 <td data-label="Status">
                                     {% if user.archived_at %}
                                         <span class="status-badge badge badge-archived">Archived</span>
+                                    {% elif user.rejected_at %}
+                                        <span class="status-badge badge badge-banned">Rejected</span>
                                     {% elif not user.is_approved %}
                                         <span class="status-badge badge badge-pending">Awaiting approval</span>
                                     {% else %}
@@ -574,15 +582,33 @@
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                                         </button>
                                         <div class="action-dropdown-menu">
+                                            <button type="button" class="action-dropdown-item" data-action="details"
+                                                data-username="{{ user.username }}"
+                                                data-email="{{ user.email }}"
+                                                data-building="{{ user.building_number or '' }}"
+                                                data-floor="{{ user.floor or '' }}"
+                                                data-street="{{ user.street_address or '' }}">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                                View Details
+                                            </button>
                                             {% if user.archived_at %}
                                             <button type="button" class="action-dropdown-item" data-user-id="{{ user.id }}" data-action="restore">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><path d="M12 7v5l3 2"/></svg>
                                                 Restore
                                             </button>
+                                            {% elif user.rejected_at %}
+                                            <button type="button" class="action-dropdown-item danger" data-user-id="{{ user.id }}" data-user-name="{{ user.username }}" data-action="delete">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                                Archive
+                                            </button>
                                             {% elif not user.is_approved %}
                                             <button type="button" class="action-dropdown-item" data-user-id="{{ user.id }}" data-action="approve">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                                                 Approve
+                                            </button>
+                                            <button type="button" class="action-dropdown-item danger" data-user-id="{{ user.id }}" data-action="reject">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                Reject
                                             </button>
                                             <button type="button" class="action-dropdown-item danger" data-user-id="{{ user.id }}" data-user-name="{{ user.username }}" data-action="delete">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
@@ -702,6 +728,32 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="userDetailsModal" role="dialog" aria-modal="true" aria-labelledby="userDetailsTitle" onclick="if (event.target === this) closeUserDetails()">
+    <div class="modal-card details-card">
+        <div class="modal-body">
+            <h3 class="modal-title" id="userDetailsTitle">Account Details</h3>
+            <p class="modal-desc" id="userDetailsIdentity"></p>
+            <div class="details-grid">
+                <div class="details-item">
+                    <span class="details-label">Building / Unit No.</span>
+                    <span class="details-value" id="userDetailsBuilding"></span>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Floor / Level</span>
+                    <span class="details-value" id="userDetailsFloor"></span>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Street / Subdivision</span>
+                    <span class="details-value" id="userDetailsStreet"></span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-modal btn-modal-cancel" onclick="closeUserDetails()">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const mobileToggle = document.getElementById('mobileToggle');
     const adminSidebar = document.getElementById('adminSidebar');
@@ -776,7 +828,9 @@
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.innerHTML = `<span>${msg}</span>`;
+        const message = document.createElement('span');
+        message.textContent = msg;
+        toast.appendChild(message);
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 3500);
     }
@@ -871,24 +925,56 @@
     }
 
     function approveUser(button) {
-        fetch(`/admin/users/${button.dataset.userId}/approve`, {
+        submitAccountDecision(button, 'approve');
+    }
+
+    function rejectUser(button) {
+        submitAccountDecision(button, 'reject');
+    }
+
+    function submitAccountDecision(button, action) {
+        fetch(`/admin/users/${button.dataset.userId}/${action}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
             body: new URLSearchParams({})
-        }).then(response => {
-            if (!response.ok) throw new Error('Failed to approve user');
-            window.location.reload();
-        }).catch(() => {
-            showToast('Unable to approve user.', 'danger');
+        }).then(async response => {
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Unable to update account status.');
+            showToast(result.message, result.notification_sent ? 'success' : 'danger');
+            setTimeout(() => window.location.reload(), 900);
+        }).catch(error => {
+            showToast(error.message || `Unable to ${action} this account.`, 'danger');
         });
     }
+
+    function openUserDetails(button) {
+        document.getElementById('userDetailsIdentity').textContent =
+            `${button.dataset.username} · ${button.dataset.email}`;
+        document.getElementById('userDetailsBuilding').textContent = button.dataset.building || 'Not provided';
+        document.getElementById('userDetailsFloor').textContent = button.dataset.floor || 'Not provided';
+        document.getElementById('userDetailsStreet').textContent = button.dataset.street || 'Not provided';
+        document.getElementById('userDetailsModal').classList.add('open');
+    }
+
+    function closeUserDetails() {
+        document.getElementById('userDetailsModal').classList.remove('open');
+    }
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeUserDetails();
+    });
 
     document.addEventListener('click', function(event) {
         const button = event.target.closest('[data-action]');
         if (!button) return;
 
         const action = button.dataset.action;
-        if (action === 'role') {
+        if (action === 'details') {
+            openUserDetails(button);
+        } else if (action === 'role') {
             toggleRole(button);
         } else if (action === 'ban') {
             toggleBan(button);
@@ -900,6 +986,8 @@
             restoreUser(button);
         } else if (action === 'approve') {
             approveUser(button);
+        } else if (action === 'reject') {
+            rejectUser(button);
         }
     });
 

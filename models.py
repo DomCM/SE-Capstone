@@ -19,6 +19,10 @@ class User(UserMixin, db.Model):
     totp_secret = db.Column(db.String(500), nullable=True)
     totp_enabled = db.Column(db.Boolean, nullable=False, default=False)
     archived_at = db.Column(db.DateTime, nullable=True)
+    rejected_at = db.Column(db.DateTime, nullable=True)
+    building_number = db.Column(db.String(150), nullable=True)
+    floor = db.Column(db.String(150), nullable=True)
+    street_address = db.Column(db.String(200), nullable=True)
 
     @property
     def banned(self):

@@ -571,6 +571,58 @@ def _build_alert_email_html(subject, body, image_frame=None):
     )
 
 
+def _build_account_status_email_html(user, approved):
+    status = 'approved' if approved else 'not approved'
+    message = (
+        'Your registration has been approved. You can now sign in to your account.'
+        if approved else
+        'Your registration was not approved. Please contact your administrator if you believe this decision was made in error.'
+    )
+    return app.jinja_env.get_template('alert_email.html').render(
+        subject=f'Home Detection Security — account {status}',
+        alert_title='ACCOUNT REGISTRATION UPDATE',
+        alert_message=message,
+        timestamp=datetime.utcnow().strftime('%d %b %Y • %H:%M UTC'),
+        has_image=False,
+        account_status=True,
+        account_username=user.username,
+        account_status_label='Approved' if approved else 'Not approved',
+    )
+
+
+def send_account_status_email(user, approved):
+    sender = app.config.get('SMTP_USERNAME')
+    password = app.config.get('SMTP_PASSWORD')
+    if not sender or not password or not user.email:
+        app.logger.warning('Account status email could not be sent because SMTP or recipient settings are missing.')
+        return False
+
+    status = 'approved' if approved else 'not approved'
+    subject = f'Home Detection Security — account {status}'
+    body = (
+        'Your registration has been approved. You can now sign in to your account.'
+        if approved else
+        'Your registration was not approved. Please contact your administrator if you believe this decision was made in error.'
+    )
+    try:
+        message = MIMEMultipart('alternative')
+        message['From'] = sender
+        message['To'] = user.email
+        message['Subject'] = subject
+        message.attach(MIMEText(body, 'plain', 'utf-8'))
+        message.attach(MIMEText(_build_account_status_email_html(user, approved), 'html', 'utf-8'))
+
+        with smtplib.SMTP(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as smtp:
+            smtp.starttls()
+            smtp.login(sender, password)
+            smtp.send_message(message)
+        app.logger.info('Account status email sent.')
+        return True
+    except Exception:
+        app.logger.exception('Account status email delivery failed.')
+        return False
+
+
 def send_email_alert(user_settings, subject, body, image_frame=None):
     if not user_settings or not getattr(user_settings, 'email_alerts_enabled', False):
         return
@@ -1563,9 +1615,12 @@ def register():
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
+        building_number = (request.form.get('building_number') or '').strip()
+        floor = (request.form.get('floor') or '').strip()
+        street_address = (request.form.get('street_address') or '').strip()
         
-        if not username or not email or not password:
-            flash('All fields are required.', 'danger')
+        if not username or not email or not password or not building_number or not street_address:
+            flash('Username, email, password, building/unit, and street/subdivision are required.', 'danger')
             return redirect(url_for('register'))
 
         if User.query.filter_by(username=username).first():
@@ -1586,6 +1641,9 @@ def register():
             password=generate_password_hash(password),
             role='user',
             is_approved=False,
+            building_number=building_number[:150],
+            floor=floor[:150] or None,
+            street_address=street_address[:200],
             totp_secret=(encrypt_totp_secret(pyotp.random_base32())
                          if app.config.get('LEGACY_OTP') else None),
         )
@@ -1619,7 +1677,10 @@ def login():
 
         if user and user.archived_at is None and check_password_hash(user.password, password):
             if not user.is_approved:
-                flash('Your account is awaiting admin approval.', 'danger')
+                if user.rejected_at is not None:
+                    flash('Your account registration was not approved. Please contact your administrator.', 'danger')
+                else:
+                    flash('Your account is awaiting admin approval.', 'danger')
                 return redirect(url_for('login'))
             if not app.config.get('LEGACY_OTP'):
                 session['pending_login_user_id'] = user.id
@@ -1975,6 +2036,13 @@ def admin_users():
     return render_template('admin_users.html', users=users, include_archived=include_archived, message=None)
 
 
+def _admin_user_action_response(message, notification_sent=None, status=200):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify(success=status < 400, message=message, notification_sent=notification_sent), status
+    flash(message, 'success' if status < 400 else 'danger')
+    return redirect(url_for('admin_users'))
+
+
 @app.route('/admin/users/create', methods=['POST'])
 @admin_required
 def admin_create_user():
@@ -2037,17 +2105,41 @@ def admin_toggle_role(user_id):
 def admin_approve_user(user_id):
     user = User.query.get_or_404(user_id)
     if user.archived_at is not None:
-        flash('Archived accounts cannot be approved.', 'danger')
-        return redirect(url_for('admin_users'))
+        return _admin_user_action_response('Archived accounts cannot be approved.', status=400)
+    if user.rejected_at is not None:
+        return _admin_user_action_response('Rejected accounts cannot be approved.', status=400)
     if user.is_approved:
-        flash(f'Account for {user.username} is already approved.', 'danger')
-        return redirect(url_for('admin_users'))
+        return _admin_user_action_response(f'Account for {user.username} is already approved.', status=400)
 
     user.is_approved = True
     db.session.commit()
     record_audit_event(current_user.id, 'approve', f"Approved account for {user.username}", 'Admin', get_client_ip())
-    flash(f'Account for {user.username} approved.', 'success')
-    return redirect(url_for('admin_users'))
+    notification_sent = send_account_status_email(user, approved=True)
+    message = f'Account for {user.username} approved.'
+    if not notification_sent:
+        message += ' The account status email could not be sent; check SMTP configuration and logs.'
+    return _admin_user_action_response(message, notification_sent=notification_sent)
+
+
+@app.route('/admin/users/<int:user_id>/reject', methods=['POST'])
+@admin_required
+def admin_reject_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.archived_at is not None:
+        return _admin_user_action_response('Archived accounts cannot be rejected.', status=400)
+    if user.is_approved:
+        return _admin_user_action_response('Approved accounts cannot be rejected.', status=400)
+    if user.rejected_at is not None:
+        return _admin_user_action_response(f'Account for {user.username} was already rejected.', status=400)
+
+    user.rejected_at = datetime.utcnow()
+    db.session.commit()
+    record_audit_event(current_user.id, 'deny', f"Rejected account for {user.username}", 'Admin', get_client_ip())
+    notification_sent = send_account_status_email(user, approved=False)
+    message = f'Account for {user.username} rejected.'
+    if not notification_sent:
+        message += ' The account status email could not be sent; check SMTP configuration and logs.'
+    return _admin_user_action_response(message, notification_sent=notification_sent)
 
 
 @app.route('/admin/users/<int:user_id>/toggle_ban', methods=['POST'])

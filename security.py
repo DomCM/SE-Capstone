@@ -200,6 +200,10 @@ def ensure_database_schema():
             ('totp_secret', 'VARCHAR(500)'),
             ('totp_enabled', 'BOOLEAN NOT NULL DEFAULT 0'),
             ('archived_at', 'DATETIME'),
+            ('rejected_at', 'DATETIME'),
+            ('building_number', 'VARCHAR(150)'),
+            ('floor', 'VARCHAR(150)'),
+            ('street_address', 'VARCHAR(200)'),
         ]:
             if name not in user_columns:
                 db.session.execute(text(f'ALTER TABLE user ADD COLUMN {name} {definition}'))
