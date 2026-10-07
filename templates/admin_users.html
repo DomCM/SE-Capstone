@@ -932,6 +932,46 @@
         submitAccountDecision(button, 'reject');
     }
 
+    function createUserActionButton(action, label, userId, className = '') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `action-dropdown-item ${className}`.trim();
+        button.dataset.userId = userId;
+        button.dataset.action = action;
+        const text = document.createElement('span');
+        text.textContent = label;
+        button.appendChild(text);
+        return button;
+    }
+
+    function updateAccountRow(button, action) {
+        const row = button.closest('tr');
+        if (!row) return;
+
+        const userId = button.dataset.userId;
+        const statusCell = row.querySelector('[data-label="Status"]');
+        const actionMenu = row.querySelector('.action-dropdown-menu');
+        if (!statusCell || !actionMenu) return;
+
+        const status = document.createElement('span');
+        status.className = `status-badge badge ${action === 'approve' ? 'badge-active' : 'badge-banned'}`;
+        status.textContent = action === 'approve' ? 'Active' : 'Rejected';
+        statusCell.replaceChildren(status);
+
+        actionMenu.querySelectorAll('[data-action="approve"], [data-action="reject"]').forEach(item => item.remove());
+        if (action === 'approve') {
+            const role = (row.querySelector('[data-label="Role"]')?.textContent || '').trim().toLowerCase();
+            actionMenu.insertBefore(
+                createUserActionButton('role', role === 'admin' ? 'Make User' : 'Make Admin', userId),
+                actionMenu.querySelector('[data-action="delete"]')
+            );
+            actionMenu.insertBefore(
+                createUserActionButton('ban', 'Ban', userId),
+                actionMenu.querySelector('[data-action="delete"]')
+            );
+        }
+    }
+
     function submitAccountDecision(button, action) {
         fetch(`/admin/users/${button.dataset.userId}/${action}`, {
             method: 'POST',
@@ -943,8 +983,8 @@
         }).then(async response => {
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.message || 'Unable to update account status.');
+            updateAccountRow(button, action);
             showToast(result.message, result.notification_sent ? 'success' : 'danger');
-            setTimeout(() => window.location.reload(), 900);
         }).catch(error => {
             showToast(error.message || `Unable to ${action} this account.`, 'danger');
         });
