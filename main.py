@@ -62,6 +62,7 @@ from cryptography.fernet import Fernet, InvalidToken
 import pyotp
 import qrcode
 from concurrent.futures import ThreadPoolExecutor
+from performance_metrics import PerformanceMetrics
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(24)
@@ -72,8 +73,10 @@ app.config['SMTP_PORT'] = int(os.environ.get('SMTP_PORT', '587'))
 app.config['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 app.config['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
 app.config['PUBLIC_BASE_URL'] = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
+app.config['PERFORMANCE_SLOW_REQUEST_MS'] = 500
 
 db.init_app(app)
+performance_metrics = PerformanceMetrics()
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -104,10 +107,18 @@ MAX_DETECTION_POOL_WORKERS = max(1, min(2, cpu_count() or 1))
 PROCESSING_INTERVAL_SECONDS = 0.1
 detection_pool = None
 face_recognition_lock = threading.Lock()
+yolo_model_lock = threading.Lock()
+yolo_model_object_lock = threading.Lock()
 email_alert_lock = threading.Lock()
 RETENTION_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
 _retention_cleanup_thread = None
 _retention_cleanup_wakeup = threading.Event()
+
+
+def predict_with_model_lock(model, model_lock, frame, **kwargs):
+    """Serialize calls to a shared Ultralytics model and its lazy predictor."""
+    with model_lock:
+        return model.predict(frame, **kwargs)
 
 
 def is_human_detection_name(name):
@@ -721,7 +732,7 @@ class VideoStreamManager:
         self.tracker_lost = False
         self.tracker_frame_count = 0
         
-        self.known_encodings, self.known_names = get_user_face_data(user_id)
+        self.known_encodings, self.known_names = face_cache.get(user_id, ([], []))
         self.debug_tracker = False
         self._recent_event_cache = {}
         self._last_full_scan_time = 0.0
@@ -941,6 +952,8 @@ class VideoStreamManager:
 
     def _open_stream(self):
         """Lazily open the video stream with error handling, TCP forcing, and keyframe flushing."""
+        attempt_started_at = time.monotonic()
+        open_succeeded = False
         try:
             with self.frame_lock:
                 self.current_frame = None
@@ -970,6 +983,7 @@ class VideoStreamManager:
                 if self.processing_thread is None or not self.processing_thread.is_alive():
                     self.processing_thread = threading.Thread(target=self._processing_worker, daemon=True)
                     self.processing_thread.start()
+                open_succeeded = True
                 return True
             else:
                 self.cap = None
@@ -978,6 +992,11 @@ class VideoStreamManager:
             print(f"Error opening stream {self.video_source}: {e}")
             self.cap = None
             return False
+        finally:
+            performance_metrics.record_camera_open(
+                (time.monotonic() - attempt_started_at) * 1000,
+                open_succeeded,
+            )
 
     def _read_frames_worker(self):
         """Background thread that continuously reads frames from the camera."""
@@ -1114,8 +1133,22 @@ class VideoStreamManager:
         # Primary YOLO Model
         if self.settings_cache.get('yolo_enabled', True) and yolo_model:
             obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
+            inference_started_at = time.monotonic()
             with torch.no_grad():
-                results = yolo_model.predict(frame, imgsz=1088, conf=obj_conf, verbose=False)
+                try:
+                    results = predict_with_model_lock(
+                        yolo_model,
+                        yolo_model_lock,
+                        frame,
+                        imgsz=1088,
+                        conf=obj_conf,
+                        verbose=False,
+                    )
+                finally:
+                    performance_metrics.record_timing(
+                        'yolo_primary',
+                        (time.monotonic() - inference_started_at) * 1000,
+                    )
             for r in results:
                 for box in r.boxes:
                     cls_id = int(box.cls[0].item())
@@ -1135,8 +1168,22 @@ class VideoStreamManager:
         # Secondary YOLO Model
         if self.settings_cache.get('yolo_object_enabled', True) and yolo_model_object:
             obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
+            inference_started_at = time.monotonic()
             with torch.no_grad():
-                results = yolo_model_object.predict(frame, imgsz=1088, conf=obj_conf, verbose=False)
+                try:
+                    results = predict_with_model_lock(
+                        yolo_model_object,
+                        yolo_model_object_lock,
+                        frame,
+                        imgsz=1088,
+                        conf=obj_conf,
+                        verbose=False,
+                    )
+                finally:
+                    performance_metrics.record_timing(
+                        'yolo_secondary',
+                        (time.monotonic() - inference_started_at) * 1000,
+                    )
             for r in results:
                 for box in r.boxes:
                     name = r.names.get(int(box.cls[0].item()))
@@ -1190,7 +1237,14 @@ class VideoStreamManager:
                 roi_tasks.append((cropped_roi, (x1, y1, x2, y2), scale_factor, 1, self.known_encodings, self.known_names, face_conf))
 
             try:
-                all_results = run_roi_detection(roi_tasks)
+                inference_started_at = time.monotonic()
+                try:
+                    all_results = run_roi_detection(roi_tasks)
+                finally:
+                    performance_metrics.record_timing(
+                        'face_recognition',
+                        (time.monotonic() - inference_started_at) * 1000,
+                    )
 
                 for bbox in get_people_without_usable_faces(roi_tasks, all_results):
                     self.log_db_event(
@@ -1409,6 +1463,7 @@ def is_mobile(request):
 #gatekeep start
 @app.before_request
 def check_privacy_agreement():
+    request.environ['performance_started_at'] = time.monotonic()
     allowed_endpoints = ['disclaimer', 'accept_terms', 'static']
     if request.endpoint in allowed_endpoints:
         return
@@ -1428,6 +1483,23 @@ def prevent_authenticated_page_caching(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    started_at = request.environ.get('performance_started_at')
+    if started_at is not None and request.endpoint != 'performance_metrics_api':
+        duration_ms = (time.monotonic() - started_at) * 1000
+        performance_metrics.record_request(
+            request.endpoint,
+            request.method,
+            response.status_code,
+            duration_ms,
+        )
+        if duration_ms >= app.config['PERFORMANCE_SLOW_REQUEST_MS']:
+            app.logger.warning(
+                'Slow request endpoint=%s method=%s status=%s duration_ms=%.2f',
+                request.endpoint or 'unknown',
+                request.method,
+                response.status_code,
+                duration_ms,
+            )
     return response
 
 @app.route('/disclaimer')
@@ -2507,6 +2579,28 @@ def admin_system():
         },
         message=None,
     )
+
+
+@app.route('/admin/api/performance-metrics')
+@admin_required
+def performance_metrics_api():
+    metrics = performance_metrics.snapshot()
+    with stream_lock:
+        managers = list(active_physical_streams.values())
+
+    metrics['camera_workers'] = {
+        'active': len(managers),
+        'connected': sum(manager.is_connected() for manager in managers),
+        'reader_threads': sum(
+            bool(manager.reader_thread and manager.reader_thread.is_alive())
+            for manager in managers
+        ),
+        'processing_threads': sum(
+            bool(manager.processing_thread and manager.processing_thread.is_alive())
+            for manager in managers
+        ),
+    }
+    return jsonify(metrics)
 
 
 @app.route('/admin/system/save', methods=['POST'])

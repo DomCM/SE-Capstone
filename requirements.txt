@@ -7,6 +7,7 @@ Pillow
 flask
 flask-login
 flask-sqlalchemy
+psutil
 werkzeug
 face-recognition
 pyotp
