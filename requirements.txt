@@ -1,4 +1,5 @@
 ultralytics
+huggingface-hub
 Pillow
 flask
 flask-login
