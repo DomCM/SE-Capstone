@@ -291,6 +291,26 @@
             font-weight: 700;
             letter-spacing: -0.01em;
         }
+        .cam-access-badge {
+            padding: 2px 7px;
+            border: 1px solid;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            line-height: 1.5;
+            text-transform: uppercase;
+        }
+        .cam-access-badge.public {
+            color: #7dd3fc;
+            background: rgba(14, 165, 233, 0.12);
+            border-color: rgba(56, 189, 248, 0.35);
+        }
+        .cam-access-badge.private {
+            color: #c4b5fd;
+            background: rgba(139, 92, 246, 0.12);
+            border-color: rgba(167, 139, 250, 0.35);
+        }
         .cam-location-tag {
             color: #94a3b8;
             font-size: 11px;
@@ -699,10 +719,18 @@
                         <span class="cam-status-pill {% if cam.status == 'offline' %}offline{% endif %}" id="pill-{{ cam.id }}"></span>
                         <span class="cam-status-text {% if cam.status == 'offline' %}offline{% endif %}" id="status-{{ cam.id }}">{{ cam.status|upper }}</span>
                         <span class="cam-title-text">{{ cam.name }}</span>
+                        <span class="cam-access-badge {{ 'public' if cam.is_public else 'private' }}">{{ 'Public' if cam.is_public else 'Private' }}</span>
                         <span class="cam-location-tag">{{ cam.location or ('CAM-' ~ cam.id) }}</span>
                     </div>
                     
                     <div class="cam-tile-actions">
+                        {% if not cam.is_public %}
+                        <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Archive private camera {{ cam.name|e }}?');">
+                            <button class="icon-btn" type="submit" title="Remove private camera" aria-label="Remove private camera {{ cam.name|e }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                            </button>
+                        </form>
+                        {% endif %}
                         <button class="icon-btn" onclick="takeSnapshot({{ cam.id }}, '{{ cam.name|escape }}')" title="Snapshot Frame">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                         </button>

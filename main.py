@@ -1988,6 +1988,7 @@ def cctv():
             'status': 'online' if connected else 'offline',
             'motion_detected': False,
             'is_recording': recording,
+            'is_public': camera.is_public,
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
     
@@ -2835,7 +2836,7 @@ def delete_camera(camera_id):
     camera = Camera.query.get_or_404(camera_id)
     is_admin = is_admin_user(current_user)
     
-    if camera.user_id != current_user.id and not is_admin:
+    if not is_admin and (camera.user_id != current_user.id or camera.is_public):
         flash('Unauthorized action.', 'danger')
         return redirect(url_for('index'))
     
