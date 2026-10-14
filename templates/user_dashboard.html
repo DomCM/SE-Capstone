@@ -785,10 +785,10 @@
                                         <span class="cam-name">{{ cam.name or cam.camera_name or ('Camera #' ~ cam.id) }}</span>
                                     </div>
                                     <div class="cam-actions">
-                                        <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;">
+                                        <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Archive this camera? Existing request and event history will be preserved.');">
                                             <button type="submit" class="btn-remove">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                                                Remove
+                                                Archive
                                             </button>
                                         </form>
                                     </div>
@@ -823,6 +823,29 @@
                 {% endif %}
             </div>
         </section>
+
+        {% if archived_cameras %}
+        <section class="card">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div>
+                        <h2 class="card-title">Archived Cameras</h2>
+                        <p class="card-subtitle">Restore an archived camera to reuse its existing history and identity.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% for camera in archived_cameras %}
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 0;">
+                    <span>{{ camera.name }} · CAM-{{ camera.id }}</span>
+                    <form action="{{ url_for('restore_camera', camera_id=camera.id) }}" method="POST" style="margin:0;">
+                        <button type="submit" class="btn-primary">Restore</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
 
         <section id="events-section" class="card">
             <div class="card-header">

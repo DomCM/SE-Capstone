@@ -426,7 +426,7 @@
                         {% for recording_request in requests %}
                         <tr>
                             <td>#{{ recording_request.id }}</td>
-                            <td>{{ recording_request.camera.name }}</td>
+                            <td>{{ recording_request.camera_name or (recording_request.camera.name if recording_request.camera else 'Camera removed') }}</td>
                             <td>{{ recording_request.date_needed }}</td>
                             <td>{{ recording_request.time_range }}</td>
                             <td>{{ recording_request.status|capitalize }}</td>

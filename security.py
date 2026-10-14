@@ -209,6 +209,9 @@ def ensure_database_schema():
                 db.session.execute(text(f'ALTER TABLE user ADD COLUMN {name} {definition}'))
                 db.session.commit()
         camera_columns = {column['name'] for column in inspector.get_columns('camera')}
+        if 'archived_at' not in camera_columns:
+            db.session.execute(text('ALTER TABLE camera ADD COLUMN archived_at DATETIME'))
+            db.session.commit()
         if 'zone' not in camera_columns:
             db.session.execute(text('ALTER TABLE camera ADD COLUMN zone VARCHAR(100) NOT NULL DEFAULT "Main Entrance"'))
             db.session.commit()
@@ -240,6 +243,12 @@ def ensure_database_schema():
             db.session.commit()
         if 'snapshot_path' not in event_log_columns:
             db.session.execute(text('ALTER TABLE event_log ADD COLUMN snapshot_path VARCHAR(255)'))
+            db.session.commit()
+        recording_request_columns = {
+            column['name'] for column in inspector.get_columns('recording_request')
+        }
+        if 'camera_name' not in recording_request_columns:
+            db.session.execute(text('ALTER TABLE recording_request ADD COLUMN camera_name VARCHAR(100)'))
             db.session.commit()
         event_log_user_column = next(
             column for column in inspector.get_columns('event_log') if column['name'] == 'user_id'

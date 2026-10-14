@@ -41,6 +41,7 @@ class Camera(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_public = db.Column(db.Boolean, default=False)
     virtual_lines = db.Column(db.Text, default='[]')
+    archived_at = db.Column(db.DateTime, nullable=True)
 
 
 class Settings(db.Model):
@@ -131,6 +132,7 @@ class RecordingRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     camera_id = db.Column(db.Integer, db.ForeignKey('camera.id'), nullable=False)
+    camera_name = db.Column(db.String(100), nullable=True)
     date_needed = db.Column(db.String(10), nullable=False)
     time_range = db.Column(db.String(100), nullable=False)
     reason = db.Column(db.String(1000), nullable=False)

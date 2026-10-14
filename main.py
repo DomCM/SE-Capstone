@@ -1802,8 +1802,12 @@ def index():
         return redirect(url_for('admin_dashboard'))
     
     user_cameras = Camera.query.filter(
+        Camera.archived_at.is_(None),
         or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
     ).order_by(Camera.id).all()
+    archived_cameras = Camera.query.filter_by(
+        user_id=current_user.id
+    ).filter(Camera.archived_at.is_not(None)).order_by(Camera.id).all()
     month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     week_start = datetime.utcnow() - timedelta(days=7)
     incidents_this_month = EventLog.query.filter(
@@ -1825,6 +1829,7 @@ def index():
     return render_template(
         'user_dashboard.html',
         cameras=user_cameras,
+        archived_cameras=archived_cameras,
         incidents_this_month=incidents_this_month,
         alerts_this_week=alerts_this_week,
         high_severity_alerts=high_severity_alerts,
@@ -1843,7 +1848,8 @@ def create_recording_request():
     reason = request.form.get('reason', '').strip()
     camera = Camera.query.filter(
         Camera.id == camera_id,
-        or_(Camera.user_id == current_user.id, Camera.is_public.is_(True)),
+        Camera.archived_at.is_(None),
+        Camera.is_public.is_(True),
     ).first()
 
     if not camera or not date_needed or not start_time or not end_time or not reason:
@@ -1872,6 +1878,7 @@ def create_recording_request():
     recording_request = RecordingRequest(
         user_id=current_user.id,
         camera_id=camera.id,
+        camera_name=camera.name,
         date_needed=date_needed,
         time_range=f'{start_time} - {end_time}',
         reason=reason[:1000],
@@ -1908,7 +1915,8 @@ def view_recording_request(request_id):
 @login_required
 def user_request():
     cameras = Camera.query.filter(
-        or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
+        Camera.archived_at.is_(None),
+        Camera.is_public.is_(True)
     ).order_by(Camera.id).all()
     requests = RecordingRequest.query.filter_by(user_id=current_user.id).order_by(
         RecordingRequest.created_at.desc()
@@ -1920,6 +1928,7 @@ def user_request():
 def cctv():
     user_cameras = []
     cameras = Camera.query.filter(
+        Camera.archived_at.is_(None),
         or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
     ).order_by(Camera.id).all()
     for camera in cameras:
@@ -1941,8 +1950,8 @@ def cctv():
 @admin_required
 def admin_dashboard():
     total_users = User.query.count()
-    total_cameras = Camera.query.count()
-    active_cameras = Camera.query.filter_by(is_active=True).count()
+    total_cameras = Camera.query.filter(Camera.archived_at.is_(None)).count()
+    active_cameras = Camera.query.filter_by(is_active=True, archived_at=None).count()
     total_events = EventLog.query.filter_by(event_category='vision').count()
     pending_requests_count = RecordingRequest.query.filter_by(status='pending').count()
 
@@ -2051,7 +2060,7 @@ def admin_dashboard():
 def get_available_zones():
     zones = []
     try:
-        for c in Camera.query.all():
+        for c in Camera.query.filter(Camera.archived_at.is_(None)).all():
             z = (getattr(c, 'zone', None) or '').strip()
             if z and z not in zones:
                 zones.append(z)
@@ -2080,8 +2089,16 @@ def format_app_uptime(seconds):
 @app.route('/admin/cctv')
 @admin_required
 def admin_cctv():
+    show_archived = request.args.get('include_archived') == '1'
     camera_items = []
-    for camera in Camera.query.filter_by(user_id=current_user.id).order_by(Camera.id).all():
+    cameras_query = Camera.query
+    if show_archived:
+        cameras_query = cameras_query.filter(Camera.archived_at.is_not(None))
+    else:
+        cameras_query = cameras_query.filter_by(user_id=current_user.id).filter(
+            Camera.archived_at.is_(None)
+        )
+    for camera in cameras_query.order_by(Camera.id).all():
         cam_zone = getattr(camera, 'zone', 'Main Entrance') or 'Main Entrance'
         camera_items.append({
             'id': camera.id,
@@ -2092,9 +2109,15 @@ def admin_cctv():
             'motion_detected': False,
             'is_recording': False,
             'is_public': camera.is_public,
+            'is_archived': camera.archived_at is not None,
             'stream_url': url_for('video_feed', camera_id=camera.id),
         })
-    return render_template('admin_cctv.html', cameras=camera_items, available_zones=get_available_zones())
+    return render_template(
+        'admin_cctv.html',
+        cameras=camera_items,
+        available_zones=get_available_zones(),
+        show_archived=show_archived,
+    )
 
 
 @app.route('/admin/users')
@@ -2355,7 +2378,10 @@ def admin_request():
         requests.append({
             'id': recording_request.id,
             'username': recording_request.user.username,
-            'camera_name': recording_request.camera.name,
+            'camera_name': (
+                recording_request.camera_name
+                or (recording_request.camera.name if recording_request.camera else 'Camera removed')
+            ),
             'date_needed': recording_request.date_needed,
             'time_range': recording_request.time_range,
             'reason': recording_request.reason,
@@ -2444,6 +2470,8 @@ def upload_recording_request(request_id):
 @login_required
 def camera_virtual_lines(camera_id):
     camera = Camera.query.get_or_404(camera_id)
+    if camera.archived_at is not None:
+        return jsonify({'error': 'Camera is archived'}), 404
     if camera.user_id != current_user.id and not is_admin_user(current_user):
         return jsonify({'error': 'Unauthorized'}), 403
 
@@ -2503,6 +2531,8 @@ def camera_virtual_lines(camera_id):
 @login_required
 def camera_snapshot(camera_id):
     camera = Camera.query.get_or_404(camera_id)
+    if camera.archived_at is not None:
+        return jsonify({'error': 'Camera is archived'}), 404
     if camera.user_id != current_user.id and not is_admin_user(current_user):
         return jsonify({'error': 'Unauthorized'}), 403
 
@@ -2554,7 +2584,7 @@ def admin_system():
     except OSError:
         storage_used = storage_free = storage_total = storage_pct = None
 
-    active_cameras = Camera.query.filter_by(is_active=True).all()
+    active_cameras = Camera.query.filter_by(is_active=True, archived_at=None).all()
     connected_cameras = sum(1 for camera in active_cameras if camera_status(camera)[0])
     try:
         flask_version = package_version('Flask')
@@ -2698,9 +2728,15 @@ def admin_clear_faces():
 @admin_required
 def admin_factory_reset():
     cleared_count = clear_vision_events_and_snapshots()
-    Camera.query.delete()
+    cameras_to_archive = Camera.query.filter(Camera.archived_at.is_(None)).all()
+    Camera.query.filter(Camera.archived_at.is_(None)).update(
+        {Camera.archived_at: datetime.utcnow()},
+        synchronize_session=False,
+    )
     Settings.query.delete()
     db.session.commit()
+    for camera in cameras_to_archive:
+        release_camera_streams(camera.id)
     record_audit_event(
         current_user.id, 'factory_reset',
         f'Factory reset completed; removed {cleared_count} computer-vision event log(s)',
@@ -2760,33 +2796,49 @@ def delete_camera(camera_id):
     else:
         redirect_target = url_for('index')
 
-    with stream_lock:
-        user_key = camera.user_id if is_admin else current_user.id
-        manager = active_user_streams.get(user_key, {}).get(camera.id)
-    if manager:
-        release_stream(user_key, camera.id, manager.scope_key, manager)
-    
     try:
         camera_name = camera.name
-        camera_id = camera.id
-        db.session.delete(camera)
+        camera.archived_at = datetime.utcnow()
         db.session.commit()
+        release_camera_streams(camera.id)
         if is_admin:
             record_audit_event(
                 current_user.id, 'remove',
                 f"Removed camera \"{camera_name}\" (#{camera_id})",
                 'Admin', get_client_ip(),
             )
-        flash(f'Camera "{camera.name}" removed.', 'success')
+        flash(f'Camera "{camera_name}" archived. Its request and event history was preserved.', 'success')
     except Exception as e:
         flash(f'Error deleting camera: {e}', 'danger')
         
     return redirect(redirect_target)
 
+
+@app.route('/restore_camera/<int:camera_id>', methods=['POST'])
+@login_required
+def restore_camera(camera_id):
+    camera = Camera.query.get_or_404(camera_id)
+    if camera.user_id != current_user.id and not is_admin_user(current_user):
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('index'))
+
+    camera.archived_at = None
+    db.session.commit()
+    if is_admin_user(current_user):
+        record_audit_event(
+            current_user.id, 'restore',
+            f"Restored camera \"{camera.name}\" (#{camera.id})",
+            'Admin', get_client_ip(),
+        )
+    flash(f'Camera "{camera.name}" restored.', 'success')
+    return redirect(url_for('admin_cctv', include_archived=1) if is_admin_user(current_user) else url_for('index'))
+
 @app.route('/video_feed/<int:camera_id>')
 @login_required
 def video_feed(camera_id):
     camera = Camera.query.get_or_404(camera_id)
+    if camera.archived_at is not None:
+        return "Camera is archived", 404
     if camera.user_id != current_user.id and not camera.is_public:
         return "Unauthorized", 403
 
@@ -2808,9 +2860,10 @@ def camera_status(camera):
 @login_required
 def camera_status_api():
     if is_admin_user(current_user):
-        cameras = Camera.query.order_by(Camera.id).all()
+        cameras = Camera.query.filter(Camera.archived_at.is_(None)).order_by(Camera.id).all()
     else:
         cameras = Camera.query.filter(
+            Camera.archived_at.is_(None),
             or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
         ).order_by(Camera.id).all()
     statuses = {}
@@ -2860,6 +2913,17 @@ def release_stream(user_id, camera_id, source_key, manager):
             if active_physical_streams.get(source_key) is manager:
                 del active_physical_streams[source_key]
             manager.release()
+
+
+def release_camera_streams(camera_id):
+    with stream_lock:
+        subscribers = [
+            (user_id, camera_streams[camera_id])
+            for user_id, camera_streams in active_user_streams.items()
+            if camera_id in camera_streams
+        ]
+    for user_id, manager in subscribers:
+        release_stream(user_id, camera_id, manager.scope_key, manager)
 
 
 def refresh_stream_settings(settings, user_id=None):
@@ -3413,7 +3477,7 @@ def init_app():
         detection_pool = ThreadPoolExecutor(max_workers=MAX_DETECTION_POOL_WORKERS)
 
     with app.app_context():
-        for camera in Camera.query.filter_by(is_active=True).all():
+        for camera in Camera.query.filter_by(is_active=True, archived_at=None).all():
             acquire_stream(camera.user_id, camera)
 
     print("App Initialized.")
