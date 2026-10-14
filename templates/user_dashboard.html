@@ -606,6 +606,7 @@
     </style>
 </head>
 <body>
+{% include '_flash_toasts.html' %}
 
     <!-- Copied Top Navigation Bar from user_cctv.html -->
     <nav>
@@ -874,7 +875,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                            {% include '_flash_toasts.html' %}
                                 {% for event in events %}
                                     <tr>
                                         <td style="font-family: var(--font-mono); font-weight: 600;">#EV-{{ event.id }}</td>
