@@ -6,6 +6,7 @@ import smtplib
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
@@ -136,7 +137,8 @@ def send_security_email(user, subject, body, html_body=None):
             message.attach(MIMEText(html_body, 'html'))
         else:
             message = MIMEText(body, 'plain')
-        message['From'], message['To'], message['Subject'] = sender, user.email, subject
+        from_header = formataddr((app.config.get('SMTP_FROM_NAME', ''), sender))
+        message['From'], message['To'], message['Subject'] = from_header, user.email, subject
         with smtplib.SMTP(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
             server.starttls()
             server.login(sender, password)

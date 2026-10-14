@@ -54,6 +54,7 @@ import threading
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 from email.mime.image import MIMEImage
 from datetime import datetime, timedelta
 from sqlalchemy import inspect, text, or_
@@ -130,6 +131,7 @@ app.config['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.environ.get('SMTP_PORT', '587'))
 app.config['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 app.config['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
+app.config['SMTP_FROM_NAME'] = os.environ.get('SMTP_FROM_NAME', 'Home Detection Security').strip()
 app.config['PUBLIC_BASE_URL'] = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
 app.config['PERFORMANCE_SLOW_REQUEST_MS'] = 500
 
@@ -680,7 +682,7 @@ def send_account_status_email(user, approved):
     )
     try:
         message = MIMEMultipart('alternative')
-        message['From'] = sender
+        message['From'] = formataddr((app.config.get('SMTP_FROM_NAME', ''), sender))
         message['To'] = user.email
         message['Subject'] = subject
         message.attach(MIMEText(body, 'plain', 'utf-8'))
@@ -716,7 +718,7 @@ def send_email_alert(
     try:
         html_body = _build_alert_email_html(subject, body, image_frame)
         msg = MIMEMultipart('mixed')
-        msg['From'] = sender
+        msg['From'] = formataddr((app.config.get('SMTP_FROM_NAME', ''), sender))
         msg['To'] = recipient_email
         msg['Subject'] = subject
 
