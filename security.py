@@ -222,11 +222,19 @@ def ensure_database_schema():
             db.session.execute(text('ALTER TABLE camera ADD COLUMN virtual_lines TEXT NOT NULL DEFAULT "[]"'))
             db.session.commit()
         settings_columns = {column['name'] for column in inspector.get_columns('settings')}
+        if 'unidentified_email_alerts_enabled' not in settings_columns:
+            db.session.execute(text(
+                'ALTER TABLE settings ADD COLUMN unidentified_email_alerts_enabled BOOLEAN NOT NULL DEFAULT 0'
+            ))
+            db.session.commit()
         if 'critical_email_cooldown_minutes' not in settings_columns:
             db.session.execute(text('ALTER TABLE settings ADD COLUMN critical_email_cooldown_minutes INTEGER NOT NULL DEFAULT 15'))
             db.session.commit()
         if 'last_critical_email_at' not in settings_columns:
             db.session.execute(text('ALTER TABLE settings ADD COLUMN last_critical_email_at DATETIME'))
+            db.session.commit()
+        if 'last_unidentified_email_at' not in settings_columns:
+            db.session.execute(text('ALTER TABLE settings ADD COLUMN last_unidentified_email_at DATETIME'))
             db.session.commit()
         event_log_columns = {column['name'] for column in inspector.get_columns('event_log')}
         if 'camera_id' not in event_log_columns:

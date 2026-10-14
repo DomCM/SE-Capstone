@@ -581,6 +581,17 @@
                         </label>
                     </div>
 
+                    <div class="toggle-row" style="margin-bottom: 24px;">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Unidentified Detection Email Alerts</div>
+                            <div class="toggle-desc">Email you when an unidentified person is detected by face recognition.</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="unidentified_email_alerts_enabled" {% if settings.unidentified_email_alerts_enabled %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
                     <div class="field" style="margin-bottom: 20px;">
                         <label for="recipient_email">Alert Email Address</label>
                         <input type="email" name="recipient_email" id="recipient_email" value="{{ settings.recipient_email or current_user.email }}" required>

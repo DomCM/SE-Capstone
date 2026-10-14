@@ -571,7 +571,13 @@ def get_people_without_usable_faces(roi_tasks, roi_results):
 
 
 def _build_alert_email_html(subject, body, image_frame=None):
-    alert_title = 'CRITICAL ALERT' if str(subject).upper().startswith('CRITICAL') else 'SECURITY ALERT'
+    normalized_subject = str(subject).upper()
+    if normalized_subject.startswith('CRITICAL'):
+        alert_title = 'CRITICAL ALERT'
+    elif 'UNIDENTIFIED' in normalized_subject:
+        alert_title = 'UNIDENTIFIED PERSON DETECTED'
+    else:
+        alert_title = 'SECURITY ALERT'
     timestamp = datetime.utcnow().strftime('%d %b %Y • %H:%M UTC')
     return app.jinja_env.get_template('alert_email.html').render(
         subject=subject,
@@ -634,8 +640,14 @@ def send_account_status_email(user, approved):
         return False
 
 
-def send_email_alert(user_settings, subject, body, image_frame=None):
-    if not user_settings or not getattr(user_settings, 'email_alerts_enabled', False):
+def send_email_alert(
+    user_settings,
+    subject,
+    body,
+    image_frame=None,
+    preference='email_alerts_enabled',
+):
+    if not user_settings or not getattr(user_settings, preference, False):
         return
 
     sender = app.config['SMTP_USERNAME']
@@ -668,27 +680,41 @@ def send_email_alert(user_settings, subject, body, image_frame=None):
             s.starttls()
             s.login(sender, password)
             s.send_message(msg)
-        app.logger.info('Critical alert email sent to %s', recipient_email)
+        app.logger.info('Security alert email sent to %s', recipient_email)
     except Exception as e:
-        app.logger.warning('Critical alert email failed: %s', e)
+        app.logger.warning('Security alert email failed: %s', e)
 
 
-def claim_critical_email_slot(user_id):
-    """Claim the user's persisted alert cooldown before starting delivery."""
+def _claim_email_slot(user_id, preference, timestamp_field):
     with email_alert_lock:
         with app.app_context():
             settings = Settings.query.filter_by(user_id=user_id).first()
-            if not settings or not settings.email_alerts_enabled or not settings.recipient_email:
+            if not settings or not getattr(settings, preference, False) or not settings.recipient_email:
                 return False
 
             now = datetime.utcnow()
             cooldown_minutes = max(1, settings.critical_email_cooldown_minutes or 15)
-            if settings.last_critical_email_at and now - settings.last_critical_email_at < timedelta(minutes=cooldown_minutes):
+            last_sent_at = getattr(settings, timestamp_field)
+            if last_sent_at and now - last_sent_at < timedelta(minutes=cooldown_minutes):
                 return False
 
-            settings.last_critical_email_at = now
+            setattr(settings, timestamp_field, now)
             db.session.commit()
             return True
+
+
+def claim_critical_email_slot(user_id):
+    """Claim the user's persisted fire/smoke alert cooldown before delivery."""
+    return _claim_email_slot(user_id, 'email_alerts_enabled', 'last_critical_email_at')
+
+
+def claim_unidentified_email_slot(user_id):
+    """Claim the user's persisted unidentified-detection email cooldown."""
+    return _claim_email_slot(
+        user_id,
+        'unidentified_email_alerts_enabled',
+        'last_unidentified_email_at',
+    )
 
 #video
 class VideoStreamManager:
@@ -756,6 +782,7 @@ class VideoStreamManager:
                 'face_recognition_confidence': getattr(settings_obj, 'face_recognition_confidence', 0.6),
                 'active_classes': settings_obj.active_classes,
                 'email_alerts_enabled': settings_obj.email_alerts_enabled,
+                'unidentified_email_alerts_enabled': settings_obj.unidentified_email_alerts_enabled,
                 'recipient_email': settings_obj.recipient_email,
                 'critical_email_cooldown_minutes': getattr(settings_obj, 'critical_email_cooldown_minutes', 15),
                 'scale_down_amount': settings_obj.scale_down_amount,
@@ -1277,6 +1304,27 @@ class VideoStreamManager:
                                 event_metadata={'camera_zone': self.camera_zone, 'class': 'person'},
                                 snapshot_frame=annotated_frame,
                             )
+                            if (
+                                self.settings_cache.get('unidentified_email_alerts_enabled', False)
+                                and claim_unidentified_email_slot(self.user_id)
+                            ):
+                                email_settings = type('EmailSettingsSnapshot', (), self.settings_cache)()
+                                camera_label = self.camera_name or f'Camera {self.camera_id}'
+                                email_body = (
+                                    f'An unidentified person was detected by {camera_label} '
+                                    f'in {self.camera_zone}.'
+                                )
+                                threading.Thread(
+                                    target=send_email_alert,
+                                    args=(
+                                        email_settings,
+                                        'UNIDENTIFIED PERSON DETECTED',
+                                        email_body,
+                                        annotated_frame,
+                                    ),
+                                    kwargs={'preference': 'unidentified_email_alerts_enabled'},
+                                    daemon=True,
+                                ).start()
                         else:
                             self.log_db_event(
                                 "RECOGNIZED",
@@ -2985,6 +3033,9 @@ def settings():
         user_settings.yolo_enabled = 'yolo_enabled' in request.form
         user_settings.face_recognition_enabled = 'face_recognition_enabled' in request.form
         user_settings.email_alerts_enabled = 'email_alerts_enabled' in request.form
+        user_settings.unidentified_email_alerts_enabled = (
+            'unidentified_email_alerts_enabled' in request.form
+        )
         recipient_email = request.form.get('recipient_email', '').strip().lower()
         if not recipient_email or '@' not in recipient_email:
             flash('Enter a valid alert email address.', 'danger')
