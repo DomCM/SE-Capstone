@@ -822,6 +822,8 @@ class VideoStreamManager:
         self._recent_event_cache = {}
         self._last_full_scan_time = 0.0
         self.vehicle_tracks = []
+        self.person_tracks = []
+        self._virtual_line_track_sequence = 0
 
     def start(self):
         """Start processing so the worker can establish the source connection."""
@@ -948,81 +950,105 @@ class VideoStreamManager:
                 continue
 
     def _update_virtual_line_events(self, detections, virtual_lines, snapshot_frame=None):
-        """Check vehicle centers against configured virtual crossing lines."""
+        """Check tracked people and vehicles against configured virtual lines."""
         if not virtual_lines or not detections:
             return
 
-        current_objects = []
+        current_objects = {'vehicle': [], 'person': []}
         for x1, y1, x2, y2, name, confidence in detections:
-            if not is_vehicle_class_name(name):
+            if is_vehicle_class_name(name):
+                object_type = 'vehicle'
+            elif is_human_detection_name(name):
+                object_type = 'person'
+            else:
                 continue
-            current_objects.append({
+
+            current_objects[object_type].append({
                 'name': name,
                 'center': ((x1 + x2) / 2.0, (y1 + y2) / 2.0),
                 'confidence': float(confidence) if confidence is not None else 0.0,
             })
 
-        if not current_objects:
+        if not any(current_objects.values()):
             return
 
         now = time.monotonic()
-        for track in self.vehicle_tracks:
-            track['assigned'] = False
+        for object_type, objects in current_objects.items():
+            tracks = self.vehicle_tracks if object_type == 'vehicle' else self.person_tracks
+            detector_name = 'vehicle' if object_type == 'vehicle' else 'person'
+            event_label = 'VEHICLE' if object_type == 'vehicle' else 'PERSON'
 
-        for vehicle in current_objects:
-            best_track = None
-            best_distance = float('inf')
-            for track in self.vehicle_tracks:
-                if track.get('assigned'):
+            for track in tracks:
+                track['assigned'] = False
+
+            for detected_object in objects:
+                best_track = None
+                best_distance = float('inf')
+                for track in tracks:
+                    if track.get('assigned'):
+                        continue
+                    distance = math.hypot(
+                        detected_object['center'][0] - track['center'][0],
+                        detected_object['center'][1] - track['center'][1],
+                    )
+                    if distance < best_distance:
+                        best_track = track
+                        best_distance = distance
+
+                if best_track is None:
+                    self._virtual_line_track_sequence += 1
+                    tracks.append({
+                        'center': detected_object['center'],
+                        'last_seen': now,
+                        'last_line_event_time': 0.0,
+                        'assigned': True,
+                        'name': detected_object['name'],
+                        'track_id': self._virtual_line_track_sequence,
+                    })
                     continue
-                distance = math.hypot(
-                    vehicle['center'][0] - track['center'][0],
-                    vehicle['center'][1] - track['center'][1],
-                )
-                if distance < best_distance:
-                    best_track = track
-                    best_distance = distance
 
-            if best_track is not None:
                 previous_center = best_track['center']
-                best_track['center'] = vehicle['center']
+                best_track['center'] = detected_object['center']
                 best_track['last_seen'] = now
                 best_track['assigned'] = True
-                best_track['name'] = vehicle['name']
+                best_track['name'] = detected_object['name']
                 for line in virtual_lines:
-                    line_points = resolve_virtual_line_points(line.get('points') or [], self.current_frame.shape[1], self.current_frame.shape[0])
-                    direction = detect_virtual_line_crossing(previous_center, vehicle['center'], line_points)
+                    line_points = resolve_virtual_line_points(
+                        line.get('points') or [],
+                        self.current_frame.shape[1],
+                        self.current_frame.shape[0],
+                    )
+                    direction = detect_virtual_line_crossing(
+                        previous_center,
+                        detected_object['center'],
+                        line_points,
+                    )
                     if direction and now - best_track.get('last_line_event_time', 0.0) > 5:
                         best_track['last_line_event_time'] = now
+                        event_metadata = {
+                            'camera_zone': self.camera_zone,
+                            'class': detected_object['name'],
+                            'line_name': line.get('name', 'Lane'),
+                            'direction': direction,
+                            'line_points': line_points,
+                        }
+                        if object_type == 'person':
+                            event_metadata['track_id'] = best_track['track_id']
                         self.log_db_event(
-                            f"VEHICLE {direction.upper()} CROSSING",
-                            f"{vehicle['name']} crossed virtual line '{line.get('name', 'Lane')}'",
-                            vehicle['confidence'],
+                            f"{event_label} {direction.upper()} CROSSING",
+                            f"{detected_object['name']} crossed virtual line '{line.get('name', 'Lane')}'",
+                            detected_object['confidence'],
                             event_category='vision',
-                            detector='vehicle',
+                            detector=detector_name,
                             severity='medium',
-                            event_metadata={
-                                'camera_zone': self.camera_zone,
-                                'class': vehicle['name'],
-                                'line_name': line.get('name', 'Lane'),
-                                'direction': direction,
-                                'line_points': line_points,
-                            },
+                            event_metadata=event_metadata,
                             snapshot_frame=snapshot_frame,
                         )
-            else:
-                self.vehicle_tracks.append({
-                    'center': vehicle['center'],
-                    'last_seen': now,
-                    'last_line_event_time': 0.0,
-                    'assigned': True,
-                    'name': vehicle['name'],
-                })
 
-        self.vehicle_tracks = [
-            track for track in self.vehicle_tracks
-            if now - track.get('last_seen', now) <= 8.0
-        ]
+            tracks[:] = [
+                track for track in tracks
+                if now - track.get('last_seen', now) <= 8.0
+            ]
 
     def _finalize_processed_frame(self, annotated_frame):
         """Apply output work shared by detector and tracker frames."""
@@ -1298,8 +1324,21 @@ class VideoStreamManager:
             for x1, y1, x2, y2, name, is_crit, confidence in self.yolo_detections
             if is_vehicle_class_name(name)
         ]
+        detected_person_boxes = [
+            (x1, y1, x2, y2, confidence)
+            for x1, y1, x2, y2, name, is_crit, confidence in self.yolo_detections
+            if is_human_detection_name(name)
+        ]
+        person_detections = [
+            (x1, y1, x2, y2, 'person', confidence)
+            for x1, y1, x2, y2, confidence in deduplicate_human_boxes(detected_person_boxes)
+        ]
         try:
-            self._update_virtual_line_events(vehicle_detections, virtual_lines, annotated_frame)
+            self._update_virtual_line_events(
+                vehicle_detections + person_detections,
+                virtual_lines,
+                annotated_frame,
+            )
         except Exception:
             pass
 
@@ -1466,7 +1505,8 @@ class VideoStreamManager:
             self.recording_writer = None
 
     def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None, snapshot_frame=None):
-        dedupe_key = (event_type, (desc or '')[:180])
+        track_id = event_metadata.get('track_id') if isinstance(event_metadata, dict) else None
+        dedupe_key = (event_type, (desc or '')[:180], track_id)
         now = time.monotonic()
         last_logged = self._recent_event_cache.get(dedupe_key)
         if last_logged and now - last_logged < 15:
