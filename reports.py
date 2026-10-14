@@ -1,6 +1,7 @@
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 
 AUDIT_EVENT_TYPES = {
@@ -15,6 +16,24 @@ REPORT_TITLES = {
     'frequency': 'Alert Frequency Analytics Report',
     'surveillance': 'Surveillance System Health Report',
 }
+
+REPORT_TIMEZONE = ZoneInfo('Asia/Manila')
+
+
+def _as_philippine_datetime(value):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(REPORT_TIMEZONE)
+
+
+def _philippine_datetime_as_utc_naive(value):
+    return value.replace(tzinfo=REPORT_TIMEZONE).astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _as_utc_naive(value):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _severity(event_type):
@@ -198,7 +217,7 @@ def build_report(
     camera_model=None,
 ):
     """Build the admin report context from security events in EventLog."""
-    now = now or datetime.now()
+    now = _as_utc_naive(now or datetime.utcnow())
     report_type = report_type if report_type in REPORT_TITLES else 'incident'
     timeframe = timeframe if timeframe in {'24h', '7d', '30d', 'custom'} else '7d'
     severity = severity if severity in {'all', 'critical', 'normal'} else 'all'
@@ -223,8 +242,10 @@ def build_report(
 
     if timeframe == 'custom' and start_date and end_date:
         try:
-            since = datetime.strptime(start_date, '%Y-%m-%d')
-            until = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+            local_start = datetime.strptime(start_date, '%Y-%m-%d')
+            local_end = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+            since = _philippine_datetime_as_utc_naive(local_start)
+            until = _philippine_datetime_as_utc_naive(local_end)
         except (ValueError, TypeError):
             timeframe = '7d'
 
@@ -237,7 +258,7 @@ def build_report(
         ~event_log_model.event_type.in_(AUDIT_EVENT_TYPES),
     ]
     if until:
-        filters.append(event_log_model.timestamp <= until)
+        filters.append(event_log_model.timestamp < until)
 
     query = event_log_model.query.filter(*filters)
     events = query.order_by(event_log_model.timestamp.desc()).all()
@@ -255,7 +276,9 @@ def build_report(
         cam_name = event.source_name or 'Unknown camera'
 
         report_events.append({
-            'timestamp': event.timestamp.strftime('%Y-%m-%d %I:%M:%S %p') if event.timestamp else '-',
+            'event_id': event.id,
+            'snapshot_available': bool(getattr(event, 'snapshot_path', None)),
+            'timestamp': _as_philippine_datetime(event.timestamp).strftime('%Y-%m-%d %I:%M:%S %p %z') if event.timestamp else '-',
             'raw_timestamp': event.timestamp,
             'location': event_zone,
             'zone': event_zone,
@@ -306,7 +329,7 @@ def build_report(
             
             ts = event.get('raw_timestamp')
             if ts:
-                hour_str = ts.strftime('%I:00 %p')
+                hour_str = _as_philippine_datetime(ts).strftime('%I:00 %p')
                 location_data[key]['hours'][hour_str] = location_data[key]['hours'].get(hour_str, 0) + 1
             
             ev_type = event['event_type']
@@ -350,7 +373,7 @@ def build_report(
             ts = event.get('raw_timestamp')
             if ts is None:
                 continue
-            hour_key = ts.strftime('%H:00')
+            hour_key = _as_philippine_datetime(ts).strftime('%H:00')
             hourly_activity[hour_key] = hourly_activity.get(hour_key, 0) + 1
         hourly_activity_chart = [
             {'label': hour, 'value': count}
@@ -424,8 +447,8 @@ def build_report(
         'hourly_activity_chart': hourly_activity_chart,
         'severity_chart': severity_chart,
         'surveillance_summary': surveillance_summary,
-        'date_generated': now.strftime('%Y-%m-%d'),
-        'doc_id': f'EBV-{now.strftime("%Y%m%d")}-{len(report_events):04d}',
+        'date_generated': _as_philippine_datetime(now).strftime('%Y-%m-%d'),
+        'doc_id': f'EBV-{_as_philippine_datetime(now).strftime("%Y%m%d")}-{len(report_events):04d}',
     }
 
 

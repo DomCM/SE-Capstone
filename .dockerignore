@@ -5,6 +5,7 @@ __pycache__
 .env
 .pytest_cache
 instance
+storage
 users_data
 video_outputs
 datasets

@@ -64,7 +64,65 @@ import qrcode
 from concurrent.futures import ThreadPoolExecutor
 from performance_metrics import PerformanceMetrics
 
-app = Flask(__name__)
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+STORAGE_ROOT = os.path.join(APP_ROOT, 'storage')
+INSTANCE_DIR = os.path.join(STORAGE_ROOT, 'instance')
+BASE_RECORDINGS_DIR = os.path.join(STORAGE_ROOT, 'users_data')
+
+
+def _move_storage_entry(source_path, destination_path, backup_path):
+    if not os.path.exists(source_path):
+        return
+
+    if not os.path.exists(destination_path):
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+        shutil.move(source_path, destination_path)
+        return
+
+    if os.path.isdir(source_path) and os.path.isdir(destination_path):
+        for entry in os.scandir(source_path):
+            _move_storage_entry(
+                entry.path,
+                os.path.join(destination_path, entry.name),
+                os.path.join(backup_path, entry.name),
+            )
+        os.rmdir(source_path)
+        return
+
+    os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+    conflict_path = backup_path
+    suffix = 1
+    while os.path.exists(conflict_path):
+        conflict_path = f'{backup_path}.legacy-{suffix}'
+        suffix += 1
+    shutil.move(source_path, conflict_path)
+    logging.warning(
+        'Preserved conflicting legacy app data at %s instead of overwriting %s',
+        conflict_path,
+        destination_path,
+    )
+
+
+os.makedirs(STORAGE_ROOT, exist_ok=True)
+_move_storage_entry(
+    os.path.join(APP_ROOT, 'instance'),
+    INSTANCE_DIR,
+    os.path.join(STORAGE_ROOT, 'legacy_backup', 'instance'),
+)
+_move_storage_entry(
+    os.path.join(APP_ROOT, 'users_data'),
+    BASE_RECORDINGS_DIR,
+    os.path.join(STORAGE_ROOT, 'legacy_backup', 'users_data'),
+)
+_move_storage_entry(
+    os.path.join(APP_ROOT, 'smart_security.db'),
+    os.path.join(INSTANCE_DIR, 'smart_security.db'),
+    os.path.join(STORAGE_ROOT, 'legacy_backup', 'root', 'smart_security.db'),
+)
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+os.makedirs(BASE_RECORDINGS_DIR, exist_ok=True)
+
+app = Flask(__name__, instance_path=INSTANCE_DIR)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smart_security.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -83,7 +141,6 @@ login_manager.login_view = 'login'
 
 MODEL_PATH = 'models/best.pt' # main
 MODEL_PATH_OBJECT = 'models/yolo26m.pt'  # secondary
-BASE_RECORDINGS_DIR = "users_data"
 APP_STARTED_MONOTONIC = time.monotonic()
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -2389,6 +2446,11 @@ def admin_reports():
         end_date=request.args.get('end_date'),
         camera_model=Camera,
     )
+    for log in report_context['incident_logs']:
+        log['snapshot_url'] = (
+            url_for('admin_event_snapshot', event_id=log['event_id'])
+            if log['snapshot_available'] else None
+        )
     return render_template('admin_reports.html', **report_context)
 
 
@@ -3458,6 +3520,22 @@ def remove_event_snapshot_file(snapshot_path):
 @login_required
 def event_snapshot(event_id):
     event = EventLog.query.filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    snapshot_path = get_event_snapshot_path(event)
+    if not snapshot_path or not os.path.isfile(snapshot_path):
+        return 'Snapshot is not available.', 404
+    try:
+        with open(snapshot_path, 'rb') as snapshot_file:
+            snapshot_bytes = snapshot_file.read()
+    except OSError:
+        app.logger.exception('Unable to read event snapshot %s', snapshot_path)
+        return 'Snapshot is not available.', 404
+    return send_file(BytesIO(snapshot_bytes), mimetype='image/jpeg', download_name=f'event-{event_id}.jpg')
+
+
+@app.route('/admin/events/<int:event_id>/snapshot')
+@admin_required
+def admin_event_snapshot(event_id):
+    event = EventLog.query.get_or_404(event_id)
     snapshot_path = get_event_snapshot_path(event)
     if not snapshot_path or not os.path.isfile(snapshot_path):
         return 'Snapshot is not available.', 404

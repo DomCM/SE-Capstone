@@ -12,3 +12,4 @@ qrcode
 cryptography
 python-dotenv
 pandas
+tzdata

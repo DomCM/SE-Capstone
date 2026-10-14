@@ -38,7 +38,7 @@ RUN python -m pip install --upgrade pip \
 
 COPY . .
 
-RUN mkdir -p models users_data \
+RUN mkdir -p models storage/instance storage/users_data \
     && python -c "from huggingface_hub import hf_hub_download; import shutil; \
 shutil.copyfile(hf_hub_download('SalahALHaismawi/yolov26-fire-detection', 'best.pt', revision='5397b43994c39c2ed4ef81a6996c6334e2b7a5fa'), 'models/best.pt'); \
 shutil.copyfile(hf_hub_download('Ultralytics/YOLO26', 'yolo26m.pt', revision='070ac3c51435984d992ba92eb3f234daf4e4500d'), 'models/yolo26m.pt')"
