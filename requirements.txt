@@ -1,4 +1,4 @@
-ultralytics
+ultralytics>=8.4.0
 huggingface-hub
 Pillow
 flask

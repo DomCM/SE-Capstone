@@ -777,11 +777,12 @@ def claim_unidentified_email_slot(user_id):
 
 #video
 class VideoStreamManager:
-    def __init__(self, user_id, camera_id, source, settings, camera_name=None, camera_zone=None):
+    def __init__(self, user_id, camera_id, source, settings, camera_name=None, camera_zone=None, camera_is_public=False):
         self.user_id = user_id
         self.camera_id = camera_id
         self.camera_name = camera_name or f'Cam {camera_id}'
         self.camera_zone = camera_zone or 'Main Entrance'
+        self.camera_is_public = bool(camera_is_public)
         self.video_source = source
         self.cap = None
         self.last_connection_attempt = 0
@@ -1524,6 +1525,8 @@ class VideoStreamManager:
 
         if event_metadata is None:
             event_metadata = {'camera_zone': getattr(self, 'camera_zone', self.camera_name)}
+        if isinstance(event_metadata, dict):
+            event_metadata.setdefault('camera_is_public', self.camera_is_public)
 
         snapshot_bytes = None
         if snapshot_frame is not None:
@@ -3040,9 +3043,18 @@ def acquire_stream(user_id, camera):
     with stream_lock:
         manager = active_physical_streams.get(source_key)
         if manager is None or manager.stream_stop_event.is_set():
+            stream_owner_id = camera.user_id if camera.is_public else user_id
             with app.app_context():
-                user_settings = Settings.query.filter_by(user_id=user_id).first()
-            manager = VideoStreamManager(user_id, camera.id, camera.source, user_settings, camera.name, getattr(camera, 'zone', 'Main Entrance'))
+                user_settings = Settings.query.filter_by(user_id=stream_owner_id).first()
+            manager = VideoStreamManager(
+                stream_owner_id,
+                camera.id,
+                camera.source,
+                user_settings,
+                camera.name,
+                getattr(camera, 'zone', 'Main Entrance'),
+                getattr(camera, 'is_public', False),
+            )
             manager.scope_key = source_key
             active_physical_streams[source_key] = manager
             manager.start()

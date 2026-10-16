@@ -59,19 +59,50 @@ def _event_severity(event):
 
 
 def _metadata_zone(event):
+    payload = _event_metadata(event)
+    if payload:
+        zone_value = payload.get('camera_zone') or payload.get('zone')
+        if zone_value:
+            return zone_value
+    return None
+
+
+def _event_metadata(event):
     event_metadata = getattr(event, 'event_metadata', None) or ''
     if not event_metadata:
-        return None
+        return {}
     try:
         import json
         payload = json.loads(event_metadata)
         if isinstance(payload, dict):
-            zone_value = payload.get('camera_zone') or payload.get('zone')
-            if zone_value:
-                return zone_value
+            return payload
     except (TypeError, ValueError):
         pass
-    return None
+    return {}
+
+
+def _is_unidentified_or_unusable_person_event(event):
+    event_type = str(event.get('raw_event_type') or event.get('event_type') or '').lower()
+    is_person_detection = (
+        'person' in event_type
+        or 'face' in event_type
+        or str(event.get('detector') or '').lower() == 'face'
+        or str(event.get('object_class') or '').lower() == 'person'
+    )
+    has_identity_issue = any(
+        marker in event_type
+        for marker in (
+            'unknown',
+            'unidentified',
+            'unidentifiable',
+            'not identifiable',
+            'face not visible',
+            'face unavailable',
+            'face not usable',
+            'no usable face',
+        )
+    )
+    return is_person_detection and has_identity_issue
 
 
 def _resolved_zone(event):
@@ -121,12 +152,14 @@ def _matches_severity(event_severity, severity):
 
 
 def compute_patrol_priority_summary(events):
-    """Score each zone/camera by recent activity to guide patrol prioritization."""
+    """Score camera activity, limiting repeated public-camera identity events."""
     zone_stats = {}
+    public_person_event_scores = {}
 
     for event in events or []:
         zone = (event.get('zone') or event.get('location') or 'Unassigned').strip() or 'Unassigned'
         camera = event.get('camera_name') or 'Unknown camera'
+        camera_key = event.get('camera_id') or (zone, camera)
         key = (zone, camera)
         stats = zone_stats.setdefault(key, {
             'zone': zone,
@@ -145,32 +178,43 @@ def compute_patrol_priority_summary(events):
             stats['high_severity'] += 1
 
         event_type = str(event.get('event_type') or '').lower()
-        if 'unknown' in event_type:
+        is_identity_issue = _is_unidentified_or_unusable_person_event(event)
+        if is_identity_issue:
             stats['unknown_faces'] += 1
         if 'crowd' in event_type:
             stats['crowd_events'] += 1
-        if 'vehicle' in event_type or 'crossing' in event_type:
+        if 'vehicle' in event_type:
             stats['vehicle_crossings'] += 1
 
-        if 'critical' in event_type or 'alert' in event_type:
-            stats['risk_score'] += 12
-        elif 'unknown' in event_type:
-            stats['risk_score'] += 9
+        is_limited_public_person_event = event.get('camera_is_public', False) and is_identity_issue
+        if is_limited_public_person_event:
+            previous_score = public_person_event_scores.get(camera_key, 0)
+            event_risk_score = 1 if previous_score < 5 else 0
+            public_person_event_scores[camera_key] = min(5, previous_score + 1)
+        elif 'critical' in event_type or 'alert' in event_type:
+            event_risk_score = 12
+        elif 'unknown' in event_type or 'unidentified' in event_type or 'unidentifiable' in event_type:
+            event_risk_score = 9
         elif 'crowd' in event_type:
-            stats['risk_score'] += 6
+            event_risk_score = 6
         elif 'vehicle' in event_type or 'crossing' in event_type:
-            stats['risk_score'] += 5
+            event_risk_score = 5
         elif 'motion' in event_type:
-            stats['risk_score'] += 2
+            event_risk_score = 2
         elif 'recogn' in event_type:
-            stats['risk_score'] += 1
+            event_risk_score = 1
         else:
-            stats['risk_score'] += 1
+            event_risk_score = 1
 
-        stats['risk_score'] += stats['high_severity'] * 2
-        stats['risk_score'] += stats['unknown_faces'] * 3
-        stats['risk_score'] += stats['crowd_events'] * 2
-        stats['risk_score'] += stats['vehicle_crossings'] * 2
+        if not is_limited_public_person_event:
+            event_risk_score += 2 if event.get('severity') == 'High' else 0
+            if 'unknown' in event_type or 'unidentified' in event_type or 'unidentifiable' in event_type:
+                event_risk_score += 3
+            if 'crowd' in event_type:
+                event_risk_score += 2
+            if 'vehicle' in event_type:
+                event_risk_score += 2
+        stats['risk_score'] += event_risk_score
 
         event_label = event.get('event_type') or 'Other'
         stats['event_types'][event_label] = stats['event_types'].get(event_label, 0) + 1
@@ -194,6 +238,7 @@ def compute_patrol_priority_summary(events):
             'camera_name': entry['camera_name'],
             'total_triggers': entry['total_triggers'],
             'high_severity': entry['high_severity'],
+            'unknown_faces': entry['unknown_faces'],
             'risk_score': risk_score,
             'risk_level': risk_level,
             'anomaly_flag': 'Yes' if risk_level != 'Low' else 'No',
@@ -274,9 +319,15 @@ def build_report(
         
         event_zone = _resolved_zone(event)
         cam_name = event.source_name or 'Unknown camera'
+        metadata = _event_metadata(event)
+        camera_public_value = metadata.get('camera_is_public')
+        if not isinstance(camera_public_value, bool):
+            camera_public_value = bool(getattr(event.camera, 'is_public', False)) if event.camera else False
 
         report_events.append({
             'event_id': event.id,
+            'camera_id': event.camera_id,
+            'camera_is_public': camera_public_value,
             'snapshot_available': bool(getattr(event, 'snapshot_path', None)),
             'timestamp': _as_philippine_datetime(event.timestamp).strftime('%Y-%m-%d %I:%M:%S %p %z') if event.timestamp else '-',
             'raw_timestamp': event.timestamp,
@@ -284,6 +335,9 @@ def build_report(
             'zone': event_zone,
             'camera_name': cam_name,
             'event_type': event_label,
+            'raw_event_type': event.event_type,
+            'detector': event.detector,
+            'object_class': metadata.get('class'),
             'confidence': f'{event.confidence * 100:.1f}%' if event.confidence is not None else '-',
             'severity': event_severity,
         })
@@ -294,7 +348,8 @@ def build_report(
     )
     unrecognized_count = sum(
         1 for event in report_events
-        if any(keyword in event['event_type'].lower() for keyword in ('unknown', 'critical', 'alert'))
+        if _is_unidentified_or_unusable_person_event(event)
+        or any(keyword in event['event_type'].lower() for keyword in ('unknown', 'critical', 'alert'))
     )
 
     # Filtered Incident Logs for Incident Report

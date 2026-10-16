@@ -20,8 +20,18 @@ test/
 .continue
 video_outputs/
 tools/
+docs/
+experiments/
+!experiments/
+experiments/*
+!experiments/concealment_cue_sample.py
+!tests/
+tests/*
+!tests/test_concealment_cue_sample.py
 
 best.pt
+yoloe-26s-seg.pt
+mobileclip2_b.ts
 best_openvino_model/
 yolo26n.pt
 yolo26n_int8_openvino_model/
