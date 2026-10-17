@@ -264,14 +264,11 @@ def build_report(
     # Extract dynamic camera zones from database
     available_zones = []
     if camera_model:
-        try:
-            cameras = camera_model.query.all()
-            for cam in cameras:
-                cam_zone = (getattr(cam, 'zone', None) or '').strip()
-                if cam_zone and cam_zone not in available_zones:
-                    available_zones.append(cam_zone)
-        except Exception:
-            pass
+        cameras = camera_model.query.filter(camera_model.is_public.is_(True)).all()
+        for cam in cameras:
+            cam_zone = (getattr(cam, 'zone', None) or '').strip()
+            if cam_zone and cam_zone not in available_zones:
+                available_zones.append(cam_zone)
 
     if not available_zones:
         available_zones = ['Main Entrance', 'North Perimeter', 'Clubhouse & Amenities']
@@ -299,10 +296,19 @@ def build_report(
         filters.append(detection_event_model.timestamp < until)
 
     query = detection_event_model.query.filter(*filters)
+    if camera_model:
+        query = query.join(
+            camera_model,
+            detection_event_model.camera_id == camera_model.id,
+        ).filter(camera_model.is_public.is_(True))
     events = query.order_by(detection_event_model.timestamp.desc()).all()
 
     report_events = []
     for event in events:
+        camera = getattr(event, 'camera', None)
+        if camera is None or not getattr(camera, 'is_public', False):
+            continue
+
         event_severity = _event_severity(event)
         if not _matches_zone(event.source_name, zone, event) or not _matches_severity(event_severity, severity):
             continue
@@ -313,9 +319,7 @@ def build_report(
         event_zone = _resolved_zone(event)
         cam_name = event.source_name or 'Unknown camera'
         metadata = _event_metadata(event)
-        camera_public_value = metadata.get('camera_is_public')
-        if not isinstance(camera_public_value, bool):
-            camera_public_value = bool(getattr(event.camera, 'is_public', False)) if event.camera else False
+        camera_public_value = bool(camera.is_public)
 
         report_events.append({
             'event_id': event.id,
@@ -449,7 +453,7 @@ def build_report(
     offline_event_count = 0
 
     if camera_model:
-        cameras = camera_model.query.all()
+        cameras = camera_model.query.filter(camera_model.is_public.is_(True)).all()
         for cam in cameras:
             cam_zone = getattr(cam, 'zone', 'Main Area') or 'Main Area'
             cam_events = [

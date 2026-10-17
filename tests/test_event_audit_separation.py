@@ -166,9 +166,83 @@ class EventAuditSeparationTests(unittest.TestCase):
                 main.DetectionEvent,
                 report_type='incident',
                 timeframe='7d',
+                camera_model=main.Camera,
             )
-            self.assertEqual(report['total_triggers'], 1)
-            self.assertEqual(report['incident_logs'][0]['event_type'], 'PERSON DETECTED')
+            self.assertEqual(report['total_triggers'], 0)
+            self.assertEqual(report['incident_logs'], [])
+
+    def test_admin_reports_include_only_public_camera_events(self):
+        with self.app.app_context():
+            admin_private_camera = main.Camera(
+                user_id=self.admin_id,
+                name='Admin Private Camera',
+                source='rtsp://example/admin-private',
+            )
+            user_public_camera = main.Camera(
+                user_id=self.user_id,
+                name='User Public Camera',
+                source='rtsp://example/user-public',
+                is_public=True,
+            )
+            admin_public_camera = main.Camera(
+                user_id=self.admin_id,
+                name='Admin Public Camera',
+                source='rtsp://example/admin-public',
+                is_public=True,
+            )
+            main.db.session.add_all([admin_private_camera, user_public_camera, admin_public_camera])
+            main.db.session.flush()
+            main.db.session.add_all([
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    camera_id=self.camera_id,
+                    source_name='User Private Camera',
+                    event_type='PRIVATE USER ALERT',
+                    event_category='vision',
+                    severity='high',
+                ),
+                main.DetectionEvent(
+                    user_id=self.admin_id,
+                    camera_id=admin_private_camera.id,
+                    source_name=admin_private_camera.name,
+                    event_type='PRIVATE ADMIN ALERT',
+                    event_category='vision',
+                    severity='high',
+                ),
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    camera_id=user_public_camera.id,
+                    source_name=user_public_camera.name,
+                    event_type='PUBLIC USER ALERT',
+                    event_category='vision',
+                    severity='high',
+                ),
+                main.DetectionEvent(
+                    user_id=self.admin_id,
+                    camera_id=admin_public_camera.id,
+                    source_name=admin_public_camera.name,
+                    event_type='PUBLIC ADMIN ALERT',
+                    event_category='vision',
+                    severity='high',
+                ),
+            ])
+            main.db.session.commit()
+
+        self.login_as(self.admin_id)
+        report_response = self.client.get('/admin/reports?timeframe=24h')
+        self.assertEqual(report_response.status_code, 200)
+        self.assertIn(b'PUBLIC USER ALERT', report_response.data)
+        self.assertIn(b'PUBLIC ADMIN ALERT', report_response.data)
+        self.assertNotIn(b'PRIVATE USER ALERT', report_response.data)
+        self.assertNotIn(b'PRIVATE ADMIN ALERT', report_response.data)
+        self.assertNotIn(b'Admin Private Camera', report_response.data)
+
+        csv_response = self.client.get('/admin/reports/export?timeframe=24h')
+        self.assertEqual(csv_response.status_code, 200)
+        self.assertIn(b'PUBLIC USER ALERT', csv_response.data)
+        self.assertIn(b'PUBLIC ADMIN ALERT', csv_response.data)
+        self.assertNotIn(b'PRIVATE USER ALERT', csv_response.data)
+        self.assertNotIn(b'PRIVATE ADMIN ALERT', csv_response.data)
 
     def test_legacy_combined_event_table_is_split_on_schema_initialization(self):
         with self.app.app_context():
