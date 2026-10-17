@@ -638,6 +638,28 @@
                 </div>
             </form>
 
+            <div class="card" id="concealmentDiagnostics">
+                <div class="card-header">
+                    <div class="card-header-left">
+                        Background Concealment Scan
+                    </div>
+                    <button type="button" class="btn btn-outline-primary" id="refreshConcealmentStatus">
+                        Refresh Status
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p id="concealmentStatusMessage" role="status" aria-live="polite">
+                        Loading background scan status…
+                    </p>
+                    <div class="info-grid" id="concealmentStatusDetails"></div>
+                    <div id="concealmentCameraStatuses"></div>
+                    <details style="margin-top: 16px;">
+                        <summary>Raw diagnostic details</summary>
+                        <pre id="concealmentRawStatus" style="white-space: pre-wrap; overflow-wrap: anywhere;"></pre>
+                    </details>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -698,6 +720,146 @@
             profileDropdown.classList.remove('open');
         });
     }
+
+    const concealmentStatusMessage = document.getElementById('concealmentStatusMessage');
+    const concealmentStatusDetails = document.getElementById('concealmentStatusDetails');
+    const concealmentCameraStatuses = document.getElementById('concealmentCameraStatuses');
+    const concealmentRawStatus = document.getElementById('concealmentRawStatus');
+
+    function addConcealmentStatusRow(container, label, value) {
+        const row = document.createElement('div');
+        row.className = 'info-row';
+        const name = document.createElement('span');
+        name.className = 'info-label';
+        name.textContent = label;
+        const result = document.createElement('span');
+        result.className = 'info-val';
+        result.textContent = value;
+        row.append(name, result);
+        container.append(row);
+    }
+
+    async function refreshConcealmentStatus() {
+        concealmentStatusMessage.textContent = 'Checking background scan status…';
+        try {
+            const response = await fetch('{{ url_for("admin_concealment_status_api") }}', {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) {
+                throw new Error(`Status request returned HTTP ${response.status}`);
+            }
+            const status = await response.json();
+            concealmentStatusDetails.replaceChildren();
+            concealmentCameraStatuses.replaceChildren();
+            concealmentStatusDetails.className = 'info-grid';
+
+            const service = status.service;
+            const enabledText = status.enabled
+                ? `Enabled (both cue scores must reach ${status.threshold})`
+                : 'Disabled — set CONCEALMENT_CUE_THRESHOLD and restart the app';
+            addConcealmentStatusRow(concealmentStatusDetails, 'Scan feature', enabledText);
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Worker',
+                service.worker_alive
+                    ? (service.scan_in_progress ? 'Running a scan' : 'Ready / idle')
+                    : 'Not started — starts when a person is queued'
+            );
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Model',
+                service.model_loaded ? 'Loaded' : 'Not loaded yet'
+            );
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Queue',
+                `${service.queue_size} waiting / ${service.queue_capacity} capacity`
+            );
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Candidates seen',
+                `No usable face: ${service.candidates_no_usable_face}; unknown face: ${service.candidates_unknown_face}; while disabled: ${service.candidates_threshold_disabled}`
+            );
+            if (service.last_candidate) {
+                addConcealmentStatusRow(
+                    concealmentStatusDetails,
+                    'Last candidate',
+                    `${service.last_candidate.identity_status || 'unknown status'} at ${service.last_candidate.at}${service.last_candidate.threshold_disabled ? ' (scan disabled)' : ''}`
+                );
+            }
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Scan outcomes',
+                `Queued: ${service.submitted}; completed: ${service.completed}; combined cues: ${service.combined_cues_found}; no combined cues: ${service.no_combined_cues}; failed: ${service.failed}`
+            );
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Skipped requests',
+                `Pending duplicate: ${service.skipped_pending}; cooldown: ${service.skipped_cooldown}; queue full: ${service.skipped_queue_full}`
+            );
+            addConcealmentStatusRow(
+                concealmentStatusDetails,
+                'Email outcomes',
+                `Queued: ${service.notifications_queued}; sent: ${service.notifications_sent}; failed: ${service.notification_failures}; suppressed: ${service.notifications_suppressed}`
+            );
+
+            for (const camera of status.cameras) {
+                const cameraSection = document.createElement('section');
+                cameraSection.style.marginTop = '16px';
+                const title = document.createElement('strong');
+                title.textContent = `${camera.camera_name} (#${camera.camera_id})`;
+                cameraSection.append(title);
+                const cameraInfo = document.createElement('div');
+                cameraInfo.className = 'info-grid';
+                addConcealmentStatusRow(
+                    cameraInfo,
+                    'Camera state',
+                    `${camera.camera_is_public ? 'Public' : 'Private'}; ${camera.is_connected ? 'connected' : 'not connected'}`
+                );
+                addConcealmentStatusRow(
+                    cameraInfo,
+                    'Recognition path',
+                    camera.face_recognition_enabled
+                        ? 'Face recognition enabled'
+                        : 'Face recognition disabled; person crops are queued directly'
+                );
+                addConcealmentStatusRow(
+                    cameraInfo,
+                    'Email gates',
+                    `Unidentified alert preference: ${camera.email.preference_enabled ? 'on' : 'off'}; recipient configured: ${camera.email.recipient_configured ? 'yes' : 'no'}; SMTP credentials configured: ${camera.email.smtp_username_configured && camera.email.smtp_password_configured ? 'yes' : 'no'}`
+                );
+                cameraSection.append(cameraInfo);
+                concealmentCameraStatuses.append(cameraSection);
+            }
+
+            const lastScan = service.last_scan;
+            const lastNotification = service.last_notification;
+            if (lastScan) {
+                const scores = lastScan.face_covering_score === undefined
+                    ? lastScan.error
+                    : `face covering ${lastScan.face_covering_score ?? 'not detected'}, headwear ${lastScan.headwear_score ?? 'not detected'} (threshold ${lastScan.threshold})`;
+                concealmentStatusMessage.textContent =
+                    `Last scan: ${lastScan.outcome}; ${scores}; duration ${lastScan.duration_ms} ms.`;
+            } else if (!status.enabled) {
+                concealmentStatusMessage.textContent =
+                    'Background scans are disabled. Set CONCEALMENT_CUE_THRESHOLD and restart the application.';
+            } else {
+                concealmentStatusMessage.textContent =
+                    'No background scan has completed in this app process yet.';
+            }
+            if (lastNotification) {
+                concealmentStatusMessage.textContent +=
+                    ` Last email outcome: ${lastNotification.outcome}${lastNotification.reason ? ` (${lastNotification.reason})` : ''}.`;
+            }
+            concealmentRawStatus.textContent = JSON.stringify(status, null, 2);
+        } catch (error) {
+            concealmentStatusMessage.textContent = `Unable to load diagnostics: ${error.message}`;
+        }
+    }
+
+    document.getElementById('refreshConcealmentStatus')
+        .addEventListener('click', refreshConcealmentStatus);
+    refreshConcealmentStatus();
 </script>
 {% include '_logout_modal.html' %}
 </body>

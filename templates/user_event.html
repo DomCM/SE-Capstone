@@ -446,6 +446,7 @@
             <select class="select-filter" id="typeFilter" onchange="filterEvents()">
                 <option value="ALL">All Event Types</option>
                 <option value="CRITICAL ALERT">Critical Alert</option>
+                <option value="UNIDENTIFIED PERSON - FACE COVERING + HEADWEAR">Appearance Cues — Review</option>
                 <option value="UNKNOWN FACE">Unknown Face</option>
                 <option value="PERSON DETECTED - FACE NOT VISIBLE OR USABLE">Face Not Visible / Usable</option>
                 <option value="PERSON DETECTED">Person Detected</option>
@@ -494,7 +495,9 @@
                         </td>
                         <td>
                             {% set evt_upper = (event.type or event.event_type or 'NOTIFICATION')|upper %}
-                            {% if 'CRITICAL' in evt_upper or 'UNKNOWN' in evt_upper or 'INTRUSION' in evt_upper %}
+                            {% if 'FACE COVERING + HEADWEAR' in evt_upper %}
+                                <span class="event-badge badge-warning">Appearance Cues — Review</span>
+                            {% elif 'CRITICAL' in evt_upper or 'UNKNOWN' in evt_upper or 'INTRUSION' in evt_upper %}
                                 <span class="event-badge badge-critical">Critical Alert</span>
                             {% elif 'FACE NOT VISIBLE OR USABLE' in evt_upper %}
                                 <span class="event-badge badge-warning">Face Not Visible / Usable</span>

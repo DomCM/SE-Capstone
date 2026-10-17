@@ -562,7 +562,7 @@
                     <div class="toggle-row" style="margin-bottom: 24px;">
                         <div class="toggle-info">
                             <div class="toggle-label">Face Recognition</div>
-                            <div class="toggle-desc">Identifies known individuals from your saved database to avoid false alarms.</div>
+                            <div class="toggle-desc">Identifies known individuals from your saved database. Keep this enabled for unknown-face and unassessable-face email alerts.</div>
                         </div>
                         <label class="toggle-switch">
                             <input type="checkbox" name="face_recognition_enabled" {% if settings.face_recognition_enabled %}checked{% endif %}>
@@ -583,8 +583,8 @@
 
                     <div class="toggle-row" style="margin-bottom: 24px;">
                         <div class="toggle-info">
-                            <div class="toggle-label">Unidentified Detection Email Alerts</div>
-                            <div class="toggle-desc">Email you when an unidentified person is detected by face recognition.</div>
+                            <div class="toggle-label">Unidentified Person Email Alerts</div>
+                            <div class="toggle-desc">Email you for unknown or unassessable faces on your private cameras. Face Recognition must be enabled; public admin cameras never send these emails.</div>
                         </div>
                         <label class="toggle-switch">
                             <input type="checkbox" name="unidentified_email_alerts_enabled" {% if settings.unidentified_email_alerts_enabled %}checked{% endif %}>
@@ -595,11 +595,13 @@
                     <div class="field" style="margin-bottom: 20px;">
                         <label for="recipient_email">Alert Email Address</label>
                         <input type="email" name="recipient_email" id="recipient_email" value="{{ settings.recipient_email or current_user.email }}" required>
+                        <div class="toggle-desc">Shared by fire/smoke and unidentified-person alerts. Outgoing SMTP must be configured by the system administrator.</div>
                     </div>
 
                     <div class="field" style="margin-bottom: 20px;">
-                        <label for="critical_email_cooldown_minutes">Minimum Time Between Critical Emails (minutes)</label>
+                        <label for="critical_email_cooldown_minutes">Minimum Time Between Repeat Emails of Each Type (minutes)</label>
                         <input type="number" name="critical_email_cooldown_minutes" id="critical_email_cooldown_minutes" value="{{ settings.critical_email_cooldown_minutes or 15 }}" min="1" max="1440">
+                        <div class="toggle-desc">Fire/smoke and unidentified-person alerts each use this cooldown independently.</div>
                     </div>
 
                     <div class="field">
@@ -625,6 +627,7 @@
                                 oninput="document.getElementById('face-val').innerText = parseFloat(this.value).toFixed(2)">
                             <span id="face-val" class="range-val">{{ settings.face_recognition_confidence or 0.6 }}</span>
                         </div>
+                        <div class="toggle-desc">A lower value is more tolerant of lower-quality face matches, but may misidentify people. It cannot recover a face too small or unclear to detect.</div>
                     </div>
 
                     <button type="submit" class="btn-primary">
@@ -634,6 +637,27 @@
             </div>
         </div>
 
+    <!--
+        <div class="card" id="concealmentDiagnostics">
+            <div class="card-header">
+                <div class="card-header-main">
+                    <div class="card-header-text">Background Appearance-Cue Scan Status</div>
+                    <div class="card-header-sub">Check whether camera scans ran and whether email alerts were suppressed or delivered.</div>
+                </div>
+                <button type="button" class="btn-secondary" id="refreshConcealmentStatus">
+                    Refresh Status
+                </button>
+            </div>
+            <div class="card-body">
+                <p id="concealmentStatusMessage" role="status" aria-live="polite">
+                    Loading scan status…
+                </p>
+                <div id="concealmentCameraStatuses"></div>
+                <pre id="concealmentRawStatus" style="white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 16px;"></pre>
+            </div>
+        </div>
+    -->
+        
         <!-- 3. Granular Known Faces Database -->
         <div class="card">
             <div class="card-header">
@@ -966,6 +990,89 @@
             document.body.style.overflow = '';
         }
     });
+
+    const concealmentStatusMessage = document.getElementById('concealmentStatusMessage');
+    const concealmentCameraStatuses = document.getElementById('concealmentCameraStatuses');
+    const concealmentRawStatus = document.getElementById('concealmentRawStatus');
+
+    function appendStatusText(container, text, tagName = 'p') {
+        const element = document.createElement(tagName);
+        element.textContent = text;
+        container.append(element);
+    }
+
+    async function refreshConcealmentStatus() {
+        concealmentStatusMessage.textContent = 'Checking scan status…';
+        concealmentCameraStatuses.replaceChildren();
+        try {
+            const response = await fetch('{{ url_for("user_concealment_status_api") }}', {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) {
+                throw new Error(`Status request returned HTTP ${response.status}`);
+            }
+            const status = await response.json();
+            concealmentStatusMessage.textContent = status.enabled
+                ? `Background scans are enabled. Both cue scores must meet ${status.threshold}.`
+                : 'Background scans are disabled. Set CONCEALMENT_CUE_THRESHOLD in the app environment and restart the app.';
+
+            for (const camera of status.cameras) {
+                const section = document.createElement('section');
+                section.style.marginTop = '16px';
+                appendStatusText(
+                    section,
+                    `${camera.camera_name} (#${camera.camera_id}) — ${camera.camera_is_public ? 'Public camera (admin log only)' : 'Private camera'}; ${camera.is_active ? 'active' : 'inactive'}; ${camera.is_connected ? 'connected' : 'not connected'}`,
+                    'h3'
+                );
+                const scan = camera.scan;
+                appendStatusText(
+                    section,
+                    `Face recognition: ${camera.face_recognition_enabled ? 'enabled' : 'disabled'}; candidates: no usable face ${scan.candidates_no_usable_face}, unknown face ${scan.candidates_unknown_face}, encountered while scans disabled ${scan.candidates_threshold_disabled}.`
+                );
+                appendStatusText(
+                    section,
+                    `Jobs: queued ${scan.submitted}, completed ${scan.completed}, combined cues ${scan.combined_cues_found}, no combined cues ${scan.no_combined_cues}, failed ${scan.failed}, queue-full skips ${scan.skipped_queue_full}.`
+                );
+                if (scan.last_scan) {
+                    const last = scan.last_scan;
+                    const detail = last.error
+                        ? last.error
+                        : `face covering ${last.face_covering_score ?? 'not detected'}, headwear ${last.headwear_score ?? 'not detected'} (threshold ${last.threshold})`;
+                    appendStatusText(section, `Last scan: ${last.outcome}; ${detail}; ${last.duration_ms} ms.`);
+                } else {
+                    appendStatusText(section, 'No scan has completed for this camera in the current app process.');
+                }
+                if (scan.last_notification) {
+                    appendStatusText(
+                        section,
+                        `Last email outcome: ${scan.last_notification.outcome}${scan.last_notification.reason ? ` (${scan.last_notification.reason})` : ''}.`
+                    );
+                }
+                appendStatusText(
+                    section,
+                    `Email gates: preference ${camera.email.preference_enabled ? 'on' : 'off'}; recipient ${camera.email.recipient_configured ? 'configured' : 'missing'}; SMTP credentials ${camera.email.smtp_username_configured && camera.email.smtp_password_configured ? 'configured' : 'missing'}.`
+                );
+                if (camera.email.cooldown_active) {
+                    appendStatusText(
+                        section,
+                        `Email cooldown is active for about ${Math.ceil(camera.email.cooldown_remaining_seconds / 60)} more minute(s).`
+                    );
+                }
+                concealmentCameraStatuses.append(section);
+            }
+
+            if (!status.cameras.length) {
+                appendStatusText(concealmentCameraStatuses, 'No cameras are configured for this account.');
+            }
+            concealmentRawStatus.textContent = JSON.stringify(status, null, 2);
+        } catch (error) {
+            concealmentStatusMessage.textContent = `Unable to load scan diagnostics: ${error.message}`;
+        }
+    }
+
+    document.getElementById('refreshConcealmentStatus')
+        .addEventListener('click', refreshConcealmentStatus);
+    refreshConcealmentStatus();
 </script>
 </body>
 </html>

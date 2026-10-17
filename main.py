@@ -44,6 +44,12 @@ cv2.setNumThreads(1)
 
 from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
 from models import db, User, Camera, Settings, SystemSettings, OtpChallenge, EventLog, RecordingRequest
+from concealment_detection import (
+    BoundedConcealmentScanner,
+    DEFAULT_MODEL as DEFAULT_CONCEALMENT_MODEL,
+    PersonCueResult,
+    parse_optional_threshold,
+)
 import security
 from io import BytesIO
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -134,9 +140,17 @@ app.config['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
 app.config['SMTP_FROM_NAME'] = os.environ.get('SMTP_FROM_NAME', 'Home Detection Security').strip()
 app.config['PUBLIC_BASE_URL'] = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
 app.config['PERFORMANCE_SLOW_REQUEST_MS'] = 500
+app.config['CONCEALMENT_CUE_THRESHOLD'] = parse_optional_threshold(
+    os.environ.get('CONCEALMENT_CUE_THRESHOLD')
+)
 
 db.init_app(app)
 performance_metrics = PerformanceMetrics()
+if app.config['CONCEALMENT_CUE_THRESHOLD'] is None:
+    app.logger.info(
+        'Background concealment cue scans are disabled; set '
+        'CONCEALMENT_CUE_THRESHOLD after validating the threshold on sample data.'
+    )
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -169,6 +183,10 @@ face_recognition_lock = threading.Lock()
 yolo_model_lock = threading.Lock()
 yolo_model_object_lock = threading.Lock()
 email_alert_lock = threading.Lock()
+concealment_scan_service = BoundedConcealmentScanner(
+    model_path=os.environ.get('CONCEALMENT_CUE_MODEL') or DEFAULT_CONCEALMENT_MODEL,
+    max_queue_size=8,
+)
 RETENTION_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
 _retention_cleanup_thread = None
 _retention_cleanup_wakeup = threading.Event()
@@ -629,6 +647,15 @@ def get_people_without_usable_faces(roi_tasks, roi_results):
     ]
 
 
+def person_identity_status_for_cue_scan(face_results):
+    """Return why an ROI needs cue review, or None when it has a known identity."""
+    if not face_results:
+        return 'unavailable'
+    if any(str(result[4]).strip().lower() == 'unknown' for result in face_results):
+        return 'unknown'
+    return None
+
+
 def _build_alert_email_html(subject, body, image_frame=None):
     normalized_subject = str(subject).upper()
     if normalized_subject.startswith('CRITICAL'):
@@ -707,13 +734,17 @@ def send_email_alert(
     preference='email_alerts_enabled',
 ):
     if not user_settings or not getattr(user_settings, preference, False):
-        return
+        app.logger.info('Security alert email suppressed: preference %s is disabled.', preference)
+        return False
 
-    sender = app.config['SMTP_USERNAME']
-    password = app.config['SMTP_PASSWORD']
+    sender = app.config.get('SMTP_USERNAME')
+    password = app.config.get('SMTP_PASSWORD')
     recipient_email = getattr(user_settings, 'recipient_email', None)
     if not sender or not password or not recipient_email:
-        return
+        app.logger.warning(
+            'Security alert email could not be sent: SMTP credentials or recipient are not configured.'
+        )
+        return False
 
     try:
         html_body = _build_alert_email_html(subject, body, image_frame)
@@ -740,8 +771,10 @@ def send_email_alert(
             s.login(sender, password)
             s.send_message(msg)
         app.logger.info('Security alert email sent to %s', recipient_email)
+        return True
     except Exception as e:
-        app.logger.warning('Security alert email failed: %s', e)
+        app.logger.exception('Security alert email delivery failed: %s', e)
+        return False
 
 
 def _claim_email_slot(user_id, preference, timestamp_field):
@@ -821,6 +854,10 @@ class VideoStreamManager:
         self.known_encodings, self.known_names = face_cache.get(user_id, ([], []))
         self.debug_tracker = False
         self._recent_event_cache = {}
+        self._event_log_lock = threading.Lock()
+        self._concealment_track_lock = threading.Lock()
+        self._concealment_track_records = {}
+        self._concealment_track_sequence = 0
         self._last_full_scan_time = 0.0
         self.vehicle_tracks = []
         self.person_tracks = []
@@ -855,6 +892,344 @@ class VideoStreamManager:
     def update_settings(self, settings_obj):
         """Update the settings cache with new values."""
         self.settings_cache = self._cache_settings(settings_obj)
+
+    def _get_concealment_track_id(self, bbox):
+        now = time.monotonic()
+        x1, y1, x2, y2 = bbox
+        with self._concealment_track_lock:
+            expired = [
+                track_id
+                for track_id, record in self._concealment_track_records.items()
+                if now - record['last_seen'] > 120
+            ]
+            for track_id in expired:
+                del self._concealment_track_records[track_id]
+
+            best_track_id = None
+            best_iou = 0.0
+            for track_id, record in self._concealment_track_records.items():
+                if record['last_seen_frame'] == self.frame_count:
+                    continue
+                old_x1, old_y1, old_x2, old_y2 = record['bbox']
+                intersection_width = max(0, min(x2, old_x2) - max(x1, old_x1))
+                intersection_height = max(0, min(y2, old_y2) - max(y1, old_y1))
+                intersection = intersection_width * intersection_height
+                current_area = max(0, x2 - x1) * max(0, y2 - y1)
+                old_area = max(0, old_x2 - old_x1) * max(0, old_y2 - old_y1)
+                union = current_area + old_area - intersection
+                iou = intersection / union if union else 0.0
+                if iou > best_iou:
+                    best_track_id = track_id
+                    best_iou = iou
+
+            if best_track_id is None or best_iou < 0.35:
+                self._concealment_track_sequence += 1
+                best_track_id = self._concealment_track_sequence
+            self._concealment_track_records[best_track_id] = {
+                'bbox': tuple(bbox),
+                'last_seen': now,
+                'last_seen_frame': self.frame_count,
+            }
+            return best_track_id
+
+    def _send_unidentified_person_email(self, image_frame, subject, body):
+        if self.camera_is_public:
+            concealment_scan_service.record_notification(
+                'suppressed',
+                'public_camera',
+                camera_id=self.camera_id,
+            )
+            app.logger.info(
+                'Unidentified-person alert email suppressed for public camera %s.',
+                self.camera_id,
+            )
+            return False
+        if not self.settings_cache.get('unidentified_email_alerts_enabled', False):
+            concealment_scan_service.record_notification(
+                'suppressed',
+                'unidentified_email_preference_disabled',
+                camera_id=self.camera_id,
+            )
+            app.logger.info(
+                'Unidentified-person alert email suppressed for camera %s: user preference is disabled.',
+                self.camera_id,
+            )
+            return False
+        if not self.settings_cache.get('recipient_email'):
+            concealment_scan_service.record_notification(
+                'suppressed',
+                'recipient_email_missing',
+                camera_id=self.camera_id,
+            )
+            app.logger.warning(
+                'Unidentified-person alert email suppressed for camera %s: recipient is not configured.',
+                self.camera_id,
+            )
+            return False
+        if not app.config.get('SMTP_USERNAME') or not app.config.get('SMTP_PASSWORD'):
+            concealment_scan_service.record_notification(
+                'suppressed',
+                'smtp_credentials_missing',
+                camera_id=self.camera_id,
+            )
+            app.logger.warning(
+                'Unidentified-person alert email suppressed for camera %s: SMTP credentials are missing.',
+                self.camera_id,
+            )
+            return False
+        if not claim_unidentified_email_slot(self.user_id):
+            concealment_scan_service.record_notification(
+                'suppressed',
+                'email_preference_changed_or_cooldown_active',
+                camera_id=self.camera_id,
+            )
+            app.logger.info(
+                'Unidentified-person alert email suppressed for camera %s: cooldown active or preference changed.',
+                self.camera_id,
+            )
+            return False
+
+        concealment_scan_service.record_notification('queued', camera_id=self.camera_id)
+        email_settings = type(
+            'EmailSettingsSnapshot',
+            (),
+            {**self.settings_cache, 'camera_id': self.camera_id},
+        )()
+        threading.Thread(
+            target=self._deliver_unidentified_person_email,
+            args=(email_settings, subject, body, image_frame),
+            daemon=True,
+        ).start()
+        return True
+
+    @staticmethod
+    def _deliver_unidentified_person_email(email_settings, subject, body, image_frame):
+        try:
+            sent = send_email_alert(
+                email_settings,
+                subject,
+                body,
+                image_frame,
+                preference='unidentified_email_alerts_enabled',
+            )
+            concealment_scan_service.record_notification(
+                'sent' if sent else 'failed',
+                camera_id=email_settings.camera_id,
+            )
+        except Exception:
+            concealment_scan_service.record_notification(
+                'failed',
+                camera_id=email_settings.camera_id,
+            )
+            app.logger.exception('Unexpected unidentified-person email delivery error')
+
+    def _unidentified_email_diagnostic(self):
+        return {
+            'preference_enabled': bool(
+                self.settings_cache.get('unidentified_email_alerts_enabled', False)
+            ),
+            'recipient_configured': bool(self.settings_cache.get('recipient_email')),
+            'smtp_username_configured': bool(app.config.get('SMTP_USERNAME')),
+            'smtp_password_configured': bool(app.config.get('SMTP_PASSWORD')),
+        }
+
+    def _save_concealment_scan_artifacts(
+        self,
+        result,
+        person_crop,
+        *,
+        identity_status,
+        track_id,
+        observed_at=None,
+    ):
+        scan_time = observed_at or datetime.utcnow()
+        timestamp = scan_time.strftime('%Y%m%dT%H%M%S_%fZ')
+        scan_directory = os.path.join(
+            BASE_RECORDINGS_DIR,
+            str(self.user_id),
+            'image_scans',
+        )
+        filename_prefix = f'camera_{self.camera_id}_track_{track_id}_{timestamp}'
+        original_path = os.path.join(scan_directory, f'{filename_prefix}_original.jpg')
+        annotated_path = os.path.join(scan_directory, f'{filename_prefix}_annotated.jpg')
+        report_path = os.path.join(scan_directory, f'{filename_prefix}_results.txt')
+        annotated_crop = person_crop.copy()
+        outcome = 'review required' if result.review_required else 'no combined cues'
+        face_score = (
+            f'{result.face_covering_score:.3f}'
+            if result.face_covering_score is not None else 'not detected'
+        )
+        headwear_score = (
+            f'{result.headwear_score:.3f}'
+            if result.headwear_score is not None else 'not detected'
+        )
+        cv2.putText(
+            annotated_crop,
+            f'Cue scan: {outcome}',
+            (8, 20),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 0, 255) if result.review_required else (0, 180, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            annotated_crop,
+            f'Face covering: {face_score}  Headwear: {headwear_score}',
+            (8, 42),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.4,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+        report = '\n'.join((
+            'Background Appearance-Cue Scan Results',
+            f'Scanned at (UTC): {scan_time.isoformat()}Z',
+            f'Camera: {self.camera_name} (ID {self.camera_id})',
+            f'Track ID: {track_id}',
+            f'Identity status: {identity_status}',
+            f'Outcome: {outcome}',
+            f'Face-covering score: {face_score}',
+            f'Headwear score: {headwear_score}',
+            f'Review threshold: {result.cue_threshold:.3f}',
+            f'Cues: {", ".join(result.cues) if result.cues else "none"}',
+            'Visual cues only. Human review is required for flagged results; no intent is inferred.',
+            '',
+        ))
+
+        try:
+            os.makedirs(scan_directory, exist_ok=True)
+            for image_path, image in (
+                (original_path, person_crop),
+                (annotated_path, annotated_crop),
+            ):
+                encoded, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                if not encoded:
+                    raise OSError(f'Unable to encode concealment scan image: {image_path}')
+                temporary_path = f'{image_path}.tmp'
+                with open(temporary_path, 'wb') as image_file:
+                    image_file.write(buffer.tobytes())
+                os.replace(temporary_path, image_path)
+            temporary_report_path = f'{report_path}.tmp'
+            with open(temporary_report_path, 'w', encoding='utf-8') as report_file:
+                report_file.write(report)
+            os.replace(temporary_report_path, report_path)
+        except (OSError, cv2.error):
+            app.logger.exception(
+                'Unable to save concealment scan artifacts for camera %s track %s',
+                self.camera_id,
+                track_id,
+            )
+
+    def _handle_concealment_scan_result(
+        self,
+        result,
+        error,
+        *,
+        identity_status,
+        track_id,
+        person_crop,
+        observed_at=None,
+    ):
+        if error is not None:
+            app.logger.error(
+                'Concealment scan failed for camera %s track %s: %s',
+                self.camera_id,
+                track_id,
+                error,
+            )
+            return
+        if result is None:
+            app.logger.error(
+                'Concealment scan returned no result for camera %s track %s',
+                self.camera_id,
+                track_id,
+            )
+            return
+
+        self._save_concealment_scan_artifacts(
+            result,
+            person_crop,
+            identity_status=identity_status,
+            track_id=track_id,
+            observed_at=observed_at,
+        )
+
+        if result.review_required:
+            combined_score = result.combined_score
+            cue_description = 'face covering and headwear'
+            event_type = 'UNIDENTIFIED PERSON - FACE COVERING + HEADWEAR'
+            description = (
+                'Face-covering and headwear appearance cues both met the configured '
+                'review threshold. Human review is required; intent is unknown.'
+            )
+            metadata = {
+                'camera_zone': self.camera_zone,
+                'class': 'person',
+                'face_status': identity_status,
+                'identity_status': 'unknown_or_unavailable',
+                'appearance_cues': list(result.cues),
+                'cue_scores': {
+                    'face_covering': result.face_covering_score,
+                    'headwear': result.headwear_score,
+                },
+                'combined_score': combined_score,
+                'cue_threshold': result.cue_threshold,
+                'track_id': track_id,
+            }
+            if observed_at is not None:
+                metadata['detected_at'] = observed_at.isoformat()
+            self.log_db_event(
+                event_type,
+                description,
+                confidence=combined_score,
+                event_category='vision',
+                detector='concealment',
+                severity='medium',
+                event_metadata=metadata,
+                snapshot_frame=person_crop,
+                event_timestamp=observed_at,
+            )
+            if not self.camera_is_public:
+                self._send_unidentified_person_email(
+                    person_crop,
+                    'UNIDENTIFIED PERSON - MULTIPLE APPEARANCE CUES',
+                    (
+                        f'{cue_description.title()} appearance cues were both detected '
+                        f'by {self.camera_name} in {self.camera_zone}. '
+                        f'Combined score: {combined_score:.2f} '
+                        f'(threshold: {result.cue_threshold:.2f}). '
+                        'This is an automated visual cue only; please review the image. '
+                        'No intent is inferred.'
+                    ),
+                )
+
+    def _queue_concealment_scan(self, person_crop, bbox, identity_status):
+        threshold = app.config.get('CONCEALMENT_CUE_THRESHOLD')
+        concealment_scan_service.note_candidate(
+            identity_status,
+            camera_id=self.camera_id,
+            threshold_disabled=threshold is None,
+        )
+        if threshold is None:
+            return False
+        track_id = self._get_concealment_track_id(bbox)
+        crop_snapshot = person_crop.copy()
+        observed_at = datetime.utcnow()
+        return concealment_scan_service.submit(
+            key=(self.camera_id, track_id),
+            image=crop_snapshot,
+            cue_threshold=threshold,
+            callback=lambda result, error: self._handle_concealment_scan_result(
+                result,
+                error,
+                identity_status=identity_status,
+                track_id=track_id,
+                person_crop=crop_snapshot,
+                observed_at=observed_at,
+            ),
+        )
 
     def _reset_tracker(self):
         if self.debug_tracker and self.tracker_active:
@@ -1372,6 +1747,16 @@ class VideoStreamManager:
                         (time.monotonic() - inference_started_at) * 1000,
                     )
 
+                for roi_task, face_results in zip(roi_tasks, all_results):
+                    identity_status = person_identity_status_for_cue_scan(face_results)
+                    if identity_status is None:
+                        continue
+                    self._queue_concealment_scan(
+                        roi_task[0],
+                        roi_task[1],
+                        identity_status,
+                    )
+
                 for bbox in get_people_without_usable_faces(roi_tasks, all_results):
                     self.log_db_event(
                         'PERSON DETECTED - FACE NOT VISIBLE OR USABLE',
@@ -1386,9 +1771,20 @@ class VideoStreamManager:
                         },
                         snapshot_frame=annotated_frame,
                     )
+                    camera_label = self.camera_name or f'Camera {self.camera_id}'
+                    self._send_unidentified_person_email(
+                        annotated_frame,
+                        'UNIDENTIFIED PERSON - FACE NOT USABLE',
+                        (
+                            f'A person was detected by {camera_label} in {self.camera_zone}, '
+                            'but face recognition could not assess a usable face. '
+                            'Distance, pose, lighting, occlusion, or camera resolution '
+                            'may explain this; please review the camera image.'
+                        ),
+                    )
 
                 self.face_detections = []
-                for results_list in all_results:
+                for roi_index, results_list in enumerate(all_results):
                     for t, r, b, l, name in results_list:
                         self.face_detections.append(((t, r, b, l), name))
 
@@ -1403,27 +1799,15 @@ class VideoStreamManager:
                                 event_metadata={'camera_zone': self.camera_zone, 'class': 'person'},
                                 snapshot_frame=annotated_frame,
                             )
-                            if (
-                                self.settings_cache.get('unidentified_email_alerts_enabled', False)
-                                and claim_unidentified_email_slot(self.user_id)
-                            ):
-                                email_settings = type('EmailSettingsSnapshot', (), self.settings_cache)()
-                                camera_label = self.camera_name or f'Camera {self.camera_id}'
-                                email_body = (
+                            camera_label = self.camera_name or f'Camera {self.camera_id}'
+                            self._send_unidentified_person_email(
+                                annotated_frame,
+                                'UNIDENTIFIED PERSON DETECTED',
+                                (
                                     f'An unidentified person was detected by {camera_label} '
                                     f'in {self.camera_zone}.'
-                                )
-                                threading.Thread(
-                                    target=send_email_alert,
-                                    args=(
-                                        email_settings,
-                                        'UNIDENTIFIED PERSON DETECTED',
-                                        email_body,
-                                        annotated_frame,
-                                    ),
-                                    kwargs={'preference': 'unidentified_email_alerts_enabled'},
-                                    daemon=True,
-                                ).start()
+                                ),
+                            )
                         else:
                             self.log_db_event(
                                 "RECOGNIZED",
@@ -1447,6 +1831,18 @@ class VideoStreamManager:
 
             bboxes_to_track = [box[:4] for box in human_boxes]
             self._initialize_trackers(frame, bboxes_to_track)
+        elif human_boxes:
+            frame_h, frame_w = frame.shape[:2]
+            for x1, y1, x2, y2, _confidence in human_boxes:
+                x1, y1 = max(0, int(x1)), max(0, int(y1))
+                x2, y2 = min(frame_w, int(x2)), min(frame_h, int(y2))
+                if x2 <= x1 or y2 <= y1:
+                    continue
+                self._queue_concealment_scan(
+                    frame[y1:y2, x1:x2],
+                    (x1, y1, x2, y2),
+                    'unavailable',
+                )
 
         # Handle Alerts
         if critical_detected and not self.fire_alert_active:
@@ -1505,14 +1901,22 @@ class VideoStreamManager:
             self.recording_writer.release()
             self.recording_writer = None
 
-    def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None, snapshot_frame=None):
+    def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None, snapshot_frame=None, event_timestamp=None):
         track_id = event_metadata.get('track_id') if isinstance(event_metadata, dict) else None
         dedupe_key = (event_type, (desc or '')[:180], track_id)
         now = time.monotonic()
-        last_logged = self._recent_event_cache.get(dedupe_key)
-        if last_logged and now - last_logged < 15:
-            return
-        self._recent_event_cache[dedupe_key] = now
+        with self._event_log_lock:
+            last_logged = self._recent_event_cache.get(dedupe_key)
+            if last_logged and now - last_logged < 15:
+                return
+            self._recent_event_cache[dedupe_key] = now
+            if len(self._recent_event_cache) > 2048:
+                cutoff = now - 60
+                self._recent_event_cache = {
+                    key: timestamp
+                    for key, timestamp in self._recent_event_cache.items()
+                    if timestamp >= cutoff
+                }
 
         if not severity:
             normalized = (event_type or '').lower()
@@ -1545,18 +1949,25 @@ class VideoStreamManager:
 
         with app.app_context():
             try:
-                log = EventLog(
-                    user_id=self.user_id,
-                    camera_id=self.camera_id,
-                    source_name=self.camera_name,
-                    event_type=event_type,
-                    description=desc,
-                    confidence=confidence,
-                    event_category=event_category,
-                    detector=detector,
-                    severity=severity,
-                    event_metadata=json.dumps(event_metadata) if isinstance(event_metadata, dict) else event_metadata,
-                )
+                event_values = {
+                    'user_id': self.user_id,
+                    'camera_id': self.camera_id,
+                    'source_name': self.camera_name,
+                    'event_type': event_type,
+                    'description': desc,
+                    'confidence': confidence,
+                    'event_category': event_category,
+                    'detector': detector,
+                    'severity': severity,
+                    'event_metadata': (
+                        json.dumps(event_metadata)
+                        if isinstance(event_metadata, dict)
+                        else event_metadata
+                    ),
+                }
+                if event_timestamp is not None:
+                    event_values['timestamp'] = event_timestamp
+                log = EventLog(**event_values)
                 db.session.add(log)
                 db.session.commit()
                 if snapshot_bytes:
@@ -2787,6 +3198,118 @@ def performance_metrics_api():
         ),
     }
     return jsonify(metrics)
+
+
+@app.route('/admin/api/concealment-status')
+@admin_required
+def admin_concealment_status_api():
+    with stream_lock:
+        managers = list(active_physical_streams.values())
+
+    threshold = app.config.get('CONCEALMENT_CUE_THRESHOLD')
+    camera_statuses = []
+    for manager in managers:
+        camera_statuses.append({
+            'camera_id': manager.camera_id,
+            'camera_name': manager.camera_name,
+            'camera_is_public': manager.camera_is_public,
+            'is_connected': manager.is_connected(),
+            'face_recognition_enabled': bool(
+                manager.settings_cache.get('face_recognition_enabled', True)
+            ),
+            'cue_scan_enabled': threshold is not None,
+            'email': manager._unidentified_email_diagnostic(),
+        })
+
+    return jsonify({
+        'enabled': threshold is not None,
+        'threshold': threshold,
+        'service': concealment_scan_service.status(),
+        'smtp_server_configured': bool(app.config.get('SMTP_SERVER')),
+        'smtp_username_configured': bool(app.config.get('SMTP_USERNAME')),
+        'smtp_password_configured': bool(app.config.get('SMTP_PASSWORD')),
+        'active_camera_count': len(managers),
+        'cameras': camera_statuses,
+    })
+
+
+@app.route('/api/concealment-status')
+@login_required
+def user_concealment_status_api():
+    cameras = Camera.query.filter_by(user_id=current_user.id).order_by(Camera.id).all()
+    settings = Settings.query.filter_by(user_id=current_user.id).first()
+    camera_ids = {camera.id for camera in cameras}
+    with stream_lock:
+        managers = {
+            manager.camera_id: manager
+            for manager in active_physical_streams.values()
+            if manager.camera_id in camera_ids
+        }
+
+    threshold = app.config.get('CONCEALMENT_CUE_THRESHOLD')
+    camera_statuses = []
+    for camera in cameras:
+        manager = managers.get(camera.id)
+        if manager is not None:
+            camera_settings = manager.settings_cache
+        elif settings is not None:
+            camera_settings = {
+                'face_recognition_enabled': settings.face_recognition_enabled,
+                'unidentified_email_alerts_enabled': settings.unidentified_email_alerts_enabled,
+                'recipient_email': settings.recipient_email,
+            }
+        else:
+            camera_settings = {}
+        camera_statuses.append({
+            'camera_id': camera.id,
+            'camera_name': camera.name,
+            'camera_is_public': bool(camera.is_public),
+            'is_active': bool(camera.is_active and camera.archived_at is None),
+            'is_connected': bool(manager and manager.is_connected()),
+            'face_recognition_enabled': bool(
+                camera_settings.get('face_recognition_enabled', True)
+            ),
+            'cue_scan_enabled': threshold is not None,
+            'email': {
+                'preference_enabled': bool(
+                    camera_settings.get('unidentified_email_alerts_enabled', False)
+                ),
+                'recipient_configured': bool(camera_settings.get('recipient_email')),
+                'smtp_username_configured': bool(app.config.get('SMTP_USERNAME')),
+                'smtp_password_configured': bool(app.config.get('SMTP_PASSWORD')),
+            },
+            'scan': concealment_scan_service.camera_status(camera.id),
+        })
+
+    service_status = concealment_scan_service.status()
+    if settings is not None and settings.last_unidentified_email_at is not None:
+        cooldown_minutes = max(1, settings.critical_email_cooldown_minutes or 15)
+        elapsed_seconds = max(
+            0,
+            (datetime.utcnow() - settings.last_unidentified_email_at).total_seconds(),
+        )
+        cooldown_remaining_seconds = max(0, cooldown_minutes * 60 - elapsed_seconds)
+    else:
+        cooldown_minutes = max(
+            1,
+            (settings.critical_email_cooldown_minutes if settings else 15) or 15,
+        )
+        cooldown_remaining_seconds = 0
+
+    for camera_status in camera_statuses:
+        camera_status['email']['cooldown_minutes'] = cooldown_minutes
+        camera_status['email']['cooldown_active'] = cooldown_remaining_seconds > 0
+        camera_status['email']['cooldown_remaining_seconds'] = int(
+            cooldown_remaining_seconds
+        )
+
+    return jsonify({
+        'enabled': threshold is not None,
+        'threshold': threshold,
+        'model_loaded': service_status['model_loaded'],
+        'worker_alive': service_status['worker_alive'],
+        'cameras': camera_statuses,
+    })
 
 
 @app.route('/admin/system/save', methods=['POST'])

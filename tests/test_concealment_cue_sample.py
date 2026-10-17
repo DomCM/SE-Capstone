@@ -49,7 +49,7 @@ def test_unassessable_face_without_positive_cues_is_ambiguous():
     assert result.cues == ()
 
 
-def test_one_positive_cue_does_not_trigger_combined_review_flag():
+def test_one_positive_cue_is_marked_for_human_review():
     result = assess_person_cues(
         face_assessable=True,
         face_covering_score=0.90,
@@ -58,7 +58,7 @@ def test_one_positive_cue_does_not_trigger_combined_review_flag():
     )
 
     assert result.category == 'single_cue_observed'
-    assert result.review_required is False
+    assert result.review_required is True
     assert result.cues == ('face_covering',)
 
 
@@ -87,7 +87,7 @@ def test_combined_cues_are_associated_with_the_same_person():
     assert results[0].category == 'multiple_cues_for_review'
 
 
-def test_cues_on_separate_people_do_not_trigger_combined_review():
+def test_single_cues_on_separate_people_are_individually_reviewable():
     detections = [
         Detection('person', 0.95, (0, 0, 100, 200)),
         Detection('person', 0.94, (200, 0, 300, 200)),
@@ -98,7 +98,7 @@ def test_cues_on_separate_people_do_not_trigger_combined_review():
     results = associate_cues_with_people(detections)
 
     assert len(results) == 2
-    assert [result.review_required for result in results] == [False, False]
+    assert [result.review_required for result in results] == [True, True]
     assert [result.cues for result in results] == [
         ('face_covering',),
         ('headwear',),
@@ -165,11 +165,67 @@ def test_scan_image_uses_cpu_model_and_returns_assessment_and_overlay(tmp_path, 
 
     monkeypatch.setattr(ultralytics, 'YOLOE', create_model)
 
-    assessments, overlay = scan_image(image_path)
+    assessments, overlay, detections = scan_image(image_path)
 
     assert calls['model_path'] == 'yoloe-26s-seg.pt'
     assert calls['classes'] == list(PROMPTS)
     assert calls['predict']['device'] == 'cpu'
+    assert calls['predict']['conf'] == pytest.approx(0.001)
     assert len(assessments) == 1
     assert assessments[0].review_required is True
     assert overlay.shape == (120, 120, 3)
+    assert len(detections) == 3
+
+
+def test_cli_saves_input_annotation_and_text_report_in_output_folder(tmp_path, monkeypatch, capsys):
+    import json
+    import cv2
+    import numpy as np
+    from pathlib import Path
+
+    from experiments import concealment_cue_sample as cli
+
+    image_path = tmp_path / 'sample.jpg'
+    output_dir = tmp_path / 'users_data' / 'image_scans'
+    assert cv2.imwrite(str(image_path), np.zeros((20, 20, 3), dtype=np.uint8))
+    assessment = cli.PersonImageAssessment(
+        box=(1, 2, 10, 18),
+        face_covering_score=0.85,
+        headwear_score=0.80,
+        category='multiple_cues_for_review',
+        review_required=True,
+        cues=('face_covering', 'headwear'),
+        explanation='Human review is required; intent is unknown.',
+    )
+    detections = [
+        cli.Detection('person', 0.95, (1, 2, 10, 18)),
+        cli.Detection('ski mask', 0.08, (2, 3, 9, 10)),
+    ]
+    monkeypatch.setattr(
+        cli,
+        'scan_image',
+        lambda *args, **kwargs: (
+            [assessment],
+            np.zeros((20, 20, 3), dtype=np.uint8),
+            detections,
+        ),
+    )
+
+    assert cli.main([str(image_path), '--output-dir', str(output_dir)]) == 0
+
+    saved = json.loads(capsys.readouterr().out)
+    stored_image = Path(saved['stored_image'])
+    annotated_image = Path(saved['annotated_image'])
+    report = Path(saved['report'])
+    assert stored_image.parent == annotated_image.parent == report.parent
+    assert stored_image.parent.parent == output_dir
+    assert stored_image.read_bytes() == image_path.read_bytes()
+    assert cv2.imread(str(annotated_image)) is not None
+    report_text = report.read_text(encoding='utf-8')
+    assert 'People detected: 1' in report_text
+    assert 'Review required: True' in report_text
+    assert 'face_covering, headwear' in report_text
+    assert 'Combined cues detected: True' in report_text
+    assert 'ski mask: 0.080' in report_text
+    assert 'below detector confidence threshold' in report_text
+    assert 'intent is unknown' in report_text
