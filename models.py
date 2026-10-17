@@ -86,7 +86,9 @@ class OtpChallenge(db.Model):
     user = db.relationship('User', backref='otp_challenges', lazy=True)
 
 
-class EventLog(db.Model):
+class DetectionEvent(db.Model):
+    __tablename__ = 'detection_event'
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     camera_id = db.Column(db.Integer, db.ForeignKey('camera.id'), nullable=True)
@@ -100,11 +102,29 @@ class EventLog(db.Model):
     severity = db.Column(db.String(30), nullable=True, default='normal')
     event_metadata = db.Column(db.Text, nullable=True)
     snapshot_path = db.Column(db.String(255), nullable=True)
+    user = db.relationship('User', backref='detection_events', lazy=True)
+    camera = db.relationship('Camera', backref='detection_events', lazy=True)
+
+    @property
+    def username(self):
+        if self.user:
+            return self.user.username or self.user.email or 'Unknown User'
+        return 'Deleted User'
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    source_name = db.Column(db.String(100))
+    event_type = db.Column(db.String(50))
+    description = db.Column(db.String(500))
     ip_address = db.Column(db.String(45), nullable=True)
     actor_name = db.Column(db.String(150), nullable=True)
     actor_email = db.Column(db.String(150), nullable=True)
-    user = db.relationship('User', backref='event_logs', lazy=True)
-    camera = db.relationship('Camera', backref='event_logs', lazy=True)
+    user = db.relationship('User', backref='audit_logs', lazy=True)
 
     @property
     def username(self):

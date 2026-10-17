@@ -43,7 +43,7 @@ load_dotenv()
 cv2.setNumThreads(1)
 
 from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
-from models import db, User, Camera, Settings, SystemSettings, OtpChallenge, EventLog, RecordingRequest
+from models import db, User, Camera, Settings, SystemSettings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest
 from concealment_detection import (
     BoundedConcealmentScanner,
     DEFAULT_MODEL as DEFAULT_CONCEALMENT_MODEL,
@@ -163,7 +163,12 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 VIDEO_EXTENSIONS = {'mp4', 'avi', 'mkv', 'mov', 'webm'}
 CROWD_PERSON_THRESHOLD = 3
 
-security.configure(app, db, (User, Camera, Settings, OtpChallenge, EventLog, RecordingRequest), BASE_RECORDINGS_DIR)
+security.configure(
+    app,
+    db,
+    (User, Camera, Settings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest),
+    BASE_RECORDINGS_DIR,
+)
 
 detection_pool = None
 yolo_model = None
@@ -524,7 +529,6 @@ from security import (
     get_or_create_totp_secret, send_security_email,
     create_login_email_otp, create_password_reset_token,
     ensure_database_schema, create_admin_user,
-    AUDIT_EVENT_TYPES,
 )
 from reports import build_report, generate_report_csv
 
@@ -1510,8 +1514,6 @@ class VideoStreamManager:
         cap = self.cap
         if cap is None or not cap.isOpened():
             return False
-        if self.current_frame is not None and self.current_frame.size > 0:
-            return True
         return self.last_frame_at > 0 and time.monotonic() - self.last_frame_at <= STREAM_HEALTH_TIMEOUT_SECONDS * 2
 
     def _processing_worker(self):
@@ -1967,7 +1969,7 @@ class VideoStreamManager:
                 }
                 if event_timestamp is not None:
                     event_values['timestamp'] = event_timestamp
-                log = EventLog(**event_values)
+                log = DetectionEvent(**event_values)
                 db.session.add(log)
                 db.session.commit()
                 if snapshot_bytes:
@@ -2366,37 +2368,55 @@ def index():
         Camera.archived_at.is_(None),
         or_(Camera.user_id == current_user.id, Camera.is_public.is_(True))
     ).order_by(Camera.id).all()
+    online_cameras_count = sum(1 for camera in user_cameras if camera_status(camera)[0])
     archived_cameras = Camera.query.filter_by(
         user_id=current_user.id
     ).filter(Camera.archived_at.is_not(None)).order_by(Camera.id).all()
-    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    week_start = datetime.utcnow() - timedelta(days=7)
-    incidents_this_month = EventLog.query.filter(
-        EventLog.user_id == current_user.id,
-        EventLog.timestamp >= month_start,
-    ).count()
-    alerts_this_week = EventLog.query.filter(
-        EventLog.user_id == current_user.id,
-        EventLog.timestamp >= week_start,
-        EventLog.event_type.ilike('%alert%'),
-    ).count()
-    high_severity_alerts = EventLog.query.filter(
-        EventLog.user_id == current_user.id,
-        EventLog.timestamp >= month_start,
-        EventLog.event_type.ilike('%critical%'),
-    ).count()
+    dashboard_metrics = get_user_dashboard_metrics(current_user.id)
     recording_requests = RecordingRequest.query.filter_by(user_id=current_user.id).order_by(RecordingRequest.created_at.desc()).all()
+    events = DetectionEvent.query.filter_by(
+        user_id=current_user.id,
+        event_category='vision',
+    ).order_by(DetectionEvent.timestamp.desc()).limit(10).all()
     
     return render_template(
         'user_dashboard.html',
         cameras=user_cameras,
+        online_cameras_count=online_cameras_count,
         archived_cameras=archived_cameras,
-        incidents_this_month=incidents_this_month,
-        alerts_this_week=alerts_this_week,
-        high_severity_alerts=high_severity_alerts,
+        dashboard_metrics=dashboard_metrics,
         recording_requests=recording_requests,
+        events=events,
         available_zones=get_available_zones(),
     )
+
+
+def get_user_dashboard_metrics(user_id):
+    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return {
+        'pending_requests': RecordingRequest.query.filter_by(
+            user_id=user_id,
+            status='pending',
+        ).count(),
+        'total_detections': DetectionEvent.query.filter_by(
+            user_id=user_id,
+            event_category='vision',
+        ).count(),
+        'high_severity_alerts': DetectionEvent.query.filter(
+            DetectionEvent.user_id == user_id,
+            DetectionEvent.event_category == 'vision',
+            DetectionEvent.timestamp >= month_start,
+            DetectionEvent.severity.in_(('high', 'critical')),
+        ).count(),
+    }
+
+
+@app.route('/api/user/dashboard-metrics')
+@login_required
+def user_dashboard_metrics_api():
+    if is_admin_user(current_user):
+        return jsonify(error='This endpoint is for user dashboards only.'), 403
+    return jsonify(get_user_dashboard_metrics(current_user.id))
 
 
 @app.route('/recording_requests', methods=['POST'])
@@ -2514,7 +2534,7 @@ def admin_dashboard():
     total_users = User.query.count()
     total_cameras = Camera.query.filter(Camera.archived_at.is_(None)).count()
     active_cameras = Camera.query.filter_by(is_active=True, archived_at=None).count()
-    total_events = EventLog.query.filter_by(event_category='vision').count()
+    total_events = DetectionEvent.query.filter_by(event_category='vision').count()
     pending_requests_count = RecordingRequest.query.filter_by(status='pending').count()
 
     total_recordings = 0
@@ -2535,15 +2555,15 @@ def admin_dashboard():
         storage_used = f'{storage_used_bytes / (1024 * 1024 * 1024):.1f} GB'
 
     since = datetime.utcnow() - timedelta(days=1)
-    events_today = EventLog.query.filter(
-        EventLog.timestamp >= since,
-        EventLog.event_category == 'vision',
+    events_today = DetectionEvent.query.filter(
+        DetectionEvent.timestamp >= since,
+        DetectionEvent.event_category == 'vision',
     ).count()
     new_users_today = User.query.filter(User.created_at >= since).count()
 
-    alert_events_today = EventLog.query.filter(
-        EventLog.timestamp >= since,
-        EventLog.event_category == 'vision',
+    alert_events_today = DetectionEvent.query.filter(
+        DetectionEvent.timestamp >= since,
+        DetectionEvent.event_category == 'vision',
     ).all()
     zone_counts = {}
     hour_counts = {}
@@ -2568,7 +2588,17 @@ def admin_dashboard():
 
     recent_activity = []
     now = datetime.utcnow()
-    for event in EventLog.query.order_by(EventLog.timestamp.desc()).limit(5).all():
+    recent_events = DetectionEvent.query.order_by(
+        DetectionEvent.timestamp.desc()
+    ).limit(5).all()
+    recent_audit_logs = AuditLog.query.order_by(
+        AuditLog.timestamp.desc()
+    ).limit(5).all()
+    for event in sorted(
+        recent_events + recent_audit_logs,
+        key=lambda item: item.timestamp or datetime.min,
+        reverse=True,
+    )[:5]:
         user_name = event.username or 'System'
         action = event.description or event.source_name or event.event_type or 'Event recorded'
         delta = now - (event.timestamp or now)
@@ -2616,6 +2646,14 @@ def admin_dashboard():
         pending_requests_count=pending_requests_count,
         current_year=datetime.utcnow().year,
         recent_activity=recent_activity,
+    )
+
+
+@app.route('/api/admin/pending-requests')
+@admin_required
+def admin_pending_requests_count():
+    return jsonify(
+        pending_requests_count=RecordingRequest.query.filter_by(status='pending').count()
     )
 
 
@@ -2856,7 +2894,7 @@ def admin_restore_user(user_id):
 @app.route('/admin/logs')
 @admin_required
 def admin_logs():
-    query = EventLog.query.join(User, EventLog.user_id == User.id, isouter=True)
+    query = AuditLog.query.join(User, AuditLog.user_id == User.id, isouter=True)
 
     user_filter = (request.args.get('user') or '').strip()
     action_filter = (request.args.get('action') or '').strip()
@@ -2868,24 +2906,23 @@ def admin_logs():
         query = query.filter(or_(User.username.ilike(search), User.email.ilike(search)))
 
     if action_filter:
-        query = query.filter(EventLog.event_type.ilike(action_filter))
+        query = query.filter(AuditLog.event_type.ilike(action_filter))
 
     if from_date:
         try:
             from_dt = datetime.strptime(from_date, '%Y-%m-%d')
-            query = query.filter(EventLog.timestamp >= from_dt)
+            query = query.filter(AuditLog.timestamp >= from_dt)
         except ValueError:
             pass
 
     if to_date:
         try:
             to_dt = datetime.strptime(to_date, '%Y-%m-%d') + timedelta(days=1)
-            query = query.filter(EventLog.timestamp < to_dt)
+            query = query.filter(AuditLog.timestamp < to_dt)
         except ValueError:
             pass
 
-    query = query.filter(EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)))
-    logs = query.order_by(EventLog.timestamp.desc()).all()
+    logs = query.order_by(AuditLog.timestamp.desc()).all()
     return render_template('admin_logs.html', logs=logs, total_logs=len(logs), page=1)
 
 
@@ -2893,7 +2930,7 @@ def admin_logs():
 @admin_required
 def admin_reports():
     report_context = build_report(
-        EventLog,
+        DetectionEvent,
         report_type=request.args.get('type', 'incident'),
         timeframe=request.args.get('timeframe', '7d'),
         zone=request.args.get('zone', 'all'),
@@ -2914,7 +2951,7 @@ def admin_reports():
 @admin_required
 def admin_reports_export():
     report_context = build_report(
-        EventLog,
+        DetectionEvent,
         report_type=request.args.get('type', 'incident'),
         timeframe=request.args.get('timeframe', '7d'),
         zone=request.args.get('zone', 'all'),
@@ -3978,10 +4015,10 @@ def api_events():
 
 
 def get_user_vision_events(user_id):
-    return EventLog.query.filter(
-        EventLog.user_id == user_id,
-        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
-    ).order_by(EventLog.timestamp.desc()).all()
+    return DetectionEvent.query.filter_by(
+        user_id=user_id,
+        event_category='vision',
+    ).order_by(DetectionEvent.timestamp.desc()).all()
 
 @app.route('/recordings/<filename>')
 @login_required
@@ -4035,10 +4072,9 @@ def clear_all_recordings():
 @app.route('/api/delete_event/<int:event_id>', methods=['POST'])
 @login_required
 def delete_event(event_id):
-    event = EventLog.query.filter(
-        EventLog.id == event_id,
-        EventLog.user_id == current_user.id,
-        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
+    event = DetectionEvent.query.filter_by(
+        id=event_id,
+        user_id=current_user.id,
     ).first()
     if event is None:
         return jsonify({"error": "Event not found"}), 404
@@ -4055,16 +4091,12 @@ def delete_event(event_id):
 
 
 def clear_vision_events_and_snapshots(user_id=None):
-    events = EventLog.query.filter(
-        *([EventLog.user_id == user_id] if user_id is not None else []),
-        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
-    ).all()
+    events_query = DetectionEvent.query
+    if user_id is not None:
+        events_query = events_query.filter_by(user_id=user_id)
+    events = events_query.all()
     snapshot_paths = [get_event_snapshot_path(event) for event in events]
-    event_query = EventLog.query.filter(
-        *([EventLog.user_id == user_id] if user_id is not None else []),
-        ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
-    )
-    cleared_count = event_query.delete(synchronize_session=False)
+    cleared_count = events_query.delete(synchronize_session=False)
     db.session.commit()
     for snapshot_path in snapshot_paths:
         remove_event_snapshot_file(snapshot_path)
@@ -4072,7 +4104,11 @@ def clear_vision_events_and_snapshots(user_id=None):
 
 
 def get_event_snapshot_path(event):
-    if event.snapshot_path != f'{event.id}.jpg' or not str(event.user_id).isdecimal():
+    if (
+        not event.snapshot_path
+        or not re.fullmatch(r'\d+\.jpg', event.snapshot_path, re.IGNORECASE)
+        or not str(event.user_id).isdecimal()
+    ):
         return None
     return os.path.join(
         BASE_RECORDINGS_DIR,
@@ -4096,7 +4132,7 @@ def remove_event_snapshot_file(snapshot_path):
 @app.route('/events/<int:event_id>/snapshot')
 @login_required
 def event_snapshot(event_id):
-    event = EventLog.query.filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    event = DetectionEvent.query.filter_by(id=event_id, user_id=current_user.id).first_or_404()
     snapshot_path = get_event_snapshot_path(event)
     if not snapshot_path or not os.path.isfile(snapshot_path):
         return 'Snapshot is not available.', 404
@@ -4112,7 +4148,7 @@ def event_snapshot(event_id):
 @app.route('/admin/events/<int:event_id>/snapshot')
 @admin_required
 def admin_event_snapshot(event_id):
-    event = EventLog.query.get_or_404(event_id)
+    event = DetectionEvent.query.get_or_404(event_id)
     snapshot_path = get_event_snapshot_path(event)
     if not snapshot_path or not os.path.isfile(snapshot_path):
         return 'Snapshot is not available.', 404
@@ -4133,13 +4169,9 @@ def api_clear_private_events():
             Camera.user_id == current_user.id,
             Camera.is_public.is_(False),
         )
-        private_events = EventLog.query.filter(
-            EventLog.user_id == current_user.id,
-            EventLog.camera_id.in_(private_camera_ids),
-            or_(
-                EventLog.event_type.is_(None),
-                ~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES)),
-            ),
+        private_events = DetectionEvent.query.filter(
+            DetectionEvent.user_id == current_user.id,
+            DetectionEvent.camera_id.in_(private_camera_ids),
         )
         private_event_rows = private_events.all()
         cleared_event_ids = [event.id for event in private_event_rows]

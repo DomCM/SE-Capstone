@@ -17,7 +17,7 @@ from werkzeug.security import generate_password_hash
 
 app = None
 db = None
-User = Camera = Settings = OtpChallenge = EventLog = RecordingRequest = None
+User = Camera = Settings = OtpChallenge = DetectionEvent = AuditLog = RecordingRequest = None
 BASE_RECORDINGS_DIR = 'users_data'
 AUDIT_EVENT_TYPES = {
     'login', 'logout', 'create', 'delete', 'settings', 'update',
@@ -27,10 +27,10 @@ AUDIT_EVENT_TYPES = {
 
 
 def configure(application, database, models, recordings_dir='users_data'):
-    global app, db, User, Camera, Settings, OtpChallenge, EventLog, RecordingRequest, BASE_RECORDINGS_DIR
+    global app, db, User, Camera, Settings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest, BASE_RECORDINGS_DIR
     app = application
     db = database
-    User, Camera, Settings, OtpChallenge, EventLog, RecordingRequest = models
+    User, Camera, Settings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest = models
     BASE_RECORDINGS_DIR = recordings_dir
 
 
@@ -73,11 +73,10 @@ def record_audit_event(user_id, event_type, description, source_name='System', i
     safe_description = (description or '').strip() or f'{normalized_type.title()} action recorded'
     try:
         with app.app_context():
-            entry = EventLog(
+            entry = AuditLog(
                 user_id=user_id,
                 source_name=source_name or 'System',
                 event_type=normalized_type,
-                event_category='audit',
                 description=safe_description[:500],
                 ip_address=ip_address or get_client_ip(),
                 actor_name=getattr(db.session.get(User, user_id), 'username', None),
@@ -184,11 +183,11 @@ def create_login_email_otp(user):
 
 
 def clear_vision_events_for_user(user_id=None):
-    """Remove computer-vision events without ever touching the audit trail."""
-    query = EventLog.query
+    """Remove detection events without affecting the separate audit trail."""
+    query = DetectionEvent.query
     if user_id is not None:
         query = query.filter_by(user_id=user_id)
-    return query.filter(~EventLog.event_type.in_(list(AUDIT_EVENT_TYPES))).delete(synchronize_session=False)
+    return query.delete(synchronize_session=False)
 
 
 def ensure_database_schema():
@@ -238,68 +237,70 @@ def ensure_database_schema():
         if 'last_unidentified_email_at' not in settings_columns:
             db.session.execute(text('ALTER TABLE settings ADD COLUMN last_unidentified_email_at DATETIME'))
             db.session.commit()
-        event_log_columns = {column['name'] for column in inspector.get_columns('event_log')}
-        if 'camera_id' not in event_log_columns:
-            db.session.execute(text('ALTER TABLE event_log ADD COLUMN camera_id INTEGER'))
-            db.session.commit()
-        if 'confidence' not in event_log_columns:
-            db.session.execute(text('ALTER TABLE event_log ADD COLUMN confidence FLOAT'))
-            db.session.commit()
-        if 'actor_name' not in event_log_columns:
-            db.session.execute(text('ALTER TABLE event_log ADD COLUMN actor_name VARCHAR(150)'))
-            db.session.commit()
-        if 'actor_email' not in event_log_columns:
-            db.session.execute(text('ALTER TABLE event_log ADD COLUMN actor_email VARCHAR(150)'))
-            db.session.commit()
-        if 'snapshot_path' not in event_log_columns:
-            db.session.execute(text('ALTER TABLE event_log ADD COLUMN snapshot_path VARCHAR(255)'))
-            db.session.commit()
+        if 'event_log' in inspector.get_table_names():
+            event_log_columns = {
+                column['name'] for column in inspector.get_columns('event_log')
+            }
+            for name, definition in [
+                ('camera_id', 'INTEGER'),
+                ('confidence', 'FLOAT'),
+                ('event_category', 'VARCHAR(30)'),
+                ('detector', 'VARCHAR(30)'),
+                ('severity', 'VARCHAR(30)'),
+                ('event_metadata', 'TEXT'),
+                ('ip_address', 'VARCHAR(45)'),
+                ('actor_name', 'VARCHAR(150)'),
+                ('actor_email', 'VARCHAR(150)'),
+                ('snapshot_path', 'VARCHAR(255)'),
+            ]:
+                if name not in event_log_columns:
+                    db.session.execute(text(
+                        f'ALTER TABLE event_log ADD COLUMN {name} {definition}'
+                    ))
+                    db.session.commit()
         recording_request_columns = {
             column['name'] for column in inspector.get_columns('recording_request')
         }
         if 'camera_name' not in recording_request_columns:
             db.session.execute(text('ALTER TABLE recording_request ADD COLUMN camera_name VARCHAR(100)'))
             db.session.commit()
-        event_log_user_column = next(
-            column for column in inspector.get_columns('event_log') if column['name'] == 'user_id'
-        )
-        if not event_log_user_column.get('nullable', True) and db.engine.dialect.name == 'sqlite':
-            db.session.execute(text('PRAGMA foreign_keys=OFF'))
-            db.session.execute(text('ALTER TABLE event_log RENAME TO event_log_legacy'))
-            db.session.execute(text('''
-                CREATE TABLE event_log (
-                    id INTEGER PRIMARY KEY,
-                    user_id INTEGER,
-                    camera_id INTEGER,
-                    timestamp DATETIME,
-                    source_name VARCHAR(100),
-                    event_type VARCHAR(50),
-                    description VARCHAR(500),
-                    confidence FLOAT,
-                    event_category VARCHAR(30),
-                    detector VARCHAR(30),
-                    severity VARCHAR(30),
-                    event_metadata TEXT,
-                    snapshot_path VARCHAR(255),
-                    ip_address VARCHAR(45),
-                    actor_name VARCHAR(150),
-                    actor_email VARCHAR(150),
-                    FOREIGN KEY(user_id) REFERENCES user (id),
-                    FOREIGN KEY(camera_id) REFERENCES camera (id)
-                )
-            '''))
-            db.session.execute(text('''
-                INSERT INTO event_log
-                    (id, user_id, camera_id, timestamp, source_name, event_type,
-                     description, confidence, event_category, detector, severity,
-                     event_metadata, snapshot_path, ip_address, actor_name, actor_email)
-                SELECT id, user_id, camera_id, timestamp, source_name, event_type,
-                       description, confidence, event_category, detector, severity,
-                       event_metadata, snapshot_path, ip_address, actor_name, actor_email
-                FROM event_log_legacy
-            '''))
-            db.session.execute(text('DROP TABLE event_log_legacy'))
-            db.session.execute(text('PRAGMA foreign_keys=ON'))
+        if 'event_log' in inspector.get_table_names():
+            legacy_events = db.session.execute(
+                text('SELECT * FROM event_log ORDER BY id')
+            ).mappings().all()
+            for row in legacy_events:
+                event_type = row.get('event_type') or ''
+                if (
+                    row.get('event_category') == 'audit'
+                    or event_type.strip().lower() in AUDIT_EVENT_TYPES
+                ):
+                    db.session.add(AuditLog(
+                        user_id=row.get('user_id'),
+                        timestamp=row.get('timestamp'),
+                        source_name=row.get('source_name'),
+                        event_type=event_type,
+                        description=row.get('description'),
+                        ip_address=row.get('ip_address'),
+                        actor_name=row.get('actor_name'),
+                        actor_email=row.get('actor_email'),
+                    ))
+                else:
+                    db.session.add(DetectionEvent(
+                        user_id=row.get('user_id'),
+                        camera_id=row.get('camera_id'),
+                        timestamp=row.get('timestamp'),
+                        source_name=row.get('source_name'),
+                        event_type=event_type,
+                        description=row.get('description'),
+                        confidence=row.get('confidence'),
+                        event_category=row.get('event_category') or 'vision',
+                        detector=row.get('detector'),
+                        severity=row.get('severity'),
+                        event_metadata=row.get('event_metadata'),
+                        snapshot_path=row.get('snapshot_path'),
+                    ))
+            db.session.flush()
+            db.session.execute(text('DROP TABLE event_log'))
             db.session.commit()
 
 

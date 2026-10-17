@@ -317,8 +317,12 @@
         }
 
         .cam-name-row { display: flex; align-items: center; gap: 10px; }
-        .cam-status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); }
+        .cam-status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+        .cam-status-dot.is-offline { background: var(--danger); }
         .cam-name { font-size: 15px; font-weight: 700; color: var(--navy-900); }
+        .cam-status-label { color: var(--text-muted); font-size: 11px; font-weight: 600; }
+        .cam-status-label.is-offline { color: var(--danger); }
+        .cam-status-label:not(.is-offline) { color: var(--success); }
 
         .cam-actions { display: flex; gap: 6px; align-items: center; }
 
@@ -390,16 +394,28 @@
             letter-spacing: 0.05em;
             text-transform: uppercase;
         }
+        .cam-video-badge.is-offline { background: rgba(127, 29, 29, 0.88); }
 
         .live-dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: #ef4444;
-            animation: pulse-red 2s infinite;
+            background: var(--success);
         }
 
-        @keyframes pulse-red { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .cam-video-badge.is-offline .live-dot { background: #ef4444; }
+        .cam-offline-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            background: rgba(6, 13, 31, 0.72);
+        }
+        .cam-offline-overlay[hidden] { display: none; }
 
         .cam-footer {
             padding: 12px 18px;
@@ -680,8 +696,8 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
                 <div class="stat-info">
-                    <div class="stat-value">{{ cameras|length if cameras else 0 }}</div>
-                    <div class="stat-label">Active Cameras</div>
+                    <div class="stat-value" id="onlineCamerasCount">{{ online_cameras_count }}</div>
+                    <div class="stat-label">Online Cameras</div>
                 </div>
             </div>
 
@@ -690,7 +706,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
                 <div class="stat-info">
-                    <div class="stat-value">{{ pending_requests|length if pending_requests else 0 }}</div>
+                    <div class="stat-value" id="pendingRequestsCount">{{ dashboard_metrics.pending_requests }}</div>
                     <div class="stat-label">Pending Requests</div>
                 </div>
             </div>
@@ -700,7 +716,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 </div>
                 <div class="stat-info">
-                    <div class="stat-value">{{ events|length if events else 0 }}</div>
+                    <div class="stat-value" id="totalDetectionsCount">{{ dashboard_metrics.total_detections }}</div>
                     <div class="stat-label">Total Detections</div>
                 </div>
             </div>
@@ -710,7 +726,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 </div>
                 <div class="stat-info">
-                    <div class="stat-value">{{ high_severity_alerts or 0 }}</div>
+                    <div class="stat-value" id="highSeverityAlertsCount">{{ dashboard_metrics.high_severity_alerts }}</div>
                     <div class="stat-label">High Severity Alerts</div>
                 </div>
             </div>
@@ -779,11 +795,12 @@
                 {% if cameras and cameras|length > 0 %}
                     <div class="camera-grid">
                         {% for cam in cameras %}
-                            <div class="cam-card">
+                            <div class="cam-card" data-camera-id="{{ cam.id }}">
                                 <div class="cam-header">
                                     <div class="cam-name-row">
                                         <span class="cam-status-dot"></span>
                                         <span class="cam-name">{{ cam.name or cam.camera_name or ('Camera #' ~ cam.id) }}</span>
+                                        <span class="cam-status-label" data-camera-status>Checking</span>
                                     </div>
                                     <div class="cam-actions">
                                         {% if not cam.is_public %}
@@ -799,16 +816,18 @@
                                 <div class="cam-video">
                                     <div class="cam-video-badge">
                                         <span class="live-dot"></span>
-                                        LIVE
+                                        <span data-camera-live-status>Checking</span>
                                     </div>
-                                    <img src="{{ url_for('video_feed', camera_id=cam.id) }}" 
+                                    <div class="cam-offline-overlay" hidden>Camera offline</div>
+                                    <img src="{{ url_for('video_feed', camera_id=cam.id) }}"
+                                         data-stream-url="{{ url_for('video_feed', camera_id=cam.id) }}"
                                          alt="Camera Stream"
-                                         onerror="this.onerror=null; this.src='https://placehold.co/600x337/0b1735/ffffff?text=Camera+Offline';">
+                                         onerror="this.dataset.streamFailed='true'; this.style.display='none';">
                                 </div>
                                 <div class="cam-footer">
                                     <span class="cam-meta">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                        <span>Active Stream</span>
+                                        <span data-camera-stream-status>Checking stream</span>
                                     </span>
                                     <span class="cam-meta" style="font-family: var(--font-sans);">ID: CAM-00{{ cam.id }} • {{ cam.location or cam.zone or 'Main Perimeter' }}</span>
                                 </div>
@@ -880,12 +899,12 @@
                                 {% for event in events %}
                                     <tr>
                                         <td style="font-family: var(--font-mono); font-weight: 600;">#EV-{{ event.id }}</td>
-                                        <td><strong>{{ event.camera_name or ('Camera #' ~ event.camera_id) }}</strong></td>
+                                        <td><strong>{{ event.source_name or ('Camera #' ~ event.camera_id) }}</strong></td>
                                         <td>{{ event.description or 'Motion detected in zone' }}</td>
                                         <td style="font-family: var(--font-mono); color: var(--text-muted);">{{ event.timestamp or 'N/A' }}</td>
                                         <td>
                                             <span class="badge-type badge-type-motion">
-                                                Motion Detected
+                                                {{ event.event_type or 'Detection' }}
                                             </span>
                                         </td>
                                     </tr>
@@ -951,6 +970,101 @@
                 }
             }
         });
+
+        let dashboardRefreshInProgress = false;
+        async function refreshDashboardMetrics() {
+            if (document.hidden || dashboardRefreshInProgress) return;
+            dashboardRefreshInProgress = true;
+
+            try {
+                const response = await fetch('/api/user/dashboard-metrics', { cache: 'no-store' });
+                if (!response.ok) {
+                    console.error('Unable to refresh dashboard metrics:', response.status);
+                    return;
+                }
+
+                const metrics = await response.json();
+                for (const [key, id] of [
+                    ['pending_requests', 'pendingRequestsCount'],
+                    ['total_detections', 'totalDetectionsCount'],
+                    ['high_severity_alerts', 'highSeverityAlertsCount'],
+                ]) {
+                    const element = document.getElementById(id);
+                    if (element && Number.isInteger(metrics[key])) {
+                        element.textContent = metrics[key];
+                    }
+                }
+            } catch (error) {
+                console.error('Unable to refresh dashboard metrics:', error);
+            } finally {
+                dashboardRefreshInProgress = false;
+            }
+        }
+
+        let cameraStatusRefreshInProgress = false;
+        async function refreshDashboardCameraStatus() {
+            if (document.hidden || cameraStatusRefreshInProgress) return;
+            const cameraCards = document.querySelectorAll('.cam-card[data-camera-id]');
+            if (!cameraCards.length) return;
+            cameraStatusRefreshInProgress = true;
+
+            try {
+                const response = await fetch('/api/camera-status', { cache: 'no-store' });
+                if (!response.ok) {
+                    console.error('Unable to refresh camera status:', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                const onlineCamerasEl = document.getElementById('onlineCamerasCount');
+                if (onlineCamerasEl && Number.isInteger(data.connected_count)) {
+                    onlineCamerasEl.textContent = data.connected_count;
+                }
+                for (const card of cameraCards) {
+                    const status = data.cameras[String(card.dataset.cameraId)];
+                    if (!status) continue;
+
+                    const state = status.connected ? 'Online' : 'Offline';
+                    const statusDot = card.querySelector('.cam-status-dot');
+                    statusDot.classList.toggle('is-offline', !status.connected);
+                    const statusLabel = card.querySelector('[data-camera-status]');
+                    statusLabel.textContent = state;
+                    statusLabel.classList.toggle('is-offline', !status.connected);
+                    const videoBadge = card.querySelector('.cam-video-badge');
+                    videoBadge.classList.toggle('is-offline', !status.connected);
+                    card.querySelector('[data-camera-live-status]').textContent = state;
+                    card.querySelector('[data-camera-stream-status]').textContent =
+                        status.connected ? 'Active Stream' : 'Stream Offline';
+                    const image = card.querySelector('.cam-video img');
+                    const offlineOverlay = card.querySelector('.cam-offline-overlay');
+                    offlineOverlay.hidden = status.connected;
+                    if (status.connected) {
+                        image.style.display = '';
+                        if (image.dataset.streamFailed === 'true') {
+                            image.dataset.streamFailed = 'false';
+                            image.src = image.dataset.streamUrl;
+                        }
+                    } else {
+                        image.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Unable to refresh camera status:', error);
+            } finally {
+                cameraStatusRefreshInProgress = false;
+            }
+        }
+
+        function refreshVisibleDashboard() {
+            if (document.hidden) return;
+            refreshDashboardMetrics();
+            refreshDashboardCameraStatus();
+        }
+
+        refreshVisibleDashboard();
+        setInterval(refreshDashboardMetrics, 30000);
+        setInterval(refreshDashboardCameraStatus, 10000);
+        document.addEventListener('visibilitychange', refreshVisibleDashboard);
     </script>
 </body>
 </html>

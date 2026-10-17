@@ -4,12 +4,6 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 
-AUDIT_EVENT_TYPES = {
-    'login', 'logout', 'create', 'delete', 'settings', 'update',
-    'approve', 'deny', 'fulfill', 'add', 'remove', 'clear', 'reset',
-    'factory_reset', 'export', 'archive', 'restore',
-}
-
 REPORT_TITLES = {
     'village': 'Village-Wide Security Summary Report',
     'incident': 'Security Incident Report',
@@ -251,7 +245,7 @@ def compute_patrol_priority_summary(events):
 
 
 def build_report(
-    event_log_model,
+    detection_event_model,
     report_type='incident',
     timeframe='7d',
     zone='all',
@@ -261,7 +255,7 @@ def build_report(
     now=None,
     camera_model=None,
 ):
-    """Build the admin report context from security events in EventLog."""
+    """Build the admin report context from detection events."""
     now = _as_utc_naive(now or datetime.utcnow())
     report_type = report_type if report_type in REPORT_TITLES else 'incident'
     timeframe = timeframe if timeframe in {'24h', '7d', '30d', 'custom'} else '7d'
@@ -299,14 +293,13 @@ def build_report(
         since = now - timedelta(days=timeframe_days)
 
     filters = [
-        event_log_model.timestamp >= since,
-        ~event_log_model.event_type.in_(AUDIT_EVENT_TYPES),
+        detection_event_model.timestamp >= since,
     ]
     if until:
-        filters.append(event_log_model.timestamp < until)
+        filters.append(detection_event_model.timestamp < until)
 
-    query = event_log_model.query.filter(*filters)
-    events = query.order_by(event_log_model.timestamp.desc()).all()
+    query = detection_event_model.query.filter(*filters)
+    events = query.order_by(detection_event_model.timestamp.desc()).all()
 
     report_events = []
     for event in events:
