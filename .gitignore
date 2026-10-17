@@ -28,7 +28,7 @@ tests/*
 !tests/test_concealment_service.py
 !tests/test_event_audit_separation.py
 weights/
-
+rtsp-simulator
 
 mobileclip2_b.ts
 best.pt

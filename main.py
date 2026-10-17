@@ -881,7 +881,7 @@ class VideoStreamManager:
                 'yolo_object_enabled': settings_obj.yolo_object_enabled,
                 'face_recognition_enabled': settings_obj.face_recognition_enabled,
                 'confidence_threshold': settings_obj.confidence_threshold,
-                'object_detection_confidence': getattr(settings_obj, 'object_detection_confidence', 0.5),
+                'object_detection_confidence': getattr(settings_obj, 'object_detection_confidence', 0.7),
                 'face_recognition_confidence': getattr(settings_obj, 'face_recognition_confidence', 0.6),
                 'active_classes': settings_obj.active_classes,
                 'email_alerts_enabled': settings_obj.email_alerts_enabled,
