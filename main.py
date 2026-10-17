@@ -43,7 +43,7 @@ load_dotenv()
 cv2.setNumThreads(1)
 
 from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
-from models import db, User, Camera, Settings, SystemSettings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest
+from models import db, User, Camera, Settings, DetectionThresholdSettings, SystemSettings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest
 from concealment_detection import (
     BoundedConcealmentScanner,
     DEFAULT_MODEL as DEFAULT_CONCEALMENT_MODEL,
@@ -201,6 +201,42 @@ def predict_with_model_lock(model, model_lock, frame, **kwargs):
     """Serialize calls to a shared Ultralytics model and its lazy predictor."""
     with model_lock:
         return model.predict(frame, **kwargs)
+
+
+def get_detection_threshold_values(user_id, fallback=0.5):
+    thresholds = DetectionThresholdSettings.query.filter_by(user_id=user_id).first()
+    if thresholds:
+        return thresholds.fire_confidence, thresholds.smoke_confidence
+    return fallback, fallback
+
+
+def get_or_create_detection_threshold_settings(user_id, fallback=0.5):
+    thresholds = DetectionThresholdSettings.query.filter_by(user_id=user_id).first()
+    if thresholds is None:
+        thresholds = DetectionThresholdSettings(
+            user_id=user_id,
+            fire_confidence=fallback,
+            smoke_confidence=fallback,
+        )
+        db.session.add(thresholds)
+    return thresholds
+
+
+def parse_confidence_threshold(value, field_name):
+    try:
+        threshold = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f'{field_name} must be a number between 0.1 and 1.0.')
+    if not 0.1 <= threshold <= 1.0:
+        raise ValueError(f'{field_name} must be between 0.1 and 1.0.')
+    return threshold
+
+
+def get_detection_class_threshold(class_name, fire_confidence, smoke_confidence, fallback):
+    return {
+        'fire': fire_confidence,
+        'smoke': smoke_confidence,
+    }.get(str(class_name).strip().lower(), fallback)
 
 
 def is_human_detection_name(name):
@@ -876,12 +912,19 @@ class VideoStreamManager:
     def _cache_settings(self, settings_obj):
         """Cache settings values from the SQLAlchemy object to avoid detached instance errors."""
         if settings_obj:
+            object_confidence = getattr(settings_obj, 'object_detection_confidence', 0.7)
+            fire_confidence, smoke_confidence = get_detection_threshold_values(
+                settings_obj.user_id,
+                object_confidence,
+            )
             return {
                 'yolo_enabled': settings_obj.yolo_enabled,
                 'yolo_object_enabled': settings_obj.yolo_object_enabled,
                 'face_recognition_enabled': settings_obj.face_recognition_enabled,
                 'confidence_threshold': settings_obj.confidence_threshold,
-                'object_detection_confidence': getattr(settings_obj, 'object_detection_confidence', 0.7),
+                'object_detection_confidence': object_confidence,
+                'fire_confidence': fire_confidence,
+                'smoke_confidence': smoke_confidence,
                 'face_recognition_confidence': getattr(settings_obj, 'face_recognition_confidence', 0.6),
                 'active_classes': settings_obj.active_classes,
                 'email_alerts_enabled': settings_obj.email_alerts_enabled,
@@ -896,6 +939,18 @@ class VideoStreamManager:
     def update_settings(self, settings_obj):
         """Update the settings cache with new values."""
         self.settings_cache = self._cache_settings(settings_obj)
+        if settings_obj and settings_obj.user_id != self.user_id:
+            owner_settings = Settings.query.filter_by(user_id=self.user_id).first()
+            fallback = (
+                getattr(owner_settings, 'object_detection_confidence', 0.5)
+                if owner_settings else 0.5
+            )
+            fire_confidence, smoke_confidence = get_detection_threshold_values(
+                self.user_id,
+                fallback,
+            )
+            self.settings_cache['fire_confidence'] = fire_confidence
+            self.settings_cache['smoke_confidence'] = smoke_confidence
 
     def _get_concealment_track_id(self, bbox):
         now = time.monotonic()
@@ -1623,6 +1678,8 @@ class VideoStreamManager:
         # Primary YOLO Model
         if self.settings_cache.get('yolo_enabled', True) and yolo_model:
             obj_conf = self.settings_cache.get('object_detection_confidence', 0.5)
+            fire_conf = self.settings_cache.get('fire_confidence', obj_conf)
+            smoke_conf = self.settings_cache.get('smoke_confidence', obj_conf)
             inference_started_at = time.monotonic()
             with torch.no_grad():
                 try:
@@ -1631,7 +1688,7 @@ class VideoStreamManager:
                         yolo_model_lock,
                         frame,
                         imgsz=1088,
-                        conf=obj_conf,
+                        conf=min(fire_conf, smoke_conf),
                         verbose=False,
                     )
                 finally:
@@ -1645,8 +1702,17 @@ class VideoStreamManager:
                     name = r.names.get(cls_id, str(cls_id))
                     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                     confidence = float(box.conf[0].item()) if getattr(box, 'conf', None) is not None and len(box.conf) > 0 else obj_conf
+                    normalized_name = str(name).strip().lower()
+                    class_threshold = get_detection_class_threshold(
+                        normalized_name,
+                        fire_conf,
+                        smoke_conf,
+                        obj_conf,
+                    )
+                    if confidence < class_threshold:
+                        continue
                     
-                    is_crit = str(name).strip().lower() in active_classes
+                    is_crit = normalized_name in active_classes
                     if is_crit:
                         critical_detected = True
                         detected_crit_names.append((name, confidence))
@@ -3177,6 +3243,10 @@ def admin_system():
         settings = Settings(user_id=current_user.id)
         db.session.add(settings)
         db.session.commit()
+    fire_confidence, smoke_confidence = get_detection_threshold_values(
+        current_user.id,
+        settings.object_detection_confidence,
+    )
     system_settings = get_system_settings()
 
     try:
@@ -3198,6 +3268,8 @@ def admin_system():
     return render_template(
         'admin_system.html',
         settings=settings,
+        fire_confidence=fire_confidence,
+        smoke_confidence=smoke_confidence,
         system_settings=system_settings,
         storage_pct=storage_pct,
         storage_used=storage_used,
@@ -3374,6 +3446,23 @@ def admin_system_save():
         settings = Settings(user_id=current_user.id)
         db.session.add(settings)
 
+    try:
+        object_detection_confidence = float(request.form.get(
+            'object_detection_confidence',
+            settings.object_detection_confidence,
+        ))
+        fire_confidence = parse_confidence_threshold(
+            request.form.get('fire_confidence', object_detection_confidence),
+            'Fire confidence threshold',
+        )
+        smoke_confidence = parse_confidence_threshold(
+            request.form.get('smoke_confidence', object_detection_confidence),
+            'Smoke confidence threshold',
+        )
+    except (TypeError, ValueError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin_system'))
+
     system_settings.recorded_footage_retention_days = recorded_footage_retention_days
     system_settings.request_video_retention_days = request_video_retention_days
 
@@ -3384,10 +3473,17 @@ def admin_system_save():
 
     settings.yolo_enabled = 'yolo_enabled' in request.form
     settings.face_recognition_enabled = 'face_recognition_enabled' in request.form
-    settings.object_detection_confidence = float(request.form.get('object_detection_confidence', 0.5))
+    settings.object_detection_confidence = object_detection_confidence
     settings.face_recognition_confidence = float(request.form.get('face_recognition_confidence', 0.6))
     settings.active_classes = request.form.get('active_classes', 'fire,smoke')    
     settings.frame_process_interval = int(request.form.get('frame_process_interval', 3))
+
+    detection_thresholds = get_or_create_detection_threshold_settings(
+        current_user.id,
+        object_detection_confidence,
+    )
+    detection_thresholds.fire_confidence = fire_confidence
+    detection_thresholds.smoke_confidence = smoke_confidence
 
     db.session.commit()
     record_audit_event(current_user.id, 'settings', 'Updated system settings', 'Admin', get_client_ip())
@@ -3719,13 +3815,28 @@ def settings():
             return redirect(url_for('settings'))
         user_settings.recipient_email = recipient_email[:150]
         try:
+            object_detection_confidence = max(0.1, min(1.0, float(request.form.get('object_detection_confidence', 0.5))))
+            fire_confidence = parse_confidence_threshold(
+                request.form.get('fire_confidence', object_detection_confidence),
+                'Fire confidence threshold',
+            )
+            smoke_confidence = parse_confidence_threshold(
+                request.form.get('smoke_confidence', object_detection_confidence),
+                'Smoke confidence threshold',
+            )
             user_settings.frame_process_interval = max(1, min(30, int(request.form.get('frame_process_interval', 3))))
-            user_settings.object_detection_confidence = max(0.1, min(1.0, float(request.form.get('object_detection_confidence', 0.5))))
+            user_settings.object_detection_confidence = object_detection_confidence
             user_settings.face_recognition_confidence = max(0.1, min(1.0, float(request.form.get('face_recognition_confidence', 0.6))))
             user_settings.critical_email_cooldown_minutes = max(1, min(1440, int(request.form.get('critical_email_cooldown_minutes', 15))))
-        except (TypeError, ValueError):
-            flash('Detection settings must contain valid numeric values.', 'danger')
+        except (TypeError, ValueError) as exc:
+            flash(f'Detection settings must contain valid values: {exc}', 'danger')
             return redirect(url_for('settings'))
+        detection_thresholds = get_or_create_detection_threshold_settings(
+            current_user.id,
+            object_detection_confidence,
+        )
+        detection_thresholds.fire_confidence = fire_confidence
+        detection_thresholds.smoke_confidence = smoke_confidence
         db.session.commit()
         flash("Settings Updated", "success")
         
@@ -3733,9 +3844,15 @@ def settings():
         
         return redirect(url_for('settings'))
         
+    fire_confidence, smoke_confidence = get_detection_threshold_values(
+        current_user.id,
+        user_settings.object_detection_confidence if user_settings else 0.5,
+    )
     return render_template(
         'user_system.html',
         settings=user_settings,
+        fire_confidence=fire_confidence,
+        smoke_confidence=smoke_confidence,
         known_faces=known_faces_list,
         known_face_details=known_face_details,
     )

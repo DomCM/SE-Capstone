@@ -610,12 +610,33 @@
                     </div>
 
                     <div class="field" style="margin-top: 24px;">
-                        <label>Object & Hazard Detection Confidence</label>
+                        <label>Other Object Detection Confidence</label>
                         <div class="range-container">
                             <input type="range" min="0.1" max="1.0" step="0.05" name="object_detection_confidence"
                                 value="{{ settings.object_detection_confidence or 0.5 }}"
                                 oninput="document.getElementById('object-val').innerText = parseFloat(this.value).toFixed(2)">
                             <span id="object-val" class="range-val">{{ settings.object_detection_confidence or 0.5 }}</span>
+                        </div>
+                        <div class="toggle-desc">Applies to detections from the secondary object-detection model. Fire and smoke use their separate thresholds below.</div>
+                    </div>
+
+                    <div class="field" style="margin-top: 24px;">
+                        <label>Fire Detection Confidence</label>
+                        <div class="range-container">
+                            <input type="range" min="0.1" max="1.0" step="0.05" name="fire_confidence"
+                                value="{{ fire_confidence }}"
+                                oninput="document.getElementById('fire-conf-val').innerText = parseFloat(this.value).toFixed(2)">
+                            <span id="fire-conf-val" class="range-val">{{ '%.2f'|format(fire_confidence) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="field" style="margin-top: 24px;">
+                        <label>Smoke Detection Confidence</label>
+                        <div class="range-container">
+                            <input type="range" min="0.1" max="1.0" step="0.05" name="smoke_confidence"
+                                value="{{ smoke_confidence }}"
+                                oninput="document.getElementById('smoke-conf-val').innerText = parseFloat(this.value).toFixed(2)">
+                            <span id="smoke-conf-val" class="range-val">{{ '%.2f'|format(smoke_confidence) }}</span>
                         </div>
                     </div>
 

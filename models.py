@@ -68,6 +68,15 @@ class Settings(db.Model):
     frame_process_interval = db.Column(db.Integer, default=3)
 
 
+class DetectionThresholdSettings(db.Model):
+    __tablename__ = 'detection_threshold_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    fire_confidence = db.Column(db.Float, nullable=False, default=0.5)
+    smoke_confidence = db.Column(db.Float, nullable=False, default=0.5)
+
+
 class SystemSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True, default=1)
     recorded_footage_retention_days = db.Column(db.Integer, nullable=False, default=30)

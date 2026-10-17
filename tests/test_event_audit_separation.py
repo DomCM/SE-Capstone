@@ -244,6 +244,43 @@ class EventAuditSeparationTests(unittest.TestCase):
         self.assertNotIn(b'PRIVATE USER ALERT', csv_response.data)
         self.assertNotIn(b'PRIVATE ADMIN ALERT', csv_response.data)
 
+    def test_user_can_save_independent_fire_and_smoke_thresholds(self):
+        with self.app.app_context():
+            main.db.session.add(main.Settings(
+                user_id=self.user_id,
+                recipient_email='event-user@example.com',
+            ))
+            main.db.session.commit()
+
+        self.login_as(self.user_id)
+        response = self.client.post('/settings', data={
+            'recipient_email': 'alerts@example.com',
+            'frame_process_interval': '3',
+            'object_detection_confidence': '0.5',
+            'face_recognition_confidence': '0.6',
+            'fire_confidence': '0.8',
+            'smoke_confidence': '0.35',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            thresholds = main.DetectionThresholdSettings.query.filter_by(
+                user_id=self.user_id,
+            ).one()
+            self.assertEqual(thresholds.fire_confidence, 0.8)
+            self.assertEqual(thresholds.smoke_confidence, 0.35)
+            self.assertEqual(main.get_detection_class_threshold(
+                'fire', thresholds.fire_confidence, thresholds.smoke_confidence, 0.5,
+            ), 0.8)
+            self.assertEqual(main.get_detection_class_threshold(
+                'Smoke', thresholds.fire_confidence, thresholds.smoke_confidence, 0.5,
+            ), 0.35)
+
+        settings_page = self.client.get('/settings')
+        self.assertEqual(settings_page.status_code, 200)
+        self.assertIn(b'name="fire_confidence"', settings_page.data)
+        self.assertIn(b'name="smoke_confidence"', settings_page.data)
+
     def test_legacy_combined_event_table_is_split_on_schema_initialization(self):
         with self.app.app_context():
             main.db.session.execute(text('''
