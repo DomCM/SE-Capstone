@@ -901,7 +901,7 @@
                                         <td style="font-family: var(--font-mono); font-weight: 600;">#EV-{{ event.id }}</td>
                                         <td><strong>{{ event.source_name or ('Camera #' ~ event.camera_id) }}</strong></td>
                                         <td>{{ event.description or 'Motion detected in zone' }}</td>
-                                        <td style="font-family: var(--font-mono); color: var(--text-muted);">{{ event.timestamp or 'N/A' }}</td>
+                                        <td style="font-family: var(--font-mono); color: var(--text-muted);">{{ event.timestamp|manila_datetime }}</td>
                                         <td>
                                             <span class="badge-type badge-type-motion">
                                                 {{ event.event_type or 'Detection' }}

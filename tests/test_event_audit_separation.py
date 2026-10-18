@@ -179,6 +179,36 @@ class EventAuditSeparationTests(unittest.TestCase):
             self.assertEqual(main.DetectionEvent.query.count(), 0)
             self.assertEqual(main.AuditLog.query.count(), 1)
 
+    def test_user_event_timestamps_are_rendered_in_manila_time(self):
+        with self.app.app_context():
+            event = main.DetectionEvent(
+                user_id=self.user_id,
+                camera_id=self.camera_id,
+                event_type='PERSON DETECTED',
+                event_category='vision',
+                severity='medium',
+                timestamp=main.datetime(2024, 1, 2, 12, 30),
+            )
+            main.db.session.add(event)
+            main.db.session.commit()
+
+        self.login_as(self.user_id)
+        response = self.client.get('/events')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'20:30:00 PHT', response.data)
+        self.assertIn(b'Jan 02, 2024', response.data)
+
+        response = self.client.get('/api/events')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json[0]['timestamp'],
+            '2024-01-02T20:30:00+08:00',
+        )
+
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'2024-01-02 20:30:00 PHT', response.data)
+
     def test_admin_log_and_report_routes_use_separate_models(self):
         with self.app.app_context():
             main.security.record_audit_event(

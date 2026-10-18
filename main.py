@@ -62,7 +62,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
 from email.mime.image import MIMEImage
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from sqlalchemy import inspect, text, or_
 from sqlalchemy.exc import SQLAlchemyError
 from cryptography.fernet import Fernet, InvalidToken
@@ -130,6 +131,7 @@ os.makedirs(INSTANCE_DIR, exist_ok=True)
 os.makedirs(BASE_RECORDINGS_DIR, exist_ok=True)
 
 app = Flask(__name__, instance_path=INSTANCE_DIR)
+MANILA_TIMEZONE = ZoneInfo('Asia/Manila')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smart_security.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -143,6 +145,21 @@ app.config['PERFORMANCE_SLOW_REQUEST_MS'] = 500
 app.config['CONCEALMENT_CUE_THRESHOLD'] = parse_optional_threshold(
     os.environ.get('CONCEALMENT_CUE_THRESHOLD')
 )
+
+
+def to_manila_time(value):
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(MANILA_TIMEZONE)
+
+
+@app.template_filter('manila_datetime')
+def format_manila_datetime(value):
+    local_time = to_manila_time(value)
+    return local_time.strftime('%Y-%m-%d %H:%M:%S PHT') if local_time else 'N/A'
+
 
 db.init_app(app)
 performance_metrics = PerformanceMetrics()
@@ -4102,8 +4119,14 @@ def events_page():
     event_items = [
         {
             'id': event.id,
-            'timestamp': event.timestamp.strftime('%H:%M:%S') if event.timestamp else '—',
-            'date': event.timestamp.strftime('%b %d, %Y') if event.timestamp else '',
+            'timestamp': (
+                to_manila_time(event.timestamp).strftime('%H:%M:%S PHT')
+                if event.timestamp else '—'
+            ),
+            'date': (
+                to_manila_time(event.timestamp).strftime('%b %d, %Y')
+                if event.timestamp else ''
+            ),
             'type': event.event_type or 'NOTIFICATION',
             'event_type': event.event_type,
             'camera': event.camera.name if event.camera else event.source_name or 'System',
@@ -4149,7 +4172,7 @@ def api_events():
     for event in events:
         result.append({
             'id': event.id,
-            'timestamp': event.timestamp.isoformat(),
+            'timestamp': to_manila_time(event.timestamp).isoformat(),
             'camera': event.camera.name if event.camera else event.source_name or 'System',
             'source_name': event.source_name,
             'event_type': event.event_type,
