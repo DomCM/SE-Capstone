@@ -2761,8 +2761,12 @@ def admin_cctv():
     if show_archived:
         cameras_query = cameras_query.filter(Camera.archived_at.is_not(None))
     else:
-        cameras_query = cameras_query.filter_by(user_id=current_user.id).filter(
-            Camera.archived_at.is_(None)
+        cameras_query = cameras_query.filter(
+            Camera.archived_at.is_(None),
+            or_(
+                Camera.user_id == current_user.id,
+                Camera.is_public.is_(True),
+            ),
         )
     for camera in cameras_query.order_by(Camera.id).all():
         cam_zone = getattr(camera, 'zone', 'Main Entrance') or 'Main Entrance'
@@ -3592,6 +3596,30 @@ def add_camera():
     flash('Camera added.', 'success')
 
     return redirect(redirect_target)
+
+
+@app.route('/admin/cameras/<int:camera_id>/toggle_public', methods=['POST'])
+@admin_required
+def admin_toggle_camera_public(camera_id):
+    camera = Camera.query.get_or_404(camera_id)
+    if camera.archived_at is not None:
+        flash('Archived cameras cannot be changed.', 'danger')
+        return redirect(url_for('admin_cctv', include_archived=1))
+    if camera.user_id != current_user.id and not camera.is_public:
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('admin_cctv'))
+
+    camera.is_public = not camera.is_public
+    db.session.commit()
+    visibility = 'public' if camera.is_public else 'private'
+    record_audit_event(
+        current_user.id, 'settings',
+        f"Set camera \"{camera.name}\" (#{camera.id}) to {visibility}",
+        'Admin', get_client_ip(),
+    )
+    flash(f'Camera "{camera.name}" is now {visibility}.', 'success')
+    return redirect(url_for('admin_cctv'))
+
 
 @app.route('/delete_camera/<int:camera_id>', methods=['POST'])
 @login_required

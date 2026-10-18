@@ -59,6 +59,51 @@ class EventAuditSeparationTests(unittest.TestCase):
             session['_user_id'] = str(user_id)
             session['_fresh'] = True
 
+    def test_admin_cctv_shows_and_allows_admins_to_manage_public_cameras(self):
+        with self.app.app_context():
+            other_admin = main.User(
+                username='event-admin-b',
+                email='event-admin-b@example.com',
+                password='secret',
+                role='admin',
+            )
+            main.db.session.add(other_admin)
+            main.db.session.flush()
+            public_camera = main.Camera(
+                user_id=self.admin_id,
+                name='Admin A Public Camera',
+                source='rtsp://example/admin-a-public',
+                is_public=True,
+            )
+            private_camera = main.Camera(
+                user_id=self.admin_id,
+                name='Admin A Private Camera',
+                source='rtsp://example/admin-a-private',
+            )
+            main.db.session.add_all([public_camera, private_camera])
+            main.db.session.commit()
+            other_admin_id = other_admin.id
+            public_camera_id = public_camera.id
+            private_camera_id = private_camera.id
+
+        self.login_as(other_admin_id)
+        response = self.client.get('/admin/cctv')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Admin A Public Camera', response.data)
+        self.assertNotIn(b'Admin A Private Camera', response.data)
+
+        response = self.client.post(
+            f'/admin/cameras/{public_camera_id}/toggle_public',
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        with self.app.app_context():
+            self.assertFalse(main.db.session.get(main.Camera, public_camera_id).is_public)
+
+        self.client.post(f'/admin/cameras/{private_camera_id}/toggle_public')
+        with self.app.app_context():
+            self.assertFalse(main.db.session.get(main.Camera, private_camera_id).is_public)
+
     def test_detection_and_audit_ids_are_independent(self):
         with self.app.app_context():
             main.security.record_audit_event(
