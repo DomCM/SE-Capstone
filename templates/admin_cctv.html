@@ -618,7 +618,7 @@
                         <div class="toolbar-divider"></div>
                         <div class="cam-count">
                             <span id="onlineCount">{% if cameras %}{{ cameras|selectattr('status','equalto','online')|list|length }}{% else %}0{% endif %}</span>
-                            / {% if cameras %}{{ cameras|length }}{% else %}0{% endif %} Online
+                            / <span id="totalCount">{{ cameras|length }}</span> Online
                         </div>
                     </div>
                     
@@ -639,6 +639,7 @@
                                  data-cam-status="{{ cam.status }}" 
                                  {% if not cam.is_archived %}data-stream-url="{{ cam.stream_url }}"{% endif %}
                                  data-is-public="{{ 'true' if cam.is_public else 'false' }}"
+                                 data-is-archived="{{ 'true' if cam.is_archived else 'false' }}"
                                  {% if not cam.is_archived %}onclick="openModal(this)"{% endif %}>
                                 <div class="cam-feed">
                                     {% if cam.is_archived %}
@@ -903,7 +904,21 @@
             else if (type === 'private' && !isPublic) tile.style.display = 'flex';
             else tile.style.display = 'none';
         });
+        updateCameraCount();
     }
+
+    function updateCameraCount() {
+        const visibleTiles = [...document.querySelectorAll('.cam-tile')]
+            .filter(tile => tile.style.display !== 'none');
+        const onlineCount = visibleTiles.filter(tile =>
+            tile.dataset.isArchived !== 'true' && tile.dataset.camStatus === 'online'
+        ).length;
+        const onlineCountElement = document.getElementById('onlineCount');
+        const totalCountElement = document.getElementById('totalCount');
+        if (onlineCountElement) onlineCountElement.textContent = onlineCount;
+        if (totalCountElement) totalCountElement.textContent = visibleTiles.length;
+    }
+    updateCameraCount();
 
     let labelsOn = true;
     document.getElementById('toggleLabels')?.addEventListener('click', function() {
@@ -992,8 +1007,7 @@
                 }
             }
         });
-        const count = document.getElementById('onlineCount');
-        if (count) count.textContent = statusData.connected_count;
+        updateCameraCount();
     }
 
     async function refreshCameraStatus() {
