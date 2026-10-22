@@ -29,6 +29,7 @@ tests/*
 !tests/test_event_audit_separation.py
 weights/
 rtsp-simulator
+/models
 
 mobileclip2_b.ts
 best.pt
