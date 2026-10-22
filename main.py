@@ -1893,7 +1893,7 @@ class VideoStreamManager:
                         yolo_model,
                         yolo_model_lock,
                         frame,
-                        imgsz=1088,
+                        imgsz=1280,
                         conf=min(fire_conf, smoke_conf),
                         verbose=False,
                     )
@@ -1945,7 +1945,7 @@ class VideoStreamManager:
                         behavior_pose_model,
                         behavior_pose_model_lock,
                         frame,
-                        imgsz=640,
+                        imgsz=1280,
                         conf=0.25,
                         verbose=False,
                     )
@@ -1976,7 +1976,7 @@ class VideoStreamManager:
                         yolo_model_object,
                         yolo_model_object_lock,
                         frame,
-                        imgsz=1088,
+                        imgsz=1280,
                         conf=obj_conf,
                         verbose=False,
                     )
