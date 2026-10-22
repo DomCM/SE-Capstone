@@ -71,6 +71,11 @@ import pyotp
 import qrcode
 from concurrent.futures import ThreadPoolExecutor
 from performance_metrics import PerformanceMetrics
+from behavior_analysis import (
+    AdvancedTrajectoryTracker,
+    BehaviorEvaluator,
+    UnattendedObjectTracker,
+)
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 STORAGE_ROOT = os.path.join(APP_ROOT, 'storage')
@@ -174,6 +179,7 @@ login_manager.login_view = 'login'
 
 MODEL_PATH = 'models/best.pt' # main
 MODEL_PATH_OBJECT = 'models/yolo26m.pt'  # secondary
+BEHAVIOR_POSE_MODEL_PATH = os.environ.get('BEHAVIOR_POSE_MODEL')
 APP_STARTED_MONOTONIC = time.monotonic()
 OVERLAP_PIXELS = 44
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -190,6 +196,7 @@ security.configure(
 detection_pool = None
 yolo_model = None
 yolo_model_object = None
+behavior_pose_model = None
 ALL_YOLO_CLASS_NAMES = []
 
 active_user_streams = {}
@@ -204,6 +211,7 @@ detection_pool = None
 face_recognition_lock = threading.Lock()
 yolo_model_lock = threading.Lock()
 yolo_model_object_lock = threading.Lock()
+behavior_pose_model_lock = threading.Lock()
 email_alert_lock = threading.Lock()
 concealment_scan_service = BoundedConcealmentScanner(
     model_path=os.environ.get('CONCEALMENT_CUE_MODEL') or DEFAULT_CONCEALMENT_MODEL,
@@ -406,6 +414,38 @@ def deduplicate_human_boxes(human_boxes, overlap_threshold=0.5):
                    for existing in unique_boxes):
             unique_boxes.append(detection)
     return unique_boxes
+
+
+def draw_pose_skeleton(frame, keypoints, confidence_threshold=0.3):
+    """Render visible COCO-17 keypoints and limbs onto a camera frame."""
+    if keypoints is None or len(keypoints) < 17:
+        return
+
+    height, width = frame.shape[:2]
+    joints = {}
+    for index, keypoint in enumerate(keypoints[:17]):
+        if len(keypoint) < 2:
+            continue
+        x, y = float(keypoint[0]), float(keypoint[1])
+        confidence = float(keypoint[2]) if len(keypoint) > 2 else 1.0
+        if (
+            confidence >= confidence_threshold
+            and math.isfinite(x)
+            and math.isfinite(y)
+            and 0 <= x < width
+            and 0 <= y < height
+        ):
+            joints[index] = (int(x), int(y))
+            cv2.circle(frame, joints[index], 3, (255, 0, 255), -1)
+
+    skeleton_limbs = (
+        (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),
+        (5, 11), (6, 12), (11, 12),
+        (11, 13), (13, 15), (12, 14), (14, 16),
+    )
+    for start, end in skeleton_limbs:
+        if start in joints and end in joints:
+            cv2.line(frame, joints[start], joints[end], (255, 255, 0), 2)
 
 
 def should_run_face_recognition(frame_count, process_interval, has_active_tracker, tracker_lost):
@@ -919,6 +959,10 @@ class VideoStreamManager:
         self.vehicle_tracks = []
         self.person_tracks = []
         self._virtual_line_track_sequence = 0
+        self.behavior_tracker = AdvancedTrajectoryTracker()
+        self.behavior_evaluator = BehaviorEvaluator()
+        self.unattended_object_tracker = UnattendedObjectTracker()
+        self.pose_detections = []
 
     def start(self):
         """Start processing so the worker can establish the source connection."""
@@ -1514,6 +1558,150 @@ class VideoStreamManager:
         self.frame_count += 1
         return annotated_frame
 
+    def _update_behavior_analytics(self, frame, annotated_frame):
+        person_detections = deduplicate_human_boxes([
+            (x1, y1, x2, y2, confidence)
+            for x1, y1, x2, y2, name, _is_critical, confidence in self.yolo_detections
+            if is_human_detection_name(name)
+        ])
+        frame_time = time.monotonic()
+        track_ids = self.behavior_tracker.associate_detections(person_detections, frame_time)
+        active_centroids = {}
+
+        for detection, track_id in zip(person_detections, track_ids):
+            x1, y1, x2, y2 = map(int, detection[:4])
+            centroid = ((x1 + x2) / 2.0, float(y2))
+            active_centroids[track_id] = centroid
+            self.behavior_tracker.update(track_id, centroid, frame_time)
+
+        for detection, track_id in zip(person_detections, track_ids):
+            x1, y1, x2, y2 = map(int, detection[:4])
+            speed, _heading = self.behavior_tracker.compute_kinematics(track_id)
+            pacing_entropy = self.behavior_tracker.compute_pacing_entropy(track_id)
+            dwell_time = self.behavior_tracker.get_dwell_time(track_id, frame_time)
+            shadowing_score = self.behavior_tracker.evaluate_shadowing(track_id, active_centroids)
+            spatial_anomaly = self.behavior_tracker.spatial_density.update_and_evaluate(
+                active_centroids[track_id],
+                frame.shape,
+            )
+
+            pose_keypoints = None
+            best_overlap = 0.0
+            for pose_box, keypoints in self.pose_detections:
+                overlap = calculate_overlap_ratio(detection[:4], pose_box)
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    pose_keypoints = keypoints
+            if best_overlap < 0.3:
+                pose_keypoints = None
+            if pose_keypoints is not None:
+                draw_pose_skeleton(annotated_frame, pose_keypoints)
+            pose_score, pose_flags = self.behavior_evaluator.evaluate_pose_anomalies(
+                pose_keypoints,
+                (x1, y1, x2, y2),
+            )
+            instantaneous_score, flags = self.behavior_evaluator.evaluate(
+                dwell_time,
+                speed,
+                pacing_entropy,
+                False,
+                pose_score,
+                shadowing_score,
+                spatial_anomaly,
+            )
+            threat_score = self.behavior_tracker.update_threat_energy(
+                track_id,
+                instantaneous_score,
+                frame_time,
+            )
+            all_flags = sorted(set(flags + pose_flags))
+            score_color = (
+                (0, 0, 255) if threat_score >= 0.65
+                else (0, 255, 255) if threat_score >= 0.35
+                else (0, 255, 0)
+            )
+            cv2.putText(
+                annotated_frame,
+                f'Behavior {threat_score:.2f}',
+                (x1, min(frame.shape[0] - 8, y2 + 18)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.45,
+                score_color,
+                2,
+            )
+
+            if all_flags or threat_score >= 0.4:
+                description = (
+                    'Behavior indicators: ' + ', '.join(all_flags)
+                    if all_flags else 'Elevated behavior score requires operator review.'
+                )
+                self.log_db_event(
+                    'BEHAVIOR ANALYTIC ALERT',
+                    description,
+                    confidence=round(threat_score, 3),
+                    event_category='vision',
+                    detector='behavior',
+                    severity='high' if threat_score >= 0.65 else 'medium',
+                    event_metadata={
+                        'camera_zone': self.camera_zone,
+                        'class': 'person',
+                        'track_id': track_id,
+                        'behavior_score': round(threat_score, 3),
+                        'instantaneous_behavior_score': round(instantaneous_score, 3),
+                        'behavior_flags': all_flags,
+                        'behavior_metrics': {
+                            'dwell_seconds': round(dwell_time, 2),
+                            'speed_pixels_per_second': round(speed, 2),
+                            'pacing_entropy': round(pacing_entropy, 3),
+                            'pose_score': round(pose_score, 3),
+                            'shadowing_score': round(shadowing_score, 3),
+                            'spatial_anomaly_score': round(spatial_anomaly, 3),
+                        },
+                        'pose_available': pose_keypoints is not None,
+                        'zone_evaluation': 'not_configured',
+                    },
+                    snapshot_frame=annotated_frame,
+                )
+
+        object_detections = [
+            {'box': (x1, y1, x2, y2), 'label': str(name)}
+            for x1, y1, x2, y2, name, _is_critical, _confidence in self.yolo_detections
+            if str(name).strip().lower() in {'backpack', 'handbag', 'suitcase'}
+        ]
+        unattended_alerts = self.unattended_object_tracker.evaluate_unattended_objects(
+            object_detections,
+            active_centroids,
+            frame_time,
+        )
+        for alert in unattended_alerts:
+            x1, y1, x2, y2 = alert['box']
+            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            cv2.putText(
+                annotated_frame,
+                f"UNATTENDED {alert['label'].upper()}",
+                (x1, max(18, y1 - 8)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.45,
+                (0, 0, 255),
+                2,
+            )
+            self.log_db_event(
+                'UNATTENDED OBJECT ALERT',
+                f"Unattended {alert['label']} remained outside the proximity threshold.",
+                event_category='vision',
+                detector='behavior',
+                severity='medium',
+                event_metadata={
+                    'camera_zone': self.camera_zone,
+                    'class': alert['label'],
+                    'track_id': f"object-{alert['track_id']}",
+                    'nearest_person_distance_pixels': alert['distance'],
+                    'unattended_seconds': alert['unattended_seconds'],
+                },
+                snapshot_frame=annotated_frame,
+            )
+        self.behavior_tracker.purge_stale(frame_time)
+
     def _open_stream(self):
         """Lazily open the video stream with error handling, TCP forcing, and keyframe flushing."""
         attempt_started_at = time.monotonic()
@@ -1690,6 +1878,7 @@ class VideoStreamManager:
         critical_detected = False
         detected_crit_names = []
         self.yolo_detections = []
+        self.pose_detections = []
         human_boxes = []
 
         # Primary YOLO Model
@@ -1714,7 +1903,12 @@ class VideoStreamManager:
                         (time.monotonic() - inference_started_at) * 1000,
                     )
             for r in results:
-                for box in r.boxes:
+                keypoints_data = (
+                    r.keypoints.data.cpu().numpy()
+                    if getattr(r, 'keypoints', None) is not None
+                    else None
+                )
+                for box_index, box in enumerate(r.boxes):
                     cls_id = int(box.cls[0].item())
                     name = r.names.get(cls_id, str(cls_id))
                     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
@@ -1737,6 +1931,40 @@ class VideoStreamManager:
                     self.yolo_detections.append((x1, y1, x2, y2, name, is_crit, confidence))
                     if is_human_detection_name(name):
                         human_boxes.append((x1, y1, x2, y2, confidence))
+                        if keypoints_data is not None and box_index < len(keypoints_data):
+                            self.pose_detections.append((
+                                (x1, y1, x2, y2),
+                                keypoints_data[box_index],
+                            ))
+
+        if behavior_pose_model is not None:
+            inference_started_at = time.monotonic()
+            with torch.no_grad():
+                try:
+                    pose_results = predict_with_model_lock(
+                        behavior_pose_model,
+                        behavior_pose_model_lock,
+                        frame,
+                        imgsz=640,
+                        conf=0.25,
+                        verbose=False,
+                    )
+                finally:
+                    performance_metrics.record_timing(
+                        'behavior_pose',
+                        (time.monotonic() - inference_started_at) * 1000,
+                    )
+            for result in pose_results:
+                if getattr(result, 'keypoints', None) is None:
+                    continue
+                pose_keypoints = result.keypoints.data.cpu().numpy()
+                for box_index, box in enumerate(result.boxes):
+                    cls_id = int(box.cls[0].item())
+                    if not is_human_detection_name(result.names.get(cls_id, str(cls_id))):
+                        continue
+                    if box_index < len(pose_keypoints):
+                        pose_box = tuple(int(value) for value in box.xyxy[0].tolist())
+                        self.pose_detections.append((pose_box, pose_keypoints[box_index]))
 
         # Secondary YOLO Model
         if self.settings_cache.get('yolo_object_enabled', True) and yolo_model_object:
@@ -1802,6 +2030,7 @@ class VideoStreamManager:
             )
         except Exception:
             pass
+        self._update_behavior_analytics(frame, annotated_frame)
 
         # Parallel Face Recognition on Human ROIs
         if human_boxes and self.settings_cache.get('face_recognition_enabled', True):
@@ -4360,7 +4589,8 @@ def api_clear_private_events():
 
 # --- INITIALIZATION ---
 def init_app():
-    global yolo_model, yolo_model_object, detection_pool, ALL_YOLO_CLASS_NAMES, _retention_cleanup_thread
+    global yolo_model, yolo_model_object, behavior_pose_model
+    global detection_pool, ALL_YOLO_CLASS_NAMES, _retention_cleanup_thread
 
     with app.app_context():
         ensure_database_schema()
@@ -4379,6 +4609,15 @@ def init_app():
 
     if yolo_model_object is None:
         yolo_model_object = YOLO(MODEL_PATH_OBJECT)
+
+    if behavior_pose_model is None and BEHAVIOR_POSE_MODEL_PATH:
+        pose_model_path = os.path.abspath(os.path.join(APP_ROOT, BEHAVIOR_POSE_MODEL_PATH))
+        if not os.path.isfile(pose_model_path):
+            raise FileNotFoundError(
+                f'BEHAVIOR_POSE_MODEL does not point to an existing file: {pose_model_path}'
+            )
+        behavior_pose_model = YOLO(pose_model_path)
+        app.logger.info('Loaded optional behavior pose model from %s', pose_model_path)
 
     if detection_pool is None:
         detection_pool = ThreadPoolExecutor(max_workers=MAX_DETECTION_POOL_WORKERS)

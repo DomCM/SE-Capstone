@@ -185,6 +185,11 @@ def compute_patrol_priority_summary(events):
             previous_score = public_person_event_scores.get(camera_key, 0)
             event_risk_score = 1 if previous_score < 5 else 0
             public_person_event_scores[camera_key] = min(5, previous_score + 1)
+        elif 'behavior' in event_type:
+            behavior_score = event.get('behavior_score') or 0
+            event_risk_score = 12 if behavior_score >= 0.65 else 7 if behavior_score >= 0.4 else 2
+        elif 'unattended' in event_type:
+            event_risk_score = 6
         elif 'critical' in event_type or 'alert' in event_type:
             event_risk_score = 12
         elif 'unknown' in event_type or 'unidentified' in event_type or 'unidentifiable' in event_type:
@@ -320,6 +325,16 @@ def build_report(
         cam_name = event.source_name or 'Unknown camera'
         metadata = _event_metadata(event)
         camera_public_value = bool(camera.is_public)
+        behavior_score = metadata.get('behavior_score')
+        try:
+            behavior_score = float(behavior_score) if behavior_score is not None else None
+        except (TypeError, ValueError):
+            behavior_score = None
+        behavior_flags = metadata.get('behavior_flags')
+        if not isinstance(behavior_flags, list):
+            behavior_flags = []
+        unattended_seconds = metadata.get('unattended_seconds')
+        nearest_person_distance = metadata.get('nearest_person_distance_pixels')
 
         report_events.append({
             'event_id': event.id,
@@ -337,7 +352,34 @@ def build_report(
             'object_class': metadata.get('class'),
             'confidence': f'{event.confidence * 100:.1f}%' if event.confidence is not None else '-',
             'severity': event_severity,
+            'behavior_score': behavior_score,
+            'behavior_flags': [str(flag) for flag in behavior_flags],
+            'track_id': metadata.get('track_id'),
+            'unattended_seconds': unattended_seconds,
+            'nearest_person_distance_pixels': nearest_person_distance,
         })
+
+    behavior_events = [
+        event for event in report_events
+        if event.get('behavior_score') is not None
+    ]
+    behavior_flag_counts = {}
+    for event in behavior_events:
+        for flag in event.get('behavior_flags', []):
+            behavior_flag_counts[flag] = behavior_flag_counts.get(flag, 0) + 1
+    behavior_scores = [event['behavior_score'] for event in behavior_events]
+    behavior_summary = {
+        'alert_count': len(behavior_events),
+        'average_score': round(sum(behavior_scores) / len(behavior_scores), 3) if behavior_scores else 0,
+        'peak_score': max(behavior_scores, default=0),
+        'flag_counts': [
+            {'label': flag, 'value': count}
+            for flag, count in sorted(
+                behavior_flag_counts.items(),
+                key=lambda item: (-item[1], item[0]),
+            )
+        ],
+    }
 
     # Calculate KPI Summary Metrics
     recognized_count = sum(
@@ -374,6 +416,8 @@ def build_report(
                     'high_severity': 0,
                     'hours': {},
                     'types': {},
+                    'behavior_scores': [],
+                    'behavior_flags': {},
                 }
             location_data[key]['total_triggers'] += 1
             if event['severity'] == 'High':
@@ -386,6 +430,11 @@ def build_report(
             
             ev_type = event['event_type']
             location_data[key]['types'][ev_type] = location_data[key]['types'].get(ev_type, 0) + 1
+            if event.get('behavior_score') is not None:
+                location_data[key]['behavior_scores'].append(event['behavior_score'])
+                for flag in event.get('behavior_flags', []):
+                    counts = location_data[key]['behavior_flags']
+                    counts[flag] = counts.get(flag, 0) + 1
 
         for (z, c), data in location_data.items():
             peak_h = max(data['hours'], key=data['hours'].get) if data['hours'] else 'N/A'
@@ -398,6 +447,12 @@ def build_report(
                 'high_severity': data['high_severity'],
                 'peak_hour': peak_h,
                 'top_event': top_t,
+                'behavior_alerts': len(data['behavior_scores']),
+                'peak_behavior_score': max(data['behavior_scores'], default=0),
+                'top_behavior_flag': (
+                    max(data['behavior_flags'], key=data['behavior_flags'].get)
+                    if data['behavior_flags'] else 'N/A'
+                ),
             })
         frequency_summary.sort(key=lambda x: x['total_triggers'], reverse=True)
 
@@ -495,6 +550,7 @@ def build_report(
         'incident_logs': filtered_events,
         'frequency_summary': frequency_summary,
         'patrol_priority_summary': patrol_priority_summary,
+        'behavior_summary': behavior_summary,
         'zone_risk_chart': zone_risk_chart,
         'hourly_activity_chart': hourly_activity_chart,
         'severity_chart': severity_chart,
@@ -512,7 +568,7 @@ def generate_report_csv(report_data):
     report_type = report_data.get('selected_type', 'village')
 
     if report_type == 'frequency':
-        writer.writerow(['Assigned Zone', 'Camera Name', 'Total Triggers', 'High Severity Alerts', 'Peak Hour', 'Primary Trigger Type', 'Risk Score', 'Patrol Priority', 'Patrol Recommendation'])
+        writer.writerow(['Assigned Zone', 'Camera Name', 'Total Triggers', 'High Severity Alerts', 'Peak Hour', 'Primary Trigger Type', 'Behavior Alerts', 'Peak Behavior Score', 'Top Behavior Flag', 'Risk Score', 'Patrol Priority', 'Patrol Recommendation'])
         for row in report_data.get('frequency_summary', []):
             writer.writerow([
                 row.get('zone', '-'),
@@ -521,6 +577,9 @@ def generate_report_csv(report_data):
                 row.get('high_severity', 0),
                 row.get('peak_hour', '-'),
                 row.get('top_event', '-'),
+                row.get('behavior_alerts', 0),
+                row.get('peak_behavior_score', 0),
+                row.get('top_behavior_flag', 'N/A'),
                 row.get('risk_score', 0),
                 row.get('risk_level', 'Low'),
                 row.get('patrol_recommendation', '-'),
@@ -536,7 +595,7 @@ def generate_report_csv(report_data):
                 row.get('last_activity', '-'),
             ])
     else:
-        writer.writerow(['Timestamp', 'Assigned Zone', 'Camera Name', 'Event / Trigger Type', 'Confidence', 'Severity Status'])
+        writer.writerow(['Timestamp', 'Assigned Zone', 'Camera Name', 'Event / Trigger Type', 'Confidence', 'Severity Status', 'Behavior Score', 'Behavior Flags', 'Track ID', 'Unattended Seconds', 'Nearest Person Distance (px)'])
         for row in report_data.get('incident_logs', []):
             writer.writerow([
                 row.get('timestamp', '-'),
@@ -545,6 +604,11 @@ def generate_report_csv(report_data):
                 row.get('event_type', '-'),
                 row.get('confidence', '-'),
                 row.get('severity', '-'),
+                row.get('behavior_score', ''),
+                '; '.join(row.get('behavior_flags', [])),
+                row.get('track_id', ''),
+                row.get('unattended_seconds', ''),
+                row.get('nearest_person_distance_pixels', ''),
             ])
 
     return output.getvalue()

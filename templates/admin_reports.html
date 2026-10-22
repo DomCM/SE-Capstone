@@ -625,6 +625,27 @@
                 Patrol Priority Analytics: zones and cameras are ranked by anomaly intensity and elevated trigger load to support manual security patrol decisions.
             </div>
 
+            <div class="analytics-grid">
+                <section class="analytics-panel">
+                    <h4>Behavior Analytics</h4>
+                    <div class="severity-list">
+                        <div class="severity-item"><span>Behavior alerts</span><strong>{{ behavior_summary.alert_count }}</strong></div>
+                        <div class="severity-item"><span>Average score</span><strong>{{ '%.2f'|format(behavior_summary.average_score) }}</strong></div>
+                        <div class="severity-item"><span>Peak score</span><strong>{{ '%.2f'|format(behavior_summary.peak_score) }}</strong></div>
+                    </div>
+                    {% if behavior_summary.flag_counts %}
+                    <p class="analytics-note">Most frequent indicators:
+                        {% for flag in behavior_summary.flag_counts[:5] %}
+                            {{ flag.label }} ({{ flag.value }}){% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    {% else %}
+                    <p class="analytics-note">No behavior indicators were recorded for these filters.</p>
+                    {% endif %}
+                    <p class="analytics-note">Pose indicators require a keypoint-capable detector or the optional BEHAVIOR_POSE_MODEL weight path. Zone intrusion scoring is disabled because the app currently supports virtual lines, not polygon geofences.</p>
+                </section>
+            </div>
+
             <table class="report-table">
                 <thead>
                     <tr>
@@ -730,6 +751,9 @@
                         <th>High Severity Alerts</th>
                         <th>Peak Hour</th>
                         <th>Primary Trigger Type</th>
+                        <th>Behavior Alerts</th>
+                        <th>Peak Behavior Score</th>
+                        <th>Top Behavior Indicator</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -748,11 +772,14 @@
                             </td>
                             <td>{{ row.peak_hour }}</td>
                             <td>{{ row.top_event }}</td>
+                            <td>{{ row.behavior_alerts }}</td>
+                            <td>{{ '%.2f'|format(row.peak_behavior_score) }}</td>
+                            <td>{{ row.top_behavior_flag }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" style="text-align:center;color:var(--text-muted); padding:32px;">No trigger frequency data available for the selected timeframe.</td>
+                            <td colspan="9" style="text-align:center;color:var(--text-muted); padding:32px;">No trigger frequency data available for the selected timeframe.</td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -803,6 +830,7 @@
                         <th>Timestamp</th>
                         <th>Camera Location</th>
                         <th>Detection Event / Trigger Type</th>
+                        <th>Behavior Indicators</th>
                         <th>Snapshot</th>
                         <th>Confidence Score</th>
                         <th>Severity Status</th>
@@ -815,6 +843,20 @@
                             <td>{{ log.timestamp }}</td>
                             <td><strong>{{ log.location }}</strong></td>
                             <td>{{ log.event_type }}</td>
+                            <td>
+                                {% if log.behavior_score is not none %}
+                                    Score {{ '%.2f'|format(log.behavior_score) }}
+                                    {% if log.behavior_flags %}<br>{{ log.behavior_flags|join(', ') }}{% endif %}
+                                {% endif %}
+                                {% if log.unattended_seconds is not none %}
+                                    {% if log.behavior_score is not none %}<br>{% endif %}
+                                    Unattended {{ log.unattended_seconds }} s
+                                    {% if log.nearest_person_distance_pixels is not none %}
+                                        ({{ log.nearest_person_distance_pixels }} px from person)
+                                    {% endif %}
+                                {% endif %}
+                                {% if log.behavior_score is none and log.unattended_seconds is none %}-{% endif %}
+                            </td>
                             <td>
                                 {% if log.snapshot_url %}
                                 <a class="report-snapshot-link" href="{{ log.snapshot_url }}" target="_blank" rel="noopener" aria-label="Open snapshot for {{ log.event_type }}">
@@ -838,7 +880,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" style="text-align:center;color:var(--text-muted); padding:32px;">No security events matched the selected filters.</td>
+                            <td colspan="7" style="text-align:center;color:var(--text-muted); padding:32px;">No security events matched the selected filters.</td>
                         </tr>
                     {% endif %}
                 </tbody>
