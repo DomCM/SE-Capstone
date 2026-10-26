@@ -145,6 +145,94 @@ def _matches_severity(event_severity, severity):
     return True
 
 
+def _format_duration(seconds):
+    total_seconds = max(0, int(seconds))
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if days:
+        return f'{days}d {hours}h'
+    if hours:
+        return f'{hours}h {minutes}m'
+    if minutes:
+        return f'{minutes}m'
+    return f'{seconds}s'
+
+
+def _camera_availability(history, period_start, period_end):
+    if period_end <= period_start:
+        return {
+            'disconnect_events': 0,
+            'reconnect_events': 0,
+            'offline_seconds': None,
+            'monitored_seconds': None,
+            'availability': None,
+            'last_state_change': None,
+        }
+    previous_events = [event for event in history if event.timestamp < period_start]
+    period_events = [
+        event for event in history
+        if period_start <= event.timestamp <= period_end
+    ]
+    if previous_events:
+        observed_start = period_start
+        status = previous_events[-1].status
+        transitions = period_events
+    elif period_events:
+        observed_start = period_events[0].timestamp
+        status = period_events[0].status
+        transitions = period_events[1:]
+    else:
+        return {
+            'disconnect_events': 0,
+            'reconnect_events': 0,
+            'offline_seconds': None,
+            'monitored_seconds': None,
+            'availability': None,
+            'last_state_change': history[-1].timestamp if history else None,
+        }
+
+    cursor = observed_start
+    monitored_seconds = 0.0
+    offline_seconds = 0.0
+    for event in transitions:
+        transition_time = min(max(event.timestamp, cursor), period_end)
+        elapsed_seconds = (transition_time - cursor).total_seconds()
+        if status in {'connected', 'disconnected'}:
+            monitored_seconds += elapsed_seconds
+        if status == 'disconnected':
+            offline_seconds += (transition_time - cursor).total_seconds()
+        status = event.status
+        cursor = transition_time
+    elapsed_seconds = max(0.0, (period_end - cursor).total_seconds())
+    if status in {'connected', 'disconnected'}:
+        monitored_seconds += elapsed_seconds
+    if status == 'disconnected':
+        offline_seconds += elapsed_seconds
+
+    availability = (
+        max(0.0, (monitored_seconds - offline_seconds) / monitored_seconds * 100)
+        if monitored_seconds else None
+    )
+    prior_status = previous_events[-1].status if previous_events else None
+    disconnect_events = 0
+    reconnect_events = 0
+    for event in period_events:
+        if prior_status == 'connected' and event.status == 'disconnected':
+            disconnect_events += 1
+        elif prior_status == 'disconnected' and event.status == 'connected':
+            reconnect_events += 1
+        prior_status = event.status
+    return {
+        'disconnect_events': disconnect_events,
+        'reconnect_events': reconnect_events,
+        'offline_seconds': offline_seconds if monitored_seconds else None,
+        'monitored_seconds': monitored_seconds,
+        'availability': availability,
+        'last_state_change': history[-1].timestamp if history else None,
+    }
+
+
 def compute_patrol_priority_summary(events):
     """Score camera activity, limiting repeated public-camera identity events."""
     zone_stats = {}
@@ -259,6 +347,8 @@ def build_report(
     end_date=None,
     now=None,
     camera_model=None,
+    connection_event_model=None,
+    camera_status_getter=None,
 ):
     """Build the admin report context from detection events."""
     now = _as_utc_naive(now or datetime.utcnow())
@@ -293,6 +383,7 @@ def build_report(
     if not since:
         timeframe_days = {'24h': 1, '7d': 7, '30d': 30}.get(timeframe, 7)
         since = now - timedelta(days=timeframe_days)
+    health_end = min(until, now) if until else now
 
     filters = [
         detection_event_model.timestamp >= since,
@@ -400,15 +491,6 @@ def build_report(
     snapshot_evidence_count = sum(
         1 for event in report_events if event['snapshot_available']
     )
-    recognized_count = sum(
-        1 for event in report_events if 'recogn' in event['event_type'].lower()
-    )
-    unrecognized_count = sum(
-        1 for event in report_events
-        if _is_unidentified_or_unusable_person_event(event)
-        or any(keyword in event['event_type'].lower() for keyword in ('unknown', 'critical', 'alert'))
-    )
-
     # Filtered Incident Logs for Incident Report
     if report_type == 'incident':
         filtered_events = [
@@ -522,35 +604,110 @@ def build_report(
 
     # Surveillance System Health Breakdown
     surveillance_summary = []
-    uptime_rate = '100.0%'
-    offline_event_count = 0
+    surveillance_metrics = {
+        'camera_count': 0,
+        'monitored_camera_count': 0,
+        'disconnect_events': 0,
+        'reconnect_events': 0,
+        'availability': 'No history',
+    }
 
-    if camera_model:
-        cameras = camera_model.query.filter(camera_model.is_public.is_(True)).all()
+    if camera_model and report_type == 'surveillance':
+        cameras = camera_model.query.filter(
+            camera_model.is_public.is_(True),
+            camera_model.archived_at.is_(None),
+        ).all()
+        camera_live_statuses = {}
+        for cam in cameras:
+            camera_live_statuses[cam.id] = (
+                camera_status_getter(cam) if camera_status_getter else None
+            )
+
+        history_by_camera = {}
+        if connection_event_model:
+            for camera in cameras:
+                previous_event = connection_event_model.query.filter(
+                    connection_event_model.camera_id == camera.id,
+                    connection_event_model.timestamp < since,
+                ).order_by(
+                    connection_event_model.timestamp.desc(),
+                    connection_event_model.id.desc(),
+                ).first()
+                period_events = connection_event_model.query.filter(
+                    connection_event_model.camera_id == camera.id,
+                    connection_event_model.timestamp >= since,
+                    connection_event_model.timestamp <= health_end,
+                ).order_by(
+                    connection_event_model.timestamp.asc(),
+                    connection_event_model.id.asc(),
+                ).all()
+                history_by_camera[camera.id] = (
+                    ([previous_event] if previous_event else []) + period_events
+                )
+
         for cam in cameras:
             cam_zone = getattr(cam, 'zone', 'Main Area') or 'Main Area'
-            cam_events = [
-                e for e in report_events
-                if (e.get('camera_name') or '').lower() == cam.name.lower()
-                or cam_zone.lower() in (e.get('zone') or '').lower()
-            ]
-            disconnects = sum(1 for e in cam_events if 'offline' in e['event_type'].lower() or 'disconnect' in e['event_type'].lower())
-            offline_event_count += disconnects
-            last_ts = cam_events[0]['timestamp'] if cam_events else 'No recent logs'
-            status = 'Operational' if disconnects == 0 else f'{disconnects} Disconnect Alert(s)'
+            if not _matches_zone(cam_zone, zone):
+                continue
+            history = history_by_camera.get(cam.id, [])
+            health = _camera_availability(history, since, health_end)
+            live_status = camera_live_statuses.get(cam.id)
+            if not getattr(cam, 'is_active', True):
+                status = 'Disabled'
+            elif live_status is None:
+                status = 'Not monitored'
+            else:
+                status = 'Connected' if live_status['connected'] else 'Disconnected'
+            recording_status = (
+                'Recording' if live_status and live_status['recording']
+                else 'Not recording' if live_status else 'Not monitored'
+            )
+            last_state_change = health['last_state_change']
             surveillance_summary.append({
+                'camera_id': cam.id,
                 'zone': cam_zone,
                 'camera_name': cam.name,
                 'status': status,
-                'disconnect_events': disconnects,
-                'last_activity': last_ts,
+                'recording_status': recording_status,
+                'disconnect_events': health['disconnect_events'],
+                'reconnect_events': health['reconnect_events'],
+                'offline_seconds': health['offline_seconds'],
+                'monitored_seconds': health['monitored_seconds'],
+                'offline_duration': (
+                    _format_duration(health['offline_seconds'])
+                    if health['offline_seconds'] is not None else 'No history'
+                ),
+                'availability': (
+                    f"{health['availability']:.1f}%"
+                    if health['availability'] is not None else 'No history'
+                ),
+                'last_state_change': (
+                    _as_philippine_datetime(last_state_change).strftime('%Y-%m-%d %I:%M:%S %p PHT')
+                    if last_state_change else 'No history'
+                ),
             })
-        if cameras and offline_event_count > 0:
-            total_evals = max(len(report_events), 1)
-            calculated = max(0.0, 100.0 - (offline_event_count / total_evals * 100))
-            uptime_rate = f'{calculated:.1f}%'
-    else:
-        uptime_rate = '99.8%' if len(report_events) > 0 else '100.0%'
+        monitored_cameras = [
+            row for row in surveillance_summary
+            if row['status'] in {'Connected', 'Disconnected'}
+        ]
+        known_health_rows = [
+            row for row in surveillance_summary
+            if row['monitored_seconds'] > 0
+        ]
+        monitored_seconds = sum(row['monitored_seconds'] for row in known_health_rows)
+        offline_seconds = sum(row['offline_seconds'] for row in known_health_rows)
+        surveillance_metrics = {
+            'camera_count': sum(
+                1 for camera in cameras if getattr(camera, 'is_active', True)
+            ),
+            'monitored_camera_count': len(monitored_cameras),
+            'disconnect_events': sum(row['disconnect_events'] for row in surveillance_summary),
+            'reconnect_events': sum(row['reconnect_events'] for row in surveillance_summary),
+            'availability': (
+                f'{max(0.0, (monitored_seconds - offline_seconds) / monitored_seconds * 100):.1f}%'
+                if monitored_seconds else 'No history'
+            ),
+        }
 
     return {
         'selected_type': report_type,
@@ -562,9 +719,6 @@ def build_report(
         'available_zones': available_zones,
         'report_title': REPORT_TITLES.get(report_type, REPORT_TITLES['village']),
         'total_triggers': len(report_events),
-        'verified_residents': recognized_count,
-        'unrecognized_alerts': unrecognized_count,
-        'uptime_rate': uptime_rate,
         'high_severity_incidents': high_severity_incidents,
         'affected_zone_count': affected_zone_count,
         'incident_hotspot_zone': hotspot_zone,
@@ -579,6 +733,7 @@ def build_report(
         'hourly_activity_chart': hourly_activity_chart,
         'severity_chart': severity_chart,
         'surveillance_summary': surveillance_summary,
+        'surveillance_metrics': surveillance_metrics,
         'date_generated': _as_philippine_datetime(now).strftime('%Y-%m-%d'),
         'doc_id': f'EBV-{_as_philippine_datetime(now).strftime("%Y%m%d")}-{len(report_events):04d}',
     }
@@ -609,14 +764,22 @@ def generate_report_csv(report_data):
                 row.get('patrol_recommendation', '-'),
             ])
     elif report_type == 'surveillance':
-        writer.writerow(['Assigned Zone', 'Camera Name', 'Operational Status', 'Disconnect Events', 'Last Recorded Activity'])
+        writer.writerow([
+            'Assigned Zone', 'Camera Name', 'Current Status', 'Recording Status',
+            'Disconnect Events', 'Reconnect Events', 'Observed Downtime',
+            'Observed Availability', 'Last State Change',
+        ])
         for row in report_data.get('surveillance_summary', []):
             writer.writerow([
                 row.get('zone', '-'),
                 row.get('camera_name', '-'),
                 row.get('status', '-'),
+                row.get('recording_status', '-'),
                 row.get('disconnect_events', 0),
-                row.get('last_activity', '-'),
+                row.get('reconnect_events', 0),
+                row.get('offline_duration', '-'),
+                row.get('availability', '-'),
+                row.get('last_state_change', '-'),
             ])
     else:
         writer.writerow(['Timestamp', 'Assigned Zone', 'Camera Name', 'Event / Trigger Type', 'Confidence', 'Severity Status', 'Behavior Score', 'Behavior Flags', 'Track ID', 'Unattended Seconds', 'Nearest Person Distance (px)'])

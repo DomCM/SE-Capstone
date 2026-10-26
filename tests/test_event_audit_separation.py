@@ -489,6 +489,114 @@ class EventAuditSeparationTests(unittest.TestCase):
             self.assertEqual(report['total_triggers'], 0)
             self.assertEqual(report['incident_logs'], [])
 
+    def test_surveillance_report_counts_persisted_connection_transitions(self):
+        now = main.datetime.utcnow()
+        with self.app.app_context():
+            camera = main.Camera(
+                user_id=self.admin_id,
+                name='Public Gate Camera',
+                source='rtsp://example/public-gate',
+                zone='Main Entrance',
+                is_public=True,
+            )
+            main.db.session.add(camera)
+            main.db.session.commit()
+
+            self.assertTrue(main.record_camera_connection_transition(
+                camera.id,
+                'connected',
+                now - main.timedelta(minutes=60),
+            ))
+            self.assertTrue(main.record_camera_connection_transition(
+                camera.id,
+                'disconnected',
+                now - main.timedelta(minutes=30),
+            ))
+            self.assertFalse(main.record_camera_connection_transition(
+                camera.id,
+                'disconnected',
+                now - main.timedelta(minutes=25),
+            ))
+            self.assertTrue(main.record_camera_connection_transition(
+                camera.id,
+                'connected',
+                now - main.timedelta(minutes=10),
+            ))
+
+            report = main.build_report(
+                main.DetectionEvent,
+                report_type='surveillance',
+                timeframe='24h',
+                now=now,
+                camera_model=main.Camera,
+                connection_event_model=main.CameraConnectionEvent,
+                camera_status_getter=lambda _camera: {
+                    'connected': True,
+                    'recording': False,
+                },
+            )
+            csv_report = main.generate_report_csv(report)
+
+        self.assertEqual(len(report['surveillance_summary']), 1)
+        row = report['surveillance_summary'][0]
+        self.assertEqual(row['status'], 'Connected')
+        self.assertEqual(row['recording_status'], 'Not recording')
+        self.assertEqual(row['disconnect_events'], 1)
+        self.assertEqual(row['reconnect_events'], 1)
+        self.assertEqual(row['offline_duration'], '20m')
+        self.assertEqual(row['availability'], '66.7%')
+        self.assertNotEqual(row['last_state_change'], 'No history')
+        self.assertIn('Observed Availability', csv_report)
+
+        self.login_as(self.admin_id)
+        response = self.client.get('/admin/reports?type=surveillance&timeframe=24h')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Cameras Monitored', response.data)
+        self.assertIn(b'Observed Downtime', response.data)
+        self.assertIn(b'Reconnects', response.data)
+
+    def test_live_camera_status_persists_only_actual_state_changes(self):
+        with self.app.app_context():
+            camera = main.Camera(
+                user_id=self.admin_id,
+                name='Monitored Public Camera',
+                source='rtsp://example/monitored',
+                is_public=True,
+            )
+            main.db.session.add(camera)
+            main.db.session.commit()
+            camera_id = camera.id
+
+        class FakeManager:
+            is_recording = False
+
+            def __init__(self, connected):
+                self.connected = connected
+
+            def is_connected(self):
+                return self.connected
+
+        managers = main.active_user_streams.setdefault(self.admin_id, {})
+        managers[camera_id] = FakeManager(True)
+        try:
+            with self.app.app_context():
+                camera = main.db.session.get(main.Camera, camera_id)
+                self.assertTrue(main.camera_live_status(camera)['connected'])
+                self.assertTrue(main.camera_live_status(camera)['connected'])
+                managers[camera_id].connected = False
+                self.assertFalse(main.camera_live_status(camera)['connected'])
+                statuses = [
+                    event.status
+                    for event in main.CameraConnectionEvent.query.filter_by(
+                        camera_id=camera_id,
+                    ).order_by(main.CameraConnectionEvent.id).all()
+                ]
+                self.assertEqual(statuses, ['connected', 'disconnected'])
+        finally:
+            managers.pop(camera_id, None)
+            if not managers:
+                main.active_user_streams.pop(self.admin_id, None)
+
     def test_admin_reports_include_only_public_camera_events(self):
         with self.app.app_context():
             admin_private_camera = main.Camera(

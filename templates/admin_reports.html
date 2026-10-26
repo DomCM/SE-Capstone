@@ -512,7 +512,7 @@
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                     </div>
                     <div class="report-card-title">Surveillance Data</div>
-                    <div class="report-card-desc">CCTV camera stream uptime, storage utilization, and network hardware health.</div>
+                    <div class="report-card-desc">Current stream status, observed disconnects, reconnects, and availability by camera.</div>
                 </div>
             </div>
         </div>
@@ -602,6 +602,24 @@
 
             <!-- KPI DATA METRICS -->
             <div class="report-summary-boxes">
+                {% if selected_type == 'surveillance' %}
+                <div class="r-box">
+                    <div class="r-val">{{ surveillance_metrics.monitored_camera_count }} / {{ surveillance_metrics.camera_count }}</div>
+                    <div class="r-lbl">Cameras Monitored</div>
+                </div>
+                <div class="r-box">
+                    <div class="r-val" style="color:var(--danger);">{{ surveillance_metrics.disconnect_events }}</div>
+                    <div class="r-lbl">Disconnects</div>
+                </div>
+                <div class="r-box">
+                    <div class="r-val">{{ surveillance_metrics.reconnect_events }}</div>
+                    <div class="r-lbl">Reconnects</div>
+                </div>
+                <div class="r-box">
+                    <div class="r-val">{{ surveillance_metrics.availability }}</div>
+                    <div class="r-lbl">Observed Availability</div>
+                </div>
+                {% else %}
                 <div class="r-box">
                     <div class="r-val" style="color:var(--danger);">{{ high_severity_incidents }}</div>
                     <div class="r-lbl">High / Critical Incidents</div>
@@ -618,6 +636,7 @@
                     <div class="r-val">{{ snapshot_evidence_count }} / {{ snapshot_evidence_total }}</div>
                     <div class="r-lbl">Incidents With Snapshot Evidence</div>
                 </div>
+                {% endif %}
             </div>
 
             <!-- Restored Conditional Tables Logic based on Report Type -->
@@ -787,15 +806,22 @@
             </table>
 
             {% elif selected_type == 'surveillance' %}
-            <!-- SURVEILLANCE SYSTEM HEALTH TABLE -->
+            <p class="frequency-note">
+                Connection history is recorded while a camera stream is monitored. Availability is calculated only for periods with recorded connection state; cameras without an active stream worker are marked Not monitored.
+            </p>
+            <div class="surveillance-table-wrapper">
             <table class="report-table">
                 <thead>
                     <tr>
                         <th>Assigned Zone / Location</th>
                         <th>Camera Name</th>
-                        <th>Operational Status</th>
-                        <th>Disconnect Alerts</th>
-                        <th>Last Recorded Activity</th>
+                        <th>Current Status</th>
+                        <th>Recording</th>
+                        <th>Disconnects</th>
+                        <th>Reconnects</th>
+                        <th>Observed Downtime</th>
+                        <th>Observed Availability</th>
+                        <th>Last State Change</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -805,23 +831,30 @@
                             <td><strong>{{ row.zone }}</strong></td>
                             <td>{{ row.camera_name }}</td>
                             <td>
-                                {% if row.disconnect_events == 0 %}
+                                {% if row.status == 'Connected' %}
                                     <strong style="color:var(--success);">{{ row.status }}</strong>
+                                {% elif row.status == 'Not monitored' or row.status == 'Disabled' %}
+                                    <strong style="color:var(--text-muted);">{{ row.status }}</strong>
                                 {% else %}
                                     <strong style="color:var(--danger);">{{ row.status }}</strong>
                                 {% endif %}
                             </td>
+                            <td>{{ row.recording_status }}</td>
                             <td>{{ row.disconnect_events }}</td>
-                            <td>{{ row.last_activity }}</td>
+                            <td>{{ row.reconnect_events }}</td>
+                            <td>{{ row.offline_duration }}</td>
+                            <td>{{ row.availability }}</td>
+                            <td>{{ row.last_state_change }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="5" style="text-align:center;color:var(--text-muted); padding:32px;">No surveillance camera records found.</td>
+                            <td colspan="9" style="text-align:center;color:var(--text-muted); padding:32px;">No surveillance camera records found.</td>
                         </tr>
                     {% endif %}
                 </tbody>
             </table>
+            </div>
 
             {% else %}
             <!-- DETAILED INCIDENT & VILLAGE SUMMARY TABLE -->

@@ -43,7 +43,7 @@ load_dotenv()
 cv2.setNumThreads(1)
 
 from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
-from models import db, User, Camera, Settings, DetectionThresholdSettings, SystemSettings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest
+from models import db, User, Camera, CameraConnectionEvent, Settings, DetectionThresholdSettings, SystemSettings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest
 from concealment_detection import (
     BoundedConcealmentScanner,
     DEFAULT_MODEL as DEFAULT_CONCEALMENT_MODEL,
@@ -3288,6 +3288,8 @@ def admin_reports():
         start_date=request.args.get('start_date'),
         end_date=request.args.get('end_date'),
         camera_model=Camera,
+        connection_event_model=CameraConnectionEvent,
+        camera_status_getter=camera_live_status,
     )
     for log in report_context['incident_logs']:
         log['snapshot_url'] = (
@@ -3309,6 +3311,8 @@ def admin_reports_export():
         start_date=request.args.get('start_date'),
         end_date=request.args.get('end_date'),
         camera_model=Camera,
+        connection_event_model=CameraConnectionEvent,
+        camera_status_getter=camera_live_status,
     )
     csv_data = generate_report_csv(report_context)
     filename = f"security_report_{report_context['selected_type']}_{datetime.utcnow().strftime('%Y%m%d')}.csv"
@@ -3966,14 +3970,56 @@ def video_feed(camera_id):
     return Response(gen_frames(stream_user_id, camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-def camera_status(camera):
-    """Get live capture health for a camera without starting a new stream."""
+def camera_live_status(camera):
+    """Return the state of a camera worker, or None when it is not being monitored."""
     stream_owner_id = camera.user_id
     with stream_lock:
         manager = active_user_streams.get(stream_owner_id, {}).get(camera.id)
         if manager is None:
             manager = active_physical_streams.get(stream_scope_key(stream_owner_id, camera))
-    return bool(manager and manager.is_connected()), bool(manager and manager.is_recording)
+    if manager is None:
+        record_camera_connection_transition(camera.id, 'not_monitored')
+        return None
+
+    connected = bool(manager.is_connected())
+    record_camera_connection_transition(
+        camera.id,
+        'connected' if connected else 'disconnected',
+    )
+    return {
+        'connected': connected,
+        'recording': bool(manager.is_recording),
+    }
+
+
+def record_camera_connection_transition(camera_id, status, timestamp=None):
+    if status not in {'connected', 'disconnected', 'not_monitored'}:
+        raise ValueError(f'Invalid camera connection status: {status}')
+    with app.app_context():
+        latest_event = CameraConnectionEvent.query.filter_by(
+            camera_id=camera_id,
+        ).order_by(
+            CameraConnectionEvent.timestamp.desc(),
+            CameraConnectionEvent.id.desc(),
+        ).first()
+        if latest_event and latest_event.status == status:
+            return False
+
+        db.session.add(CameraConnectionEvent(
+            camera_id=camera_id,
+            status=status,
+            timestamp=timestamp or datetime.utcnow(),
+        ))
+        db.session.commit()
+        return True
+
+
+def camera_status(camera):
+    """Get live capture health for a camera without starting a new stream."""
+    status = camera_live_status(camera)
+    if status is None:
+        return False, False
+    return status['connected'], status['recording']
 
 
 @app.route('/api/camera-status')
@@ -4030,6 +4076,7 @@ def acquire_stream(user_id, camera):
 
 def release_stream(user_id, camera_id, source_key, manager):
     """Remove one subscriber and stop the worker after the last subscriber leaves."""
+    stopped = False
     with stream_lock:
         user_streams = active_user_streams.get(user_id)
         if user_streams and user_streams.get(camera_id) is manager:
@@ -4042,6 +4089,9 @@ def release_stream(user_id, camera_id, source_key, manager):
             if active_physical_streams.get(source_key) is manager:
                 del active_physical_streams[source_key]
             manager.release()
+            stopped = True
+    if stopped:
+        record_camera_connection_transition(manager.camera_id, 'not_monitored')
 
 
 def release_camera_streams(camera_id):
