@@ -269,6 +269,19 @@
         .report-snapshot-link { display: inline-flex; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-subtle); }
         .report-snapshot { display: block; width: 112px; height: 68px; object-fit: cover; background: var(--navy-900); }
         .report-snapshot-link:hover { box-shadow: var(--shadow-hover); }
+        .report-snapshot-button { display: inline-flex; padding: 0; border: 0; border-radius: var(--radius-sm); overflow: hidden; background: transparent; cursor: zoom-in; }
+        .report-snapshot-button:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+        .report-snapshot-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(6, 13, 31, .84); }
+        .report-snapshot-modal.is-open { display: flex; }
+        .report-snapshot-dialog { width: min(960px, 100%); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius-lg); background: var(--surface-white); box-shadow: var(--shadow-lg); }
+        .report-snapshot-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; background: var(--navy-950); color: #fff; }
+        .report-snapshot-modal-header h2 { font-size: 15px; font-weight: 700; }
+        .report-snapshot-close { width: 34px; height: 34px; border: 0; border-radius: var(--radius-sm); background: rgba(255,255,255,.12); color: #fff; font-size: 22px; cursor: pointer; }
+        .report-snapshot-image-wrap { min-height: 180px; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 16px; background: #020617; }
+        .report-snapshot-image-wrap img { display: block; max-width: 100%; max-height: calc(92vh - 130px); object-fit: contain; }
+        .report-snapshot-unavailable-modal { display: none; padding: 48px 20px; color: #cbd5e1; text-align: center; }
+        .report-snapshot-image-wrap.is-unavailable img { display: none; }
+        .report-snapshot-image-wrap.is-unavailable .report-snapshot-unavailable-modal { display: block; }
         .report-snapshot-unavailable { color: var(--text-muted); font-size: 12px; }
         .report-pagination {
             display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -893,9 +906,9 @@
                             </td>
                             <td>
                                 {% if log.snapshot_url %}
-                                <a class="report-snapshot-link" href="{{ log.snapshot_url }}" target="_blank" rel="noopener" aria-label="Open snapshot for {{ log.event_type }}">
+                                <button type="button" class="report-snapshot-button" data-report-snapshot="{{ log.snapshot_url }}" data-report-event="{{ log.event_type }}" aria-label="View snapshot for {{ log.event_type }}">
                                     <img class="report-snapshot" src="{{ log.snapshot_url }}" alt="Snapshot for {{ log.event_type }}" loading="lazy" onerror="this.parentElement.replaceWith(document.createTextNode('Snapshot unavailable'))">
-                                </a>
+                                </button>
                                 {% else %}
                                 <span class="report-snapshot-unavailable">No snapshot</span>
                                 {% endif %}
@@ -947,6 +960,18 @@
     </footer>
 </main>
 
+<div class="report-snapshot-modal" id="reportSnapshotModal" role="dialog" aria-modal="true" aria-labelledby="reportSnapshotTitle">
+    <div class="report-snapshot-dialog">
+        <div class="report-snapshot-modal-header">
+            <h2 id="reportSnapshotTitle">Event snapshot</h2>
+            <button type="button" class="report-snapshot-close" id="reportSnapshotClose" aria-label="Close snapshot">&times;</button>
+        </div>
+        <div class="report-snapshot-image-wrap" id="reportSnapshotImageWrap">
+            <img id="reportSnapshotImage" alt="Event snapshot">
+            <div class="report-snapshot-unavailable-modal">Snapshot unavailable.</div>
+        </div>
+    </div>
+</div>
 <script>
     // Mobile Drawer Toggle
     const mobileToggle = document.getElementById('mobileToggle');
@@ -1043,6 +1068,46 @@
 
     document.querySelectorAll('#printableReport table.report-table').forEach(table => {
         addReportTablePagination(table);
+    });
+
+    const reportSnapshotModal = document.getElementById('reportSnapshotModal');
+    const reportSnapshotImage = document.getElementById('reportSnapshotImage');
+    const reportSnapshotImageWrap = document.getElementById('reportSnapshotImageWrap');
+
+    function openReportSnapshot(url, eventName) {
+        reportSnapshotImageWrap.classList.remove('is-unavailable');
+        reportSnapshotImage.alt = `Snapshot for ${eventName}`;
+        reportSnapshotImage.src = url;
+        document.getElementById('reportSnapshotTitle').textContent = `Snapshot — ${eventName}`;
+        reportSnapshotModal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('reportSnapshotClose').focus();
+    }
+
+    function closeReportSnapshot() {
+        reportSnapshotModal.classList.remove('is-open');
+        reportSnapshotImage.removeAttribute('src');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('click', event => {
+        const trigger = event.target.closest('[data-report-snapshot]');
+        if (trigger) {
+            openReportSnapshot(trigger.dataset.reportSnapshot, trigger.dataset.reportEvent || 'Event');
+        } else if (
+            event.target === reportSnapshotModal
+            || event.target.closest('#reportSnapshotClose')
+        ) {
+            closeReportSnapshot();
+        }
+    });
+    reportSnapshotImage.addEventListener('error', () => {
+        reportSnapshotImageWrap.classList.add('is-unavailable');
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && reportSnapshotModal.classList.contains('is-open')) {
+            closeReportSnapshot();
+        }
     });
 
     // Restored Toggle Custom Dates for Timeframe selection

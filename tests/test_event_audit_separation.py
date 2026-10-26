@@ -763,6 +763,38 @@ class EventAuditSeparationTests(unittest.TestCase):
         self.assertNotIn(b'PRIVATE USER ALERT', csv_response.data)
         self.assertNotIn(b'PRIVATE ADMIN ALERT', csv_response.data)
 
+    def test_admin_report_snapshot_opens_from_modal_control(self):
+        with self.app.app_context():
+            camera = main.Camera(
+                user_id=self.admin_id,
+                name='Report Snapshot Camera',
+                source='rtsp://example/report-snapshot',
+                is_public=True,
+            )
+            main.db.session.add(camera)
+            main.db.session.flush()
+            event = main.DetectionEvent(
+                user_id=self.admin_id,
+                camera_id=camera.id,
+                source_name=camera.name,
+                event_type='SNAPSHOT TEST EVENT',
+                event_category='vision',
+                severity='high',
+                snapshot_path='123.jpg',
+                timestamp=datetime.utcnow(),
+            )
+            main.db.session.add(event)
+            main.db.session.commit()
+            event_id = event.id
+
+        self.login_as(self.admin_id)
+        response = self.client.get('/admin/reports?timeframe=24h')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'data-report-snapshot="/admin/events/', response.data)
+        self.assertIn(f'/admin/events/{event_id}/snapshot'.encode(), response.data)
+        self.assertIn(b'id="reportSnapshotModal"', response.data)
+        self.assertIn(b'id="reportSnapshotImage"', response.data)
+
     def test_user_can_save_independent_fire_and_smoke_thresholds(self):
         with self.app.app_context():
             main.db.session.add(main.Settings(
