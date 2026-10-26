@@ -21,6 +21,9 @@ test/
 video_outputs/
 tools/
 docs/
+!docs/
+docs/*
+!docs/level-0-dfd.md
 experiments/
 tests/
 !tests/
