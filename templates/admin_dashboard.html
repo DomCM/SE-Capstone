@@ -621,14 +621,14 @@
                             </div>
                         </a>
 
-                        <form action="{{ url_for('admin_system_clear_events') }}" method="post" onsubmit="return confirm('Are you sure you want to clear system event history?');">
+                        <form action="{{ url_for('admin_system_clear_events') }}" method="post" onsubmit="return confirm('Clear computer-vision event logs for all admin accounts? User events and audit logs will be preserved.');">
                             <button type="submit" class="action-item-btn">
                                 <div class="action-icon-box danger-style">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                                 </div>
                                 <div>
                                     <div class="action-text-title" style="color:var(--danger);">Clear Event Logs</div>
-                                    <div class="action-text-desc">Purge temporary alert history</div>
+                                    <div class="action-text-desc">Clear computer-vision events for all admins; user events and audit logs are preserved</div>
                                 </div>
                             </button>
                         </form>

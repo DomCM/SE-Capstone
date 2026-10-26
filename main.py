@@ -64,7 +64,7 @@ from email.utils import formataddr
 from email.mime.image import MIMEImage
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from sqlalchemy import inspect, text, or_
+from sqlalchemy import inspect, text, or_, func
 from sqlalchemy.exc import SQLAlchemyError
 from cryptography.fernet import Fernet, InvalidToken
 import pyotp
@@ -3474,14 +3474,14 @@ def camera_snapshot(camera_id):
 @app.route('/admin/clear_events', methods=['POST'])
 @admin_required
 def admin_clear_events():
-    cleared_count = clear_vision_events_and_snapshots()
+    cleared_count = clear_admin_vision_events_and_snapshots()
     db.session.commit()
     record_audit_event(
         current_user.id, 'clear',
-        f'Cleared {cleared_count} computer-vision event log(s); audit trail preserved',
+        f'Cleared {cleared_count} admin computer-vision event log(s); audit trail preserved',
         'Admin', get_client_ip(),
     )
-    flash('All computer-vision event logs were cleared. Audit logs were preserved.', 'success')
+    flash('Computer-vision event logs for all admin accounts were cleared. User events and audit logs were preserved.', 'success')
     return redirect(url_for('admin_logs'))
 
 
@@ -3762,14 +3762,14 @@ def admin_clear_recordings():
 @app.route('/admin/system/clear_events', methods=['POST'])
 @admin_required
 def admin_system_clear_events():
-    cleared_count = clear_vision_events_and_snapshots()
+    cleared_count = clear_admin_vision_events_and_snapshots()
     db.session.commit()
     record_audit_event(
         current_user.id, 'clear',
-        f'Cleared {cleared_count} computer-vision event log(s); audit trail preserved',
+        f'Cleared {cleared_count} admin computer-vision event log(s); audit trail preserved',
         'Admin', get_client_ip(),
     )
-    flash('All computer-vision event logs were cleared. Audit logs were preserved.', 'success')
+    flash('Computer-vision event logs for all admin accounts were cleared. User events and audit logs were preserved.', 'success')
     return redirect(url_for('admin_system'))
 
 
@@ -4491,6 +4491,21 @@ def clear_vision_events_and_snapshots(user_id=None):
     events_query = DetectionEvent.query
     if user_id is not None:
         events_query = events_query.filter_by(user_id=user_id)
+    return _delete_detection_events_and_snapshots(events_query)
+
+
+def clear_admin_vision_events_and_snapshots():
+    admin_user_ids = db.session.query(User.id).filter(
+        func.lower(func.trim(User.role)) == 'admin',
+    )
+    events_query = DetectionEvent.query.filter(
+        DetectionEvent.user_id.in_(admin_user_ids),
+        DetectionEvent.event_category == 'vision',
+    )
+    return _delete_detection_events_and_snapshots(events_query)
+
+
+def _delete_detection_events_and_snapshots(events_query):
     events = events_query.all()
     snapshot_paths = [get_event_snapshot_path(event) for event in events]
     cleared_count = events_query.delete(synchronize_session=False)

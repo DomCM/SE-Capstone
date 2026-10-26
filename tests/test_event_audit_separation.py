@@ -149,6 +149,76 @@ class EventAuditSeparationTests(unittest.TestCase):
             self.assertEqual(main.DetectionEvent.query.count(), 0)
             self.assertEqual(main.AuditLog.query.count(), 1)
 
+    def test_admin_clear_only_removes_admin_vision_events(self):
+        with self.app.app_context():
+            other_admin = main.User(
+                username='event-admin-b',
+                email='event-admin-b@example.com',
+                password='secret',
+                role='admin',
+            )
+            main.db.session.add(other_admin)
+            main.db.session.flush()
+            user_event = main.DetectionEvent(
+                user_id=self.user_id,
+                event_type='USER VISION EVENT',
+                event_category='vision',
+            )
+            admin_system_event = main.DetectionEvent(
+                user_id=self.admin_id,
+                event_type='ADMIN SYSTEM EVENT',
+                event_category='system',
+            )
+            main.db.session.add_all([
+                main.DetectionEvent(
+                    user_id=self.admin_id,
+                    event_type='ADMIN A VISION EVENT',
+                    event_category='vision',
+                ),
+                main.DetectionEvent(
+                    user_id=other_admin.id,
+                    event_type='ADMIN B VISION EVENT',
+                    event_category='vision',
+                ),
+                user_event,
+                admin_system_event,
+                main.AuditLog(
+                    user_id=self.admin_id,
+                    event_type='login',
+                    description='Admin logged in',
+                ),
+            ])
+            main.db.session.commit()
+            other_admin_id = other_admin.id
+
+        self.login_as(self.admin_id)
+        dashboard = self.client.get('/admin')
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn(b'Clear computer-vision event logs for all admin accounts?', dashboard.data)
+        self.assertIn(b'action="/admin/system/clear_events"', dashboard.data)
+
+        response = self.client.post('/admin/system/clear_events')
+        self.assertEqual(response.status_code, 302)
+
+        with self.app.app_context():
+            remaining_events = main.DetectionEvent.query.order_by(
+                main.DetectionEvent.event_type,
+            ).all()
+            self.assertEqual(
+                {(event.user_id, event.event_type) for event in remaining_events},
+                {
+                    (self.user_id, 'USER VISION EVENT'),
+                    (self.admin_id, 'ADMIN SYSTEM EVENT'),
+                },
+            )
+            self.assertNotEqual(self.admin_id, other_admin_id)
+            self.assertEqual(
+                main.AuditLog.query.filter_by(event_type='login').count(),
+                1,
+            )
+            clear_audit = main.AuditLog.query.filter_by(event_type='clear').one()
+            self.assertIn('2 admin computer-vision event log(s)', clear_audit.description)
+
     def test_user_event_api_and_delete_only_use_detection_events(self):
         with self.app.app_context():
             main.security.record_audit_event(
