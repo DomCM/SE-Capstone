@@ -1,6 +1,8 @@
 import os
 import sys
 import unittest
+from datetime import datetime
+from unittest.mock import patch
 
 from sqlalchemy import inspect, text
 
@@ -219,6 +221,170 @@ class EventAuditSeparationTests(unittest.TestCase):
             clear_audit = main.AuditLog.query.filter_by(event_type='clear').one()
             self.assertIn('2 admin computer-vision event log(s)', clear_audit.description)
 
+    def test_user_dashboard_detection_metrics_and_events_are_limited_to_today(self):
+        today_start = datetime(2026, 9, 2)
+        tomorrow_start = datetime(2026, 9, 3)
+        with self.app.app_context():
+            main.db.session.add_all([
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    camera_id=self.camera_id,
+                    event_type='TODAY HIGH',
+                    description='Today high event',
+                    event_category='vision',
+                    severity='high',
+                    timestamp=datetime(2026, 9, 2, 8),
+                ),
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    camera_id=self.camera_id,
+                    event_type='TODAY NORMAL',
+                    description='Today normal event',
+                    event_category='vision',
+                    severity='normal',
+                    timestamp=datetime(2026, 9, 2, 9),
+                ),
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    camera_id=self.camera_id,
+                    event_type='YESTERDAY',
+                    description='Yesterday event',
+                    event_category='vision',
+                    severity='critical',
+                    timestamp=datetime(2026, 9, 1, 23, 59, 59),
+                ),
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    camera_id=self.camera_id,
+                    event_type='TOMORROW',
+                    description='Tomorrow event',
+                    event_category='vision',
+                    severity='critical',
+                    timestamp=tomorrow_start,
+                ),
+            ])
+            main.db.session.commit()
+
+        self.login_as(self.user_id)
+        with patch(
+            'main.get_manila_day_utc_range',
+            return_value=(today_start, tomorrow_start),
+        ), patch('main.camera_status', return_value=(False, False)):
+            metrics = self.client.get('/api/user/dashboard-metrics')
+            dashboard = self.client.get('/')
+
+        self.assertEqual(metrics.status_code, 200)
+        self.assertEqual(metrics.json['total_detections'], 2)
+        self.assertEqual(metrics.json['high_severity_alerts'], 1)
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn(b'Today high event', dashboard.data)
+        self.assertIn(b'Today normal event', dashboard.data)
+        self.assertNotIn(b'Yesterday event', dashboard.data)
+        self.assertNotIn(b'Tomorrow event', dashboard.data)
+
+    def test_admin_dashboard_alerts_and_activity_are_limited_to_today(self):
+        today_start = datetime(2026, 9, 2)
+        tomorrow_start = datetime(2026, 9, 3)
+        with self.app.app_context():
+            main.db.session.add_all([
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    event_type='TODAY ALERT',
+                    description='Today admin alert',
+                    event_category='vision',
+                    timestamp=datetime(2026, 9, 2, 8),
+                ),
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    event_type='YESTERDAY ALERT',
+                    description='Yesterday admin alert',
+                    event_category='vision',
+                    timestamp=datetime(2026, 9, 1, 23, 59, 59),
+                ),
+                main.DetectionEvent(
+                    user_id=self.user_id,
+                    event_type='TOMORROW ALERT',
+                    description='Tomorrow admin alert',
+                    event_category='vision',
+                    timestamp=tomorrow_start,
+                ),
+            ])
+            main.db.session.commit()
+
+        self.login_as(self.admin_id)
+        with patch(
+            'main.get_manila_day_utc_range',
+            return_value=(today_start, tomorrow_start),
+        ):
+            dashboard = self.client.get('/admin')
+
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn(b'Security Alerts Today', dashboard.data)
+        self.assertIn(b'id="todaySecurityAlertsCount">1</div>', dashboard.data)
+        self.assertIn(b'Today admin alert', dashboard.data)
+        self.assertNotIn(b'Yesterday admin alert', dashboard.data)
+        self.assertNotIn(b'Tomorrow admin alert', dashboard.data)
+
+    def test_admin_dashboard_camera_counts_only_admin_owned_public_cameras(self):
+        with self.app.app_context():
+            other_admin = main.User(
+                username='camera-admin-b',
+                email='camera-admin-b@example.com',
+                password='secret',
+                role='admin',
+            )
+            main.db.session.add(other_admin)
+            main.db.session.flush()
+            main.db.session.add_all([
+                main.Camera(
+                    user_id=self.admin_id,
+                    name='Admin public active',
+                    source='rtsp://example/admin-public-active',
+                    is_public=True,
+                    is_active=True,
+                ),
+                main.Camera(
+                    user_id=self.admin_id,
+                    name='Admin public disabled',
+                    source='rtsp://example/admin-public-disabled',
+                    is_public=True,
+                    is_active=False,
+                ),
+                main.Camera(
+                    user_id=self.admin_id,
+                    name='Admin private active',
+                    source='rtsp://example/admin-private-active',
+                    is_public=False,
+                    is_active=True,
+                ),
+                main.Camera(
+                    user_id=self.user_id,
+                    name='User public active',
+                    source='rtsp://example/user-public-active',
+                    is_public=True,
+                    is_active=True,
+                ),
+                main.Camera(
+                    user_id=other_admin.id,
+                    name='Other admin public active',
+                    source='rtsp://example/other-admin-public-active',
+                    is_public=True,
+                    is_active=True,
+                ),
+            ])
+            main.db.session.commit()
+
+        self.login_as(self.admin_id)
+        with patch(
+            'main.get_manila_day_utc_range',
+            return_value=(datetime(2026, 9, 2), datetime(2026, 9, 3)),
+        ):
+            response = self.client.get('/admin')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'id="activeCameraFeeds">2</div>', response.data)
+        self.assertIn(b'id="cameraCoverageDelta">67</span>% of 3 feeds online', response.data)
+
     def test_user_event_api_and_delete_only_use_detection_events(self):
         with self.app.app_context():
             main.security.record_audit_event(
@@ -275,7 +441,14 @@ class EventAuditSeparationTests(unittest.TestCase):
             '2024-01-02T20:30:00+08:00',
         )
 
-        response = self.client.get('/')
+        with patch(
+            'main.get_manila_day_utc_range',
+            return_value=(
+                datetime(2024, 1, 1, 16),
+                datetime(2024, 1, 2, 16),
+            ),
+        ):
+            response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'2024-01-02 20:30:00 PHT', response.data)
 

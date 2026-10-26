@@ -160,6 +160,16 @@ def to_manila_time(value):
     return value.astimezone(MANILA_TIMEZONE)
 
 
+def get_manila_day_utc_range():
+    local_now = datetime.now(MANILA_TIMEZONE)
+    local_day_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    local_day_end = local_day_start + timedelta(days=1)
+    return (
+        local_day_start.astimezone(timezone.utc).replace(tzinfo=None),
+        local_day_end.astimezone(timezone.utc).replace(tzinfo=None),
+    )
+
+
 @app.template_filter('manila_datetime')
 def format_manila_datetime(value):
     local_time = to_manila_time(value)
@@ -2686,9 +2696,12 @@ def index():
     ).filter(Camera.archived_at.is_not(None)).order_by(Camera.id).all()
     dashboard_metrics = get_user_dashboard_metrics(current_user.id)
     recording_requests = RecordingRequest.query.filter_by(user_id=current_user.id).order_by(RecordingRequest.created_at.desc()).all()
-    events = DetectionEvent.query.filter_by(
-        user_id=current_user.id,
-        event_category='vision',
+    today_start, tomorrow_start = get_manila_day_utc_range()
+    events = DetectionEvent.query.filter(
+        DetectionEvent.user_id == current_user.id,
+        DetectionEvent.event_category == 'vision',
+        DetectionEvent.timestamp >= today_start,
+        DetectionEvent.timestamp < tomorrow_start,
     ).order_by(DetectionEvent.timestamp.desc()).limit(10).all()
     
     return render_template(
@@ -2704,20 +2717,23 @@ def index():
 
 
 def get_user_dashboard_metrics(user_id):
-    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    today_start, tomorrow_start = get_manila_day_utc_range()
     return {
         'pending_requests': RecordingRequest.query.filter_by(
             user_id=user_id,
             status='pending',
         ).count(),
-        'total_detections': DetectionEvent.query.filter_by(
-            user_id=user_id,
-            event_category='vision',
+        'total_detections': DetectionEvent.query.filter(
+            DetectionEvent.user_id == user_id,
+            DetectionEvent.event_category == 'vision',
+            DetectionEvent.timestamp >= today_start,
+            DetectionEvent.timestamp < tomorrow_start,
         ).count(),
         'high_severity_alerts': DetectionEvent.query.filter(
             DetectionEvent.user_id == user_id,
             DetectionEvent.event_category == 'vision',
-            DetectionEvent.timestamp >= month_start,
+            DetectionEvent.timestamp >= today_start,
+            DetectionEvent.timestamp < tomorrow_start,
             DetectionEvent.severity.in_(('high', 'critical')),
         ).count(),
     }
@@ -2844,9 +2860,16 @@ def cctv():
 @admin_required
 def admin_dashboard():
     total_users = User.query.count()
-    total_cameras = Camera.query.filter(Camera.archived_at.is_(None)).count()
-    active_cameras = Camera.query.filter_by(is_active=True, archived_at=None).count()
-    total_events = DetectionEvent.query.filter_by(event_category='vision').count()
+    admin_public_cameras = Camera.query.join(
+        User, Camera.user_id == User.id,
+    ).filter(
+        Camera.is_public.is_(True),
+        Camera.archived_at.is_(None),
+        User.archived_at.is_(None),
+        func.lower(func.trim(User.role)) == 'admin',
+    )
+    total_cameras = admin_public_cameras.count()
+    active_cameras = admin_public_cameras.filter(Camera.is_active.is_(True)).count()
     pending_requests_count = RecordingRequest.query.filter_by(status='pending').count()
 
     total_recordings = 0
@@ -2866,15 +2889,20 @@ def admin_dashboard():
     else:
         storage_used = f'{storage_used_bytes / (1024 * 1024 * 1024):.1f} GB'
 
-    since = datetime.utcnow() - timedelta(days=1)
-    events_today = DetectionEvent.query.filter(
-        DetectionEvent.timestamp >= since,
+    today_start, tomorrow_start = get_manila_day_utc_range()
+    total_events_today = DetectionEvent.query.filter(
+        DetectionEvent.timestamp >= today_start,
+        DetectionEvent.timestamp < tomorrow_start,
         DetectionEvent.event_category == 'vision',
     ).count()
-    new_users_today = User.query.filter(User.created_at >= since).count()
+    new_users_today = User.query.filter(
+        User.created_at >= today_start,
+        User.created_at < tomorrow_start,
+    ).count()
 
     alert_events_today = DetectionEvent.query.filter(
-        DetectionEvent.timestamp >= since,
+        DetectionEvent.timestamp >= today_start,
+        DetectionEvent.timestamp < tomorrow_start,
         DetectionEvent.event_category == 'vision',
     ).all()
     zone_counts = {}
@@ -2883,8 +2911,9 @@ def admin_dashboard():
         zone = event.source_name or 'Unknown source'
         zone_counts[zone] = zone_counts.get(zone, 0) + 1
         if event.timestamp:
-            hour_counts[event.timestamp.strftime('%I %p').lstrip('0')] = hour_counts.get(
-                event.timestamp.strftime('%I %p').lstrip('0'), 0
+            local_hour = to_manila_time(event.timestamp).strftime('%I %p').lstrip('0')
+            hour_counts[local_hour] = hour_counts.get(
+                local_hour, 0
             ) + 1
 
     total_zone_alerts = sum(zone_counts.values())
@@ -2902,9 +2931,15 @@ def admin_dashboard():
     now = datetime.utcnow()
     recent_events = DetectionEvent.query.order_by(
         DetectionEvent.timestamp.desc()
+    ).filter(
+        DetectionEvent.timestamp >= today_start,
+        DetectionEvent.timestamp < tomorrow_start,
     ).limit(5).all()
     recent_audit_logs = AuditLog.query.order_by(
         AuditLog.timestamp.desc()
+    ).filter(
+        AuditLog.timestamp >= today_start,
+        AuditLog.timestamp < tomorrow_start,
     ).limit(5).all()
     for event in sorted(
         recent_events + recent_audit_logs,
@@ -2945,10 +2980,9 @@ def admin_dashboard():
         total_users=total_users,
         active_cameras=active_cameras,
         total_cameras=total_cameras,
-        total_events=total_events,
+        total_events=total_events_today,
         total_recordings=total_recordings,
         storage_used=storage_used,
-        events_today=events_today,
         new_users_today=new_users_today,
         camera_coverage=round(active_cameras / total_cameras * 100) if total_cameras else 0,
         alert_zones=alert_zones,
