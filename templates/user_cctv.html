@@ -724,6 +724,9 @@
                     </div>
                     
                     <div class="cam-tile-actions">
+                        {% if cam.user_id == current_user.id %}
+                        <button class="icon-btn" type="button" title="Edit camera settings" aria-label="Edit settings for {{ cam.name|e }}" onclick="event.stopPropagation(); openCameraSettings({{ cam.id }})">Settings</button>
+                        {% endif %}
                         {% if not cam.is_public %}
                         <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Archive private camera {{ cam.name|e }}?');">
                             <button class="icon-btn" type="submit" title="Remove private camera" aria-label="Remove private camera {{ cam.name|e }}">
@@ -1063,5 +1066,6 @@
         }
     });
 </script>
+{% include '_camera_settings_modal.html' %}
 </body>
 </html>

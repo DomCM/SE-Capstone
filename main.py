@@ -884,11 +884,16 @@ def send_email_alert(
         return False
 
 
-def _claim_email_slot(user_id, preference, timestamp_field):
+def _claim_email_slot(user_id, preference, timestamp_field, enabled_override=None):
     with email_alert_lock:
         with app.app_context():
             settings = Settings.query.filter_by(user_id=user_id).first()
-            if not settings or not getattr(settings, preference, False) or not settings.recipient_email:
+            preference_enabled = (
+                enabled_override
+                if enabled_override is not None
+                else bool(settings and getattr(settings, preference, False))
+            )
+            if not settings or not preference_enabled or not settings.recipient_email:
                 return False
 
             now = datetime.utcnow()
@@ -902,22 +907,28 @@ def _claim_email_slot(user_id, preference, timestamp_field):
             return True
 
 
-def claim_critical_email_slot(user_id):
+def claim_critical_email_slot(user_id, enabled_override=None):
     """Claim the user's persisted fire/smoke alert cooldown before delivery."""
-    return _claim_email_slot(user_id, 'email_alerts_enabled', 'last_critical_email_at')
+    return _claim_email_slot(
+        user_id, 'email_alerts_enabled', 'last_critical_email_at', enabled_override,
+    )
 
 
-def claim_unidentified_email_slot(user_id):
+def claim_unidentified_email_slot(user_id, enabled_override=None):
     """Claim the user's persisted unidentified-detection email cooldown."""
     return _claim_email_slot(
         user_id,
         'unidentified_email_alerts_enabled',
         'last_unidentified_email_at',
+        enabled_override,
     )
 
 #video
 class VideoStreamManager:
-    def __init__(self, user_id, camera_id, source, settings, camera_name=None, camera_zone=None, camera_is_public=False):
+    def __init__(
+        self, user_id, camera_id, source, settings, camera_name=None,
+        camera_zone=None, camera_is_public=False, camera_settings=None,
+    ):
         self.user_id = user_id
         self.camera_id = camera_id
         self.camera_name = camera_name or f'Cam {camera_id}'
@@ -942,7 +953,8 @@ class VideoStreamManager:
         self.processed_frame_lock = threading.Lock()
         self.subscriber_count = 0
         
-        self.settings_cache = self._cache_settings(settings)
+        self.camera_settings = camera_settings or {}
+        self.settings_cache = self._apply_camera_settings(self._cache_settings(settings))
         
         self.frame_count = 0
         self.fire_alert_active = False
@@ -1007,9 +1019,54 @@ class VideoStreamManager:
             }
         return {}
 
+    def _apply_camera_settings(self, settings):
+        settings = dict(settings)
+        camera_settings = self.camera_settings
+        active_classes = {
+            item.strip().lower()
+            for item in settings.get('active_classes', 'fire,smoke').split(',')
+            if item.strip()
+        }
+        settings['cv_processing_enabled'] = camera_settings.get(
+            'cv_processing_enabled', True,
+        )
+        for detection in ('fire', 'smoke'):
+            override = camera_settings.get(f'{detection}_detection_enabled')
+            enabled = (
+                bool(override)
+                if override is not None
+                else bool(settings.get('yolo_enabled', True) and detection in active_classes)
+            )
+            active_classes.discard(detection)
+            if enabled:
+                active_classes.add(detection)
+            settings[f'{detection}_detection_enabled'] = enabled
+
+        face_override = camera_settings.get('face_recognition_enabled')
+        settings['face_recognition_enabled'] = (
+            bool(face_override)
+            if face_override is not None
+            else bool(settings.get('face_recognition_enabled', True))
+        )
+        for preference in ('email_alerts_enabled', 'unidentified_email_alerts_enabled'):
+            override = camera_settings.get(preference)
+            if override is not None:
+                settings[preference] = bool(override)
+
+        if not settings.get('yolo_enabled', True):
+            active_classes.intersection_update({'fire', 'smoke'})
+        settings['active_classes'] = ','.join(sorted(active_classes))
+        settings['yolo_enabled'] = bool(
+            settings.get('yolo_enabled', True)
+            or settings['face_recognition_enabled']
+            or settings['fire_detection_enabled']
+            or settings['smoke_detection_enabled']
+        )
+        return settings
+
     def update_settings(self, settings_obj):
         """Update the settings cache with new values."""
-        self.settings_cache = self._cache_settings(settings_obj)
+        self.settings_cache = self._apply_camera_settings(self._cache_settings(settings_obj))
         if settings_obj and settings_obj.user_id != self.user_id:
             owner_settings = Settings.query.filter_by(user_id=self.user_id).first()
             fallback = (
@@ -1107,7 +1164,10 @@ class VideoStreamManager:
                 self.camera_id,
             )
             return False
-        if not claim_unidentified_email_slot(self.user_id):
+        if not claim_unidentified_email_slot(
+            self.user_id,
+            self.settings_cache.get('unidentified_email_alerts_enabled'),
+        ):
             concealment_scan_service.record_notification(
                 'suppressed',
                 'email_preference_changed_or_cooldown_active',
@@ -1847,6 +1907,9 @@ class VideoStreamManager:
                 return None
 
             annotated_frame = frame.copy()
+
+        if not self.settings_cache.get('cv_processing_enabled', True):
+            return self._finalize_processed_frame(annotated_frame)
         
         scale_down = self.settings_cache.get('scale_down_amount', 2)
         process_interval = max(1, self.settings_cache.get('frame_process_interval', 3))
@@ -2189,7 +2252,10 @@ class VideoStreamManager:
             settings_obj = SettingsObj()
             for k, v in self.settings_cache.items():
                 setattr(settings_obj, k, v)
-            if claim_critical_email_slot(self.user_id):
+            if claim_critical_email_slot(
+                self.user_id,
+                self.settings_cache.get('email_alerts_enabled'),
+            ):
                 threading.Thread(target=send_email_alert, args=(settings_obj, "CRITICAL ALERT", msg, annotated_frame), daemon=True).start()
         
         self.fire_alert_active = critical_detected
@@ -2844,6 +2910,7 @@ def cctv():
         connected, recording = camera_status(camera)
         user_cameras.append({
             'id': camera.id,
+            'user_id': camera.user_id,
             'name': camera.name,
             'location': '',
             'status': 'online' if connected else 'offline',
@@ -3882,6 +3949,142 @@ def add_camera():
     return redirect(redirect_target)
 
 
+def camera_settings_snapshot(camera):
+    return {
+        'cv_processing_enabled': bool(camera.cv_processing_enabled),
+        'fire_detection_enabled': camera.fire_detection_enabled,
+        'smoke_detection_enabled': camera.smoke_detection_enabled,
+        'face_recognition_enabled': camera.face_recognition_enabled,
+        'email_alerts_enabled': camera.email_alerts_enabled,
+        'unidentified_email_alerts_enabled': camera.unidentified_email_alerts_enabled,
+    }
+
+
+def can_manage_camera(camera):
+    if camera.archived_at is not None:
+        return False
+    if camera.user_id == current_user.id:
+        return True
+    return is_admin_user(current_user) and camera.is_public
+
+
+@app.route('/api/camera/<int:camera_id>/settings', methods=['GET', 'PUT'])
+@login_required
+def camera_settings_api(camera_id):
+    camera = Camera.query.get_or_404(camera_id)
+    if not can_manage_camera(camera):
+        return jsonify(error='You are not authorized to edit this camera.'), 403
+
+    if request.method == 'GET':
+        account_settings = Settings.query.filter_by(user_id=camera.user_id).first()
+        account_yolo_enabled = getattr(account_settings, 'yolo_enabled', True)
+        account_classes = {
+            item.strip().lower()
+            for item in getattr(account_settings, 'active_classes', 'fire,smoke').split(',')
+            if item.strip()
+        }
+        account_defaults = {
+            'fire_detection_enabled': bool(
+                account_yolo_enabled and 'fire' in account_classes
+            ),
+            'smoke_detection_enabled': bool(
+                account_yolo_enabled and 'smoke' in account_classes
+            ),
+            'face_recognition_enabled': bool(
+                getattr(account_settings, 'face_recognition_enabled', True)
+            ),
+            'email_alerts_enabled': bool(
+                getattr(account_settings, 'email_alerts_enabled', False)
+            ),
+            'unidentified_email_alerts_enabled': bool(
+                getattr(account_settings, 'unidentified_email_alerts_enabled', False)
+            ),
+        }
+        overrides = camera_settings_snapshot(camera)
+        effective = {
+            key: overrides[key] if overrides[key] is not None else value
+            for key, value in account_defaults.items()
+        }
+        return jsonify(
+            id=camera.id,
+            name=camera.name,
+            zone=camera.zone,
+            source=camera.source,
+            overrides=overrides,
+            account_defaults=account_defaults,
+            effective=effective,
+        )
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(error='A JSON object is required.'), 400
+    name = payload.get('name')
+    zone = payload.get('zone')
+    source = payload.get('source')
+    if not all(isinstance(value, str) for value in (name, zone, source)):
+        return jsonify(error='Camera name, zone, and stream URL are required.'), 400
+    name, zone, source = name.strip(), zone.strip(), source.strip()
+    if not name or len(name) > 100:
+        return jsonify(error='Camera name must contain 1 to 100 characters.'), 400
+    if not zone or len(zone) > 100:
+        return jsonify(error='Zone must contain 1 to 100 characters.'), 400
+    parsed_source = urlsplit(source)
+    if (
+        len(source) > 500
+        or parsed_source.scheme.lower() not in {'rtsp', 'rtsps', 'http', 'https'}
+        or not parsed_source.netloc
+    ):
+        return jsonify(error='Enter a valid RTSP, RTSPS, HTTP, or HTTPS stream URL.'), 400
+    if not isinstance(payload.get('cv_processing_enabled'), bool):
+        return jsonify(error='Computer-vision processing must be enabled or disabled.'), 400
+
+    override_keys = (
+        'fire_detection_enabled',
+        'smoke_detection_enabled',
+        'face_recognition_enabled',
+        'email_alerts_enabled',
+        'unidentified_email_alerts_enabled',
+    )
+    overrides = {}
+    for key in override_keys:
+        value = payload.get(key)
+        if value is not None and not isinstance(value, bool):
+            return jsonify(error=f'{key.replace("_", " ").capitalize()} must be on, off, or inherited.'), 400
+        overrides[key] = value
+
+    source_changed = source != camera.source
+    camera.name = name
+    camera.zone = zone
+    camera.source = source
+    camera.cv_processing_enabled = payload['cv_processing_enabled']
+    for key, value in overrides.items():
+        setattr(camera, key, value)
+    db.session.commit()
+
+    if source_changed:
+        release_camera_streams(camera.id)
+    else:
+        settings = Settings.query.filter_by(user_id=camera.user_id).first()
+        with stream_lock:
+            managers = {
+                manager for manager in active_physical_streams.values()
+                if manager.camera_id == camera.id
+            }
+            for manager in managers:
+                manager.camera_name = camera.name
+                manager.camera_zone = camera.zone
+                manager.camera_settings = camera_settings_snapshot(camera)
+                manager.update_settings(settings)
+
+    if is_admin_user(current_user):
+        record_audit_event(
+            current_user.id, 'settings',
+            f'Updated camera settings for camera #{camera.id}',
+            'Admin', get_client_ip(),
+        )
+    return jsonify(success=True, message='Camera settings saved. The stream will reconnect with the updated configuration.')
+
+
 @app.route('/admin/cameras/<int:camera_id>/toggle_public', methods=['POST'])
 @admin_required
 def admin_toggle_camera_public(camera_id):
@@ -4064,6 +4267,7 @@ def acquire_stream(user_id, camera):
                 camera.name,
                 getattr(camera, 'zone', 'Main Entrance'),
                 getattr(camera, 'is_public', False),
+                camera_settings_snapshot(camera),
             )
             manager.scope_key = source_key
             active_physical_streams[source_key] = manager

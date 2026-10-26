@@ -222,6 +222,17 @@ def ensure_database_schema():
         if 'virtual_lines' not in camera_columns:
             db.session.execute(text('ALTER TABLE camera ADD COLUMN virtual_lines TEXT NOT NULL DEFAULT "[]"'))
             db.session.commit()
+        for name, definition in [
+            ('cv_processing_enabled', 'BOOLEAN NOT NULL DEFAULT 1'),
+            ('fire_detection_enabled', 'BOOLEAN'),
+            ('smoke_detection_enabled', 'BOOLEAN'),
+            ('face_recognition_enabled', 'BOOLEAN'),
+            ('email_alerts_enabled', 'BOOLEAN'),
+            ('unidentified_email_alerts_enabled', 'BOOLEAN'),
+        ]:
+            if name not in camera_columns:
+                db.session.execute(text(f'ALTER TABLE camera ADD COLUMN {name} {definition}'))
+                db.session.commit()
         settings_columns = {column['name'] for column in inspector.get_columns('settings')}
         if 'unidentified_email_alerts_enabled' not in settings_columns:
             db.session.execute(text(

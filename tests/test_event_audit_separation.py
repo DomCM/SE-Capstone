@@ -201,7 +201,6 @@ class EventAuditSeparationTests(unittest.TestCase):
 
         response = self.client.post('/admin/system/clear_events')
         self.assertEqual(response.status_code, 302)
-
         with self.app.app_context():
             remaining_events = main.DetectionEvent.query.order_by(
                 main.DetectionEvent.event_type,
@@ -220,6 +219,100 @@ class EventAuditSeparationTests(unittest.TestCase):
             )
             clear_audit = main.AuditLog.query.filter_by(event_type='clear').one()
             self.assertIn('2 admin computer-vision event log(s)', clear_audit.description)
+
+    def test_camera_settings_update_is_owner_scoped_and_restarts_changed_stream(self):
+        payload = {
+            'name': 'Updated Front Gate',
+            'zone': 'North Entry',
+            'source': 'rtsps://example/new-camera',
+            'cv_processing_enabled': False,
+            'fire_detection_enabled': False,
+            'smoke_detection_enabled': None,
+            'face_recognition_enabled': True,
+            'email_alerts_enabled': True,
+            'unidentified_email_alerts_enabled': None,
+        }
+        self.login_as(self.user_id)
+        with patch.object(main, 'release_camera_streams') as release_streams:
+            response = self.client.put(
+                f'/api/camera/{self.camera_id}/settings',
+                json=payload,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        release_streams.assert_called_once_with(self.camera_id)
+        with self.app.app_context():
+            camera = main.db.session.get(main.Camera, self.camera_id)
+            self.assertEqual(camera.name, payload['name'])
+            self.assertEqual(camera.zone, payload['zone'])
+            self.assertEqual(camera.source, payload['source'])
+            self.assertFalse(camera.cv_processing_enabled)
+            self.assertFalse(camera.fire_detection_enabled)
+            self.assertIsNone(camera.smoke_detection_enabled)
+            self.assertTrue(camera.face_recognition_enabled)
+            self.assertTrue(camera.email_alerts_enabled)
+
+        self.login_as(self.admin_id)
+        denied = self.client.put(
+            f'/api/camera/{self.camera_id}/settings',
+            json=payload,
+        )
+        self.assertEqual(denied.status_code, 403)
+
+    def test_camera_processing_overrides_inherit_account_values(self):
+        manager = object.__new__(main.VideoStreamManager)
+        manager.camera_settings = {
+            'cv_processing_enabled': True,
+            'fire_detection_enabled': False,
+            'smoke_detection_enabled': None,
+            'face_recognition_enabled': True,
+            'email_alerts_enabled': True,
+            'unidentified_email_alerts_enabled': None,
+        }
+        settings = manager._apply_camera_settings({
+            'yolo_enabled': True,
+            'face_recognition_enabled': False,
+            'active_classes': 'fire,smoke',
+            'email_alerts_enabled': False,
+            'unidentified_email_alerts_enabled': True,
+        })
+        self.assertTrue(settings['cv_processing_enabled'])
+        self.assertFalse(settings['fire_detection_enabled'])
+        self.assertTrue(settings['smoke_detection_enabled'])
+        self.assertTrue(settings['face_recognition_enabled'])
+        self.assertTrue(settings['email_alerts_enabled'])
+        self.assertTrue(settings['unidentified_email_alerts_enabled'])
+        self.assertEqual(settings['active_classes'], 'smoke')
+
+    def test_user_camera_pages_render_the_camera_settings_controls(self):
+        self.login_as(self.user_id)
+        dashboard = self.client.get('/')
+        cctv = self.client.get('/cctv')
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn(b'Edit settings', dashboard.data)
+        self.assertEqual(cctv.status_code, 200)
+        self.assertIn(b'Edit camera settings', cctv.data)
+        self.assertIn(b'cameraSettingsOverlay', cctv.data)
+
+    def test_camera_settings_reject_invalid_stream_url_and_inactive_camera(self):
+        self.login_as(self.user_id)
+        invalid = self.client.put(
+            f'/api/camera/{self.camera_id}/settings',
+            json={
+                'name': 'Front Gate',
+                'zone': 'North Entry',
+                'source': '0',
+                'cv_processing_enabled': True,
+            },
+        )
+        self.assertEqual(invalid.status_code, 400)
+
+        with self.app.app_context():
+            camera = main.db.session.get(main.Camera, self.camera_id)
+            camera.archived_at = datetime.utcnow()
+            main.db.session.commit()
+        archived = self.client.get(f'/api/camera/{self.camera_id}/settings')
+        self.assertEqual(archived.status_code, 403)
 
     def test_user_dashboard_detection_metrics_and_events_are_limited_to_today(self):
         today_start = datetime(2026, 9, 2)

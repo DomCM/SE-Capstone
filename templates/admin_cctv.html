@@ -778,6 +778,9 @@
                 <button onclick="closeModal()" class="btn-modal-action">
                     Close View
                 </button>
+                <button type="button" class="btn-modal-action" onclick="openCameraSettings(currentCamId)">
+                    Camera Settings
+                </button>
                 
                 <!-- Restored View Recordings button -->
                 <a href="#" id="modalRecordLink" class="btn-modal-action">
@@ -1264,6 +1267,7 @@
     });
 
 </script>
+{% include '_camera_settings_modal.html' %}
 {% include '_logout_modal.html' %}
 </body>
 </html>

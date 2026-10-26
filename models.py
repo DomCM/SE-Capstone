@@ -42,6 +42,12 @@ class Camera(db.Model):
     is_public = db.Column(db.Boolean, default=False)
     virtual_lines = db.Column(db.Text, default='[]')
     archived_at = db.Column(db.DateTime, nullable=True)
+    cv_processing_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    fire_detection_enabled = db.Column(db.Boolean, nullable=True)
+    smoke_detection_enabled = db.Column(db.Boolean, nullable=True)
+    face_recognition_enabled = db.Column(db.Boolean, nullable=True)
+    email_alerts_enabled = db.Column(db.Boolean, nullable=True)
+    unidentified_email_alerts_enabled = db.Column(db.Boolean, nullable=True)
 
 
 class CameraConnectionEvent(db.Model):

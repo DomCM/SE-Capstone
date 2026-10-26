@@ -803,6 +803,9 @@
                                         <span class="cam-status-label" data-camera-status>Checking</span>
                                     </div>
                                     <div class="cam-actions">
+                                        {% if cam.user_id == current_user.id %}
+                                        <button type="button" class="btn-primary" onclick="openCameraSettings({{ cam.id }})">Edit settings</button>
+                                        {% endif %}
                                         {% if not cam.is_public %}
                                         <form action="{{ url_for('delete_camera', camera_id=cam.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Archive this camera? Existing request and event history will be preserved.');">
                                             <button type="submit" class="btn-remove">
@@ -1066,5 +1069,6 @@
         setInterval(refreshDashboardCameraStatus, 10000);
         document.addEventListener('visibilitychange', refreshVisibleDashboard);
     </script>
+    {% include '_camera_settings_modal.html' %}
 </body>
 </html>
