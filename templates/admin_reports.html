@@ -259,6 +259,7 @@
         .report-summary-boxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
         .r-box { background: var(--bg-main); border: 1px solid var(--border-subtle); padding: 16px; border-radius: var(--radius-md); text-align: center; }
         .r-val { font-family: var(--font-mono); font-size: 22px; font-weight: 800; color: var(--navy-900); }
+        .r-val-hotspot { font-size: 16px; overflow-wrap: anywhere; }
         .r-lbl { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; letter-spacing: 0.04em; }
 
         table.report-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; font-size: 13px; }
@@ -602,20 +603,20 @@
             <!-- KPI DATA METRICS -->
             <div class="report-summary-boxes">
                 <div class="r-box">
-                    <div class="r-val">{{ total_triggers }}</div>
-                    <div class="r-lbl">Total Triggers</div>
+                    <div class="r-val" style="color:var(--danger);">{{ high_severity_incidents }}</div>
+                    <div class="r-lbl">High / Critical Incidents</div>
                 </div>
                 <div class="r-box">
-                    <div class="r-val">{{ verified_residents }}</div>
-                    <div class="r-lbl">Verified Residents</div>
+                    <div class="r-val">{{ affected_zone_count }}</div>
+                    <div class="r-lbl">Zones Affected</div>
                 </div>
                 <div class="r-box">
-                    <div class="r-val" style="color:var(--danger);">{{ unrecognized_alerts }}</div>
-                    <div class="r-lbl">Unrecognized Faces</div>
+                    <div class="r-val r-val-hotspot">{{ incident_hotspot_zone }}</div>
+                    <div class="r-lbl">Hotspot · {{ incident_hotspot_count }} incident(s)</div>
                 </div>
                 <div class="r-box">
-                    <div class="r-val">{{ uptime_rate }}</div>
-                    <div class="r-lbl">System Uptime Rate</div>
+                    <div class="r-val">{{ snapshot_evidence_count }} / {{ snapshot_evidence_total }}</div>
+                    <div class="r-lbl">Incidents With Snapshot Evidence</div>
                 </div>
             </div>
 

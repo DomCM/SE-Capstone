@@ -381,7 +381,25 @@ def build_report(
         ],
     }
 
-    # Calculate KPI Summary Metrics
+    # Incident KPIs use the same timeframe, zone, and severity filters as the report.
+    high_severity_incidents = sum(
+        1 for event in report_events if event['severity'] == 'High'
+    )
+    zone_incident_counts = {}
+    for event in report_events:
+        zone = event['zone']
+        zone_incident_counts[zone] = zone_incident_counts.get(zone, 0) + 1
+    affected_zone_count = len(zone_incident_counts)
+    hotspot_zone, hotspot_incident_count = (
+        min(
+            zone_incident_counts.items(),
+            key=lambda item: (-item[1], item[0].lower()),
+        )
+        if zone_incident_counts else ('No incidents', 0)
+    )
+    snapshot_evidence_count = sum(
+        1 for event in report_events if event['snapshot_available']
+    )
     recognized_count = sum(
         1 for event in report_events if 'recogn' in event['event_type'].lower()
     )
@@ -547,6 +565,12 @@ def build_report(
         'verified_residents': recognized_count,
         'unrecognized_alerts': unrecognized_count,
         'uptime_rate': uptime_rate,
+        'high_severity_incidents': high_severity_incidents,
+        'affected_zone_count': affected_zone_count,
+        'incident_hotspot_zone': hotspot_zone,
+        'incident_hotspot_count': hotspot_incident_count,
+        'snapshot_evidence_count': snapshot_evidence_count,
+        'snapshot_evidence_total': len(report_events),
         'incident_logs': filtered_events,
         'frequency_summary': frequency_summary,
         'patrol_priority_summary': patrol_priority_summary,
