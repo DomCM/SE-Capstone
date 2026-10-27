@@ -101,6 +101,15 @@ class AdvancedTrajectoryTracker:
             self.threat_energy[track_id] = 0.0
             self.last_energy_time[track_id] = timestamp
 
+        # Apply exponential moving average smoothing on raw centroid to dampen jitter/frame skip shifts
+        points = self.tracks[track_id]
+        if len(points) > 0:
+            last_x, last_y, _ = points[-1]
+            alpha = 0.35  # Smoothing factor
+            smoothed_x = alpha * centroid[0] + (1 - alpha) * last_x
+            smoothed_y = alpha * centroid[1] + (1 - alpha) * last_y
+            centroid = (smoothed_x, smoothed_y)
+
         self.tracks[track_id].append((centroid[0], centroid[1], timestamp))
         self.last_seen[track_id] = timestamp
 
@@ -113,7 +122,10 @@ class AdvancedTrajectoryTracker:
         for previous, current in zip(points, points[1:]):
             dx = current[0] - previous[0]
             dy = current[1] - previous[1]
-            if dx != 0 or dy != 0:
+            dt = max(current[2] - previous[2], 0.001)
+            dist = math.hypot(dx, dy)
+            # Require minimum displacement relative to time gap to prevent micro-jitter turning angles
+            if dist / dt > 15.0:
                 angles.append(np.arctan2(dy, dx))
         if len(angles) < 4:
             return 0.0
@@ -127,12 +139,13 @@ class AdvancedTrajectoryTracker:
         if len(points) < 3:
             return 0.0, (0.0, 0.0)
 
+        # Compute velocity using timestamps instead of frame counts
         x1, y1, time1 = points[-3]
         x2, y2, time2 = points[-1]
-        elapsed = max(time2 - time1, 0.001)
+        elapsed = max(time2 - time1, 0.01)
         dx, dy = x2 - x1, y2 - y1
         distance = math.hypot(dx, dy)
-        heading = (dx / distance, dy / distance) if distance else (0.0, 0.0)
+        heading = (dx / distance, dy / distance) if distance > 0 else (0.0, 0.0)
         return distance / elapsed, heading
 
     def evaluate_shadowing(self, track_id, active_centroids):
@@ -185,7 +198,7 @@ class AdvancedTrajectoryTracker:
 
 
 class BehaviorEvaluator:
-    def __init__(self, dwell_threshold=10.0, speed_threshold=160.0):
+    def __init__(self, dwell_threshold=10.0, speed_threshold=320.0):
         self.dwell_threshold = dwell_threshold
         self.speed_threshold = speed_threshold
 
@@ -196,6 +209,8 @@ class BehaviorEvaluator:
         nose = keypoints[0]
         left_shoulder, right_shoulder = keypoints[5], keypoints[6]
         left_hip, right_hip = keypoints[11], keypoints[12]
+        left_knee, right_knee = keypoints[13], keypoints[14]
+        left_ankle, right_ankle = keypoints[15], keypoints[16]
         left_wrist, right_wrist = keypoints[9], keypoints[10]
         x1, y1, x2, y2 = bbox
         box_height = max(1, y2 - y1)
@@ -203,15 +218,34 @@ class BehaviorEvaluator:
         flags = []
         pose_score = 0.0
 
-        if all(point[2] > 0.4 for point in (
-            left_shoulder, right_shoulder, left_hip, right_hip,
-        )):
+        # Check torso & leg keypoints confidence
+        upper_valid = left_shoulder[2] > 0.45 and right_shoulder[2] > 0.45
+        hip_valid = left_hip[2] > 0.45 and right_hip[2] > 0.45
+        lower_valid = (left_knee[2] > 0.4 or right_knee[2] > 0.4) or (left_ankle[2] > 0.4 or right_ankle[2] > 0.4)
+
+        if upper_valid and hip_valid:
             shoulder_y = (left_shoulder[1] + right_shoulder[1]) / 2.0
             hip_y = (left_hip[1] + right_hip[1]) / 2.0
             torso_height = abs(hip_y - shoulder_y)
-            if torso_height / box_height < 0.22 or box_height / box_width < 1.1:
-                pose_score += 0.5
-                flags.append('CROUCHING_OR_HIDING')
+            
+            # Additional validation: Hips must actually be below shoulders
+            if hip_y > shoulder_y:
+                # Require lower body keypoints to confirm crouching vs missing/misaligned upper keypoints
+                if lower_valid:
+                    lowest_leg_y = max(
+                        left_knee[1] if left_knee[2] > 0.4 else 0,
+                        right_knee[1] if right_knee[2] > 0.4 else 0,
+                        left_ankle[1] if left_ankle[2] > 0.4 else 0,
+                        right_ankle[1] if right_ankle[2] > 0.4 else 0,
+                    )
+                    leg_length = max(1, lowest_leg_y - hip_y)
+                    torso_to_leg_ratio = torso_height / leg_length
+                    
+                    # Crouching typically compresses leg length relative to bounding box height and lowers hips relative to box top
+                    hip_rel_pos = (hip_y - y1) / box_height
+                    if torso_to_leg_ratio < 0.35 and hip_rel_pos < 0.55 and (box_height / box_width < 1.0):
+                        pose_score += 0.5
+                        flags.append('CROUCHING_OR_HIDING')
 
         if all(point[2] > 0.4 for point in (left_wrist, right_wrist, nose)):
             if (left_wrist[1] + right_wrist[1]) / 2.0 < nose[1]:
@@ -241,10 +275,10 @@ class BehaviorEvaluator:
 
         flags = []
         if dwell_score > 0.6:
-            flags.append('LOITERING_SUSPECT')
+            flags.append('LOITERING_BEHAVIOR')
         if zone_score > 0:
             flags.append('ZONE_INTRUSION')
-        if kinematic_score > 0.6:
+        if kinematic_score > 0.7:
             flags.append('ERRATIC_MOTION')
         if pacing_score > 0.5:
             flags.append('PACING_BEHAVIOR')
