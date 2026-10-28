@@ -21,6 +21,7 @@ import gc
 import math
 import re
 import stat
+import tempfile
 import torch
 from urllib.parse import urlsplit, urlunsplit
 from importlib.metadata import PackageNotFoundError, version as package_version
@@ -42,7 +43,7 @@ os.environ['FFREPORT'] = 'file=/dev/null'
 load_dotenv()
 cv2.setNumThreads(1)
 
-from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, send_from_directory, flash, session
+from flask import Flask, Response, render_template, request, jsonify, redirect, url_for, send_file, flash, session
 from models import db, User, Camera, CameraConnectionEvent, Settings, DetectionThresholdSettings, SystemSettings, OtpChallenge, DetectionEvent, AuditLog, RecordingRequest
 from concealment_detection import (
     BoundedConcealmentScanner,
@@ -71,6 +72,7 @@ import pyotp
 import qrcode
 from concurrent.futures import ThreadPoolExecutor
 from performance_metrics import PerformanceMetrics
+from media_storage import MediaStorage, MediaStorageError
 from behavior_analysis import (
     AdvancedTrajectoryTracker,
     BehaviorEvaluator,
@@ -81,6 +83,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 STORAGE_ROOT = os.path.join(APP_ROOT, 'storage')
 INSTANCE_DIR = os.path.join(STORAGE_ROOT, 'instance')
 BASE_RECORDINGS_DIR = os.path.join(STORAGE_ROOT, 'users_data')
+media_storage = MediaStorage.from_environment()
 
 
 def _move_storage_entry(source_path, destination_path, backup_path):
@@ -545,7 +548,7 @@ def cleanup_expired_recordings(now=None):
             deleted['failed'] += 1
             continue
         try:
-            recording_files = list(os.scandir(recordings_directory))
+            recording_files = media_storage.listdir(recordings_directory)
         except FileNotFoundError:
             continue
         except OSError:
@@ -554,25 +557,26 @@ def cleanup_expired_recordings(now=None):
             continue
 
         user_id = int(user_directory.name)
-        for recording_file in recording_files:
-            if not recording_file.is_file(follow_symlinks=False):
-                continue
-            filename = recording_file.name
-            request_match = re.fullmatch(r'request_(\d+)\.(?:mp4|avi|mkv|mov|webm)', filename, re.IGNORECASE)
+        for logical_filename in recording_files:
+            request_match = re.fullmatch(r'request_(\d+)\.(?:mp4|avi|mkv|mov|webm)', logical_filename, re.IGNORECASE)
             if request_match:
                 category = 'request'
-            elif re.fullmatch(r'cam_\d+_\d{8}_\d{6}\.webm', filename, re.IGNORECASE):
+            elif re.fullmatch(r'cam_\d+_\d{8}_\d{6}\.webm', logical_filename, re.IGNORECASE):
                 category = 'camera'
             else:
                 continue
 
+            logical_path = os.path.join(recordings_directory, logical_filename)
+            stored_path = media_storage.resolve(logical_path)
+            if stored_path is None:
+                continue
             try:
-                modified_at = recording_file.stat(follow_symlinks=False).st_mtime
+                modified_at = os.stat(stored_path, follow_symlinks=False).st_mtime
                 if modified_at > cutoffs[category]:
                     continue
-                os.remove(recording_file.path)
+                media_storage.delete(logical_path)
             except OSError:
-                app.logger.exception('Unable to remove expired recording %s', recording_file.path)
+                app.logger.exception('Unable to remove expired recording %s', logical_path)
                 deleted['failed'] += 1
                 continue
 
@@ -583,8 +587,11 @@ def cleanup_expired_recordings(now=None):
                     user_id=user_id,
                 ).first()
                 if recording_request and recording_request.video_path:
-                    stored_path = os.path.normcase(os.path.abspath(recording_request.video_path))
-                    if stored_path == os.path.normcase(os.path.abspath(recording_file.path)):
+                    request_path = os.path.normcase(os.path.abspath(recording_request.video_path))
+                    logical_file_path = os.path.normcase(os.path.abspath(
+                        logical_path
+                    ))
+                    if request_path == logical_file_path:
                         recording_request.video_path = None
                         request_metadata_changed = True
 
@@ -640,6 +647,23 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def send_media_file(path, **kwargs):
+    conditional = kwargs.pop('conditional', False)
+    response = send_file(
+        media_storage.open(path),
+        etag=False,
+        conditional=False,
+        **kwargs,
+    )
+    if conditional:
+        response.make_conditional(
+            request.environ,
+            accept_ranges=True,
+            complete_length=media_storage.size(path),
+        )
+    return response
+
+
 def safe_face_name(name):
     safe_name = secure_filename((name or '').strip())
     return safe_name[:100] if safe_name else ''
@@ -672,7 +696,8 @@ def get_user_face_data(user_id):
             if os.path.isdir(person_dir):
                 for filename in glob.glob(os.path.join(person_dir, '*.*')):
                     try:
-                        image = face_recognition.load_image_file(filename)
+                        with media_storage.open(filename) as image_file:
+                            image = face_recognition.load_image_file(image_file)
                         encodings = face_recognition.face_encodings(image)
                         if encodings:
                             known_encodings.append(encodings[0])
@@ -962,6 +987,8 @@ class VideoStreamManager:
         self.face_detections = []
         self.yolo_detections = []
         self.recording_writer = None
+        self.recording_temp_path = None
+        self.recording_path = None
         self.is_recording = False
         
         # Multitracking collection structure
@@ -1297,15 +1324,9 @@ class VideoStreamManager:
                 encoded, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 if not encoded:
                     raise OSError(f'Unable to encode concealment scan image: {image_path}')
-                temporary_path = f'{image_path}.tmp'
-                with open(temporary_path, 'wb') as image_file:
-                    image_file.write(buffer.tobytes())
-                os.replace(temporary_path, image_path)
-            temporary_report_path = f'{report_path}.tmp'
-            with open(temporary_report_path, 'w', encoding='utf-8') as report_file:
-                report_file.write(report)
-            os.replace(temporary_report_path, report_path)
-        except (OSError, cv2.error):
+                media_storage.write_bytes(buffer.tobytes(), image_path)
+            media_storage.write_bytes(report.encode('utf-8'), report_path)
+        except (OSError, cv2.error, MediaStorageError):
             app.logger.exception(
                 'Unable to save concealment scan artifacts for camera %s track %s',
                 self.camera_id,
@@ -2280,16 +2301,46 @@ class VideoStreamManager:
         return self._finalize_processed_frame(annotated_frame)
 
     def start_recording(self, frame):
+        try:
+            media_storage.ensure_writable()
+        except MediaStorageError as exc:
+            app.logger.error('Cannot start recording: %s', exc)
+            self.is_recording = False
+            return
         user_rec_dir = os.path.join(BASE_RECORDINGS_DIR, str(self.user_id), "recordings")
         os.makedirs(user_rec_dir, exist_ok=True)
         filename = os.path.join(user_rec_dir, f"cam_{self.camera_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.webm")
+        descriptor, temporary_path = tempfile.mkstemp(suffix='.webm', prefix='camera-recording-')
+        os.close(descriptor)
         h, w, _ = frame.shape
-        self.recording_writer = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'VP80'), 15.0, (w, h))
+        writer = cv2.VideoWriter(temporary_path, cv2.VideoWriter_fourcc(*'VP80'), 15.0, (w, h))
+        if not writer.isOpened():
+            writer.release()
+            os.remove(temporary_path)
+            raise OSError('Unable to initialize the camera recording writer.')
+        self.recording_writer = writer
+        self.recording_temp_path = temporary_path
+        self.recording_path = filename
 
     def stop_recording(self):
         if self.recording_writer:
             self.recording_writer.release()
             self.recording_writer = None
+            temporary_path = self.recording_temp_path
+            destination_path = self.recording_path
+            self.recording_temp_path = None
+            self.recording_path = None
+            try:
+                if temporary_path and destination_path and os.path.isfile(temporary_path):
+                    media_storage.save_file(temporary_path, destination_path)
+            except (OSError, MediaStorageError):
+                app.logger.exception('Unable to encrypt completed camera recording')
+            finally:
+                if temporary_path and os.path.exists(temporary_path):
+                    try:
+                        os.remove(temporary_path)
+                    except OSError:
+                        app.logger.exception('Unable to remove temporary camera recording')
 
     def log_db_event(self, event_type, desc, confidence=None, event_category='system', detector=None, severity=None, event_metadata=None, snapshot_frame=None, event_timestamp=None):
         track_id = event_metadata.get('track_id') if isinstance(event_metadata, dict) else None
@@ -2364,22 +2415,17 @@ class VideoStreamManager:
                     snapshot_directory = os.path.join(BASE_RECORDINGS_DIR, str(self.user_id), 'event_snapshots')
                     snapshot_filename = f'{log.id}.jpg'
                     snapshot_path = os.path.join(snapshot_directory, snapshot_filename)
-                    temporary_path = f'{snapshot_path}.tmp'
                     try:
                         os.makedirs(snapshot_directory, exist_ok=True)
-                        with open(temporary_path, 'wb') as snapshot_file:
-                            snapshot_file.write(snapshot_bytes)
-                        os.replace(temporary_path, snapshot_path)
+                        media_storage.write_bytes(snapshot_bytes, snapshot_path)
                         log.snapshot_path = snapshot_filename
                         db.session.commit()
-                    except OSError:
-                        if os.path.exists(temporary_path):
-                            os.remove(temporary_path)
+                    except (OSError, MediaStorageError):
                         app.logger.exception('Unable to save snapshot for event %s', log.id)
                     except SQLAlchemyError:
                         db.session.rollback()
-                        if os.path.exists(snapshot_path):
-                            os.remove(snapshot_path)
+                        if media_storage.exists(snapshot_path):
+                            media_storage.delete(snapshot_path)
                         app.logger.exception('Unable to attach snapshot to event %s', log.id)
             finally:
                 db.session.remove()
@@ -2868,18 +2914,23 @@ def create_recording_request():
 @login_required
 def download_recording_request(request_id):
     recording_request = RecordingRequest.query.filter_by(id=request_id, user_id=current_user.id).first_or_404()
-    if recording_request.status != 'fulfilled' or not recording_request.video_path or not os.path.isfile(recording_request.video_path):
+    if recording_request.status != 'fulfilled' or not recording_request.video_path or not media_storage.exists(recording_request.video_path):
         return 'Recording is not available.', 404
-    return send_file(recording_request.video_path, as_attachment=True, download_name=recording_request.video_filename)
+    return send_media_file(
+        recording_request.video_path,
+        as_attachment=True,
+        download_name=recording_request.video_filename,
+        conditional=True,
+    )
 
 
 @app.route('/recording_requests/<int:request_id>/view')
 @login_required
 def view_recording_request(request_id):
     recording_request = RecordingRequest.query.filter_by(id=request_id, user_id=current_user.id).first_or_404()
-    if recording_request.status != 'fulfilled' or not recording_request.video_path or not os.path.isfile(recording_request.video_path):
+    if recording_request.status != 'fulfilled' or not recording_request.video_path or not media_storage.exists(recording_request.video_path):
         return 'Recording is not available.', 404
-    return send_file(
+    return send_media_file(
         recording_request.video_path,
         as_attachment=False,
         download_name=recording_request.video_filename,
@@ -3476,7 +3527,12 @@ def upload_recording_request(request_id):
         os.makedirs(user_rec_dir, exist_ok=True)
         filename = f'request_{recording_request.id}.{extension}'
         video_path = os.path.join(user_rec_dir, filename)
-        video_file.save(video_path)
+        try:
+            media_storage.write_stream(video_file.stream, video_path)
+        except (OSError, MediaStorageError):
+            app.logger.exception('Unable to encrypt uploaded recording request %s', recording_request.id)
+            flash('Unable to securely save the uploaded video. Check media encryption configuration.', 'danger')
+            return redirect(url_for('admin_request'))
         recording_request.status = 'fulfilled'
         recording_request.video_filename = original_name
         recording_request.video_path = video_path
@@ -3855,9 +3911,9 @@ def admin_system_save():
 def admin_clear_recordings():
     cleared_count = 0
     for user_dir in glob.glob(os.path.join(BASE_RECORDINGS_DIR, '*', 'recordings')):
-        for filename in os.listdir(user_dir):
+        for filename in media_storage.listdir(user_dir):
             if filename.endswith('.webm'):
-                os.remove(os.path.join(user_dir, filename))
+                media_storage.delete(os.path.join(user_dir, filename))
                 cleared_count += 1
     record_audit_event(current_user.id, 'clear', f'Cleared {cleared_count} recording file(s)', 'Admin', get_client_ip())
     flash('All recordings were cleared.', 'success')
@@ -4356,9 +4412,8 @@ def settings():
             {
                 'name': name,
                 'images': sorted(
-                    filename for filename in os.listdir(os.path.join(user_faces_dir, name))
+                    filename for filename in media_storage.listdir(os.path.join(user_faces_dir, name))
                     if allowed_file(filename)
-                    and os.path.isfile(os.path.join(user_faces_dir, name, filename))
                 ),
             }
             for name in known_faces_list
@@ -4483,7 +4538,7 @@ def store_face_uploads(name, uploads):
     def remove_saved_files():
         for saved_path in saved_paths:
             try:
-                os.remove(saved_path)
+                media_storage.delete(saved_path)
             except FileNotFoundError:
                 continue
             except OSError:
@@ -4499,18 +4554,18 @@ def store_face_uploads(name, uploads):
             stem, extension = os.path.splitext(requested_filename)
             filename = requested_filename
             suffix = 1
-            while os.path.exists(os.path.join(save_dir, filename)):
+            while media_storage.exists(os.path.join(save_dir, filename)):
                 filename = f'{stem}-{suffix}{extension}'
                 suffix += 1
 
             destination = os.path.join(save_dir, filename)
-            upload.save(destination)
+            media_storage.write_stream(upload.stream, destination)
             saved_paths.append(destination)
     except ValueError as exc:
         remove_saved_files()
         flash(str(exc), 'danger')
         return redirect(url_for('settings'))
-    except OSError:
+    except (OSError, MediaStorageError):
         app.logger.exception('Unable to save uploaded face photos for user %s', current_user.id)
         remove_saved_files()
         flash('Unable to save the selected face photos.', 'danger')
@@ -4551,12 +4606,12 @@ def delete_face_image(name, filename):
     safe_filename = secure_filename(filename)
     image_path = os.path.join(user_faces_directory(current_user.id), safe_name, safe_filename)
 
-    if not safe_name or not safe_filename or not allowed_file(safe_filename) or not os.path.isfile(image_path):
+    if not safe_name or not safe_filename or not allowed_file(safe_filename) or not media_storage.exists(image_path):
         flash('Face photo not found.', 'danger')
         return redirect(url_for('settings'))
 
     try:
-        os.remove(image_path)
+        media_storage.delete(image_path)
         invalidate_face_cache(current_user.id)
         flash(f'Photo "{safe_filename}" removed from "{safe_name}".', 'success')
     except OSError:
@@ -4607,7 +4662,10 @@ def face_image(name, filename):
         return '', 404
 
     face_dir = os.path.join(user_faces_directory(current_user.id), safe_name)
-    return send_from_directory(face_dir, safe_filename)
+    image_path = os.path.join(face_dir, safe_filename)
+    if not media_storage.exists(image_path):
+        return '', 404
+    return send_media_file(image_path, download_name=safe_filename)
 
 
 @app.route('/toggle_recording/<int:camera_id>', methods=['POST'])
@@ -4662,7 +4720,7 @@ def api_recordings():
     recordings = []
     
     if os.path.exists(user_rec_dir):
-        for filename in sorted(os.listdir(user_rec_dir), reverse=True):
+        for filename in sorted(media_storage.listdir(user_rec_dir), reverse=True):
             if filename.endswith('.webm'):
                 parts = filename.replace('.webm', '').split('_')
                 if len(parts) >= 4:
@@ -4708,6 +4766,8 @@ def get_user_vision_events(user_id):
 @app.route('/recordings/<filename>')
 @login_required
 def get_recording(filename):
+    if secure_filename(filename) != filename or os.path.basename(filename) != filename:
+        return "Unauthorized", 403
     user_rec_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "recordings")
     filepath = os.path.join(user_rec_dir, filename)
     
@@ -4716,13 +4776,21 @@ def get_recording(filename):
     if not filepath_abs.startswith(user_rec_dir_abs):
         return "Unauthorized", 403
     
-    if os.path.exists(filepath):
-        return send_file(filepath, mimetype='video/webm', as_attachment=True, download_name=filename)
+    if media_storage.exists(filepath):
+        return send_media_file(
+            filepath,
+            mimetype='video/webm',
+            as_attachment=True,
+            download_name=filename,
+            conditional=True,
+        )
     return "File not found", 404
 
 @app.route('/api/delete_recording/<filename>', methods=['POST'])
 @login_required
 def delete_recording(filename):
+    if secure_filename(filename) != filename or os.path.basename(filename) != filename:
+        return jsonify({"error": "Unauthorized"}), 403
     user_rec_dir = os.path.join(BASE_RECORDINGS_DIR, str(current_user.id), "recordings")
     filepath = os.path.join(user_rec_dir, filename)
     
@@ -4732,8 +4800,8 @@ def delete_recording(filename):
         return jsonify({"error": "Unauthorized"}), 403
     
     try:
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        if media_storage.exists(filepath):
+            media_storage.delete(filepath)
             return jsonify({"success": True, "message": "Recording deleted"})
         return jsonify({"error": "File not found"}), 404
     except Exception as e:
@@ -4746,10 +4814,10 @@ def clear_all_recordings():
     
     try:
         if os.path.exists(user_rec_dir):
-            for filename in os.listdir(user_rec_dir):
+            for filename in media_storage.listdir(user_rec_dir):
                 filepath = os.path.join(user_rec_dir, filename)
-                if os.path.isfile(filepath) and filename.endswith('.webm'):
-                    os.remove(filepath)
+                if filename.endswith('.webm') and media_storage.exists(filepath):
+                    media_storage.delete(filepath)
         return jsonify({"success": True, "message": "All recordings cleared"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -4822,7 +4890,7 @@ def remove_event_snapshot_file(snapshot_path):
     if not snapshot_path:
         return
     try:
-        os.remove(snapshot_path)
+        media_storage.delete(snapshot_path)
     except FileNotFoundError:
         pass
     except OSError:
@@ -4834,15 +4902,17 @@ def remove_event_snapshot_file(snapshot_path):
 def event_snapshot(event_id):
     event = DetectionEvent.query.filter_by(id=event_id, user_id=current_user.id).first_or_404()
     snapshot_path = get_event_snapshot_path(event)
-    if not snapshot_path or not os.path.isfile(snapshot_path):
+    if not snapshot_path or not media_storage.exists(snapshot_path):
         return 'Snapshot is not available.', 404
     try:
-        with open(snapshot_path, 'rb') as snapshot_file:
-            snapshot_bytes = snapshot_file.read()
-    except OSError:
+        return send_media_file(
+            snapshot_path,
+            mimetype='image/jpeg',
+            download_name=f'event-{event_id}.jpg',
+        )
+    except (OSError, MediaStorageError):
         app.logger.exception('Unable to read event snapshot %s', snapshot_path)
         return 'Snapshot is not available.', 404
-    return send_file(BytesIO(snapshot_bytes), mimetype='image/jpeg', download_name=f'event-{event_id}.jpg')
 
 
 @app.route('/admin/events/<int:event_id>/snapshot')
@@ -4850,15 +4920,17 @@ def event_snapshot(event_id):
 def admin_event_snapshot(event_id):
     event = DetectionEvent.query.get_or_404(event_id)
     snapshot_path = get_event_snapshot_path(event)
-    if not snapshot_path or not os.path.isfile(snapshot_path):
+    if not snapshot_path or not media_storage.exists(snapshot_path):
         return 'Snapshot is not available.', 404
     try:
-        with open(snapshot_path, 'rb') as snapshot_file:
-            snapshot_bytes = snapshot_file.read()
-    except OSError:
+        return send_media_file(
+            snapshot_path,
+            mimetype='image/jpeg',
+            download_name=f'event-{event_id}.jpg',
+        )
+    except (OSError, MediaStorageError):
         app.logger.exception('Unable to read event snapshot %s', snapshot_path)
         return 'Snapshot is not available.', 404
-    return send_file(BytesIO(snapshot_bytes), mimetype='image/jpeg', download_name=f'event-{event_id}.jpg')
 
 
 @app.route('/api/clear_private_events', methods=['POST'])

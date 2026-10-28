@@ -30,6 +30,8 @@ tests/
 tests/*
 !tests/test_concealment_service.py
 !tests/test_event_audit_separation.py
+!tests/test_media_storage.py
+!tests/test_recording_requests.py
 weights/
 rtsp-simulator
 /models
