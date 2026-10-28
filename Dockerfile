@@ -14,6 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     build-essential \
     cmake \
     libglib2.0-0 \
@@ -33,6 +34,8 @@ RUN python -m pip install --upgrade pip \
         torchvision==0.20.1+cpu \
         torchaudio==2.5.1+cpu \
     && python -m pip install -r requirements.txt \
+    && python -m pip install \
+        "git+https://github.com/ultralytics/CLIP.git" \
     && python -m pip install --force-reinstall --no-deps \
         opencv-contrib-python-headless \
     && python -m pip check
