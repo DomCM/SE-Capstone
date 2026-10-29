@@ -242,9 +242,10 @@ def predict_with_model_lock(model, model_lock, frame, **kwargs):
 
 
 def get_detection_threshold_values(user_id, fallback=0.5):
-    thresholds = DetectionThresholdSettings.query.filter_by(user_id=user_id).first()
-    if thresholds:
-        return thresholds.fire_confidence, thresholds.smoke_confidence
+    with app.app_context():
+        thresholds = DetectionThresholdSettings.query.filter_by(user_id=user_id).first()
+        if thresholds:
+            return thresholds.fire_confidence, thresholds.smoke_confidence
     return fallback, fallback
 
 
@@ -2987,7 +2988,8 @@ def admin_dashboard():
         func.lower(func.trim(User.role)) == 'admin',
     )
     total_cameras = admin_public_cameras.count()
-    active_cameras = admin_public_cameras.filter(Camera.is_active.is_(True)).count()
+    active_cameras = admin_public_cameras.filter(Camera.is_public.is_(True),
+                                               Camera.is_active.is_(True)).count()
     pending_requests_count = RecordingRequest.query.filter_by(status='pending').count()
 
     total_recordings = 0
@@ -4285,7 +4287,14 @@ def camera_status(camera):
 @login_required
 def camera_status_api():
     if is_admin_user(current_user):
-        cameras = Camera.query.filter(Camera.archived_at.is_(None)).order_by(Camera.id).all()
+        cameras = Camera.query.join(
+            User, Camera.user_id == User.id,
+        ).filter(
+            Camera.is_public.is_(True),
+            Camera.archived_at.is_(None),
+            User.archived_at.is_(None),
+            func.lower(func.trim(User.role)) == 'admin',
+        ).order_by(Camera.id).all()
     else:
         cameras = Camera.query.filter(
             Camera.archived_at.is_(None),
@@ -4295,7 +4304,7 @@ def camera_status_api():
     for camera in cameras:
         connected, recording = camera_status(camera)
         statuses[str(camera.id)] = {
-            'connected': connected,
+            'connected': bool(camera.is_active and connected),
             'recording': recording,
         }
     connected_count = sum(status['connected'] for status in statuses.values())

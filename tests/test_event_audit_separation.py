@@ -466,6 +466,17 @@ class EventAuditSeparationTests(unittest.TestCase):
                 ),
             ])
             main.db.session.commit()
+            admin_public_ids = [
+                camera.id
+                for camera in main.Camera.query.filter(
+                    main.Camera.user_id == self.admin_id,
+                    main.Camera.is_public.is_(True),
+                ).all()
+            ]
+            other_admin_public_id = main.Camera.query.filter_by(
+                user_id=other_admin.id,
+                is_public=True,
+            ).one().id
 
         self.login_as(self.admin_id)
         with patch(
@@ -473,10 +484,24 @@ class EventAuditSeparationTests(unittest.TestCase):
             return_value=(datetime(2026, 9, 2), datetime(2026, 9, 3)),
         ):
             response = self.client.get('/admin')
+        with patch(
+            'main.camera_status',
+            side_effect=[(True, False), (True, False), (False, False)],
+        ):
+            camera_status_response = self.client.get('/api/camera-status')
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'id="activeCameraFeeds">2</div>', response.data)
         self.assertIn(b'id="cameraCoverageDelta">67</span>% of 3 feeds online', response.data)
+        self.assertEqual(camera_status_response.status_code, 200)
+        camera_status = camera_status_response.get_json()
+        expected_camera_ids = admin_public_ids + [other_admin_public_id]
+        self.assertEqual(camera_status['total_count'], 3)
+        self.assertEqual(camera_status['connected_count'], 1)
+        self.assertEqual(
+            set(camera_status['cameras']),
+            {str(camera_id) for camera_id in expected_camera_ids},
+        )
 
     def test_user_event_api_and_delete_only_use_detection_events(self):
         with self.app.app_context():

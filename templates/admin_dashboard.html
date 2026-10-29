@@ -686,12 +686,10 @@
             const connected = status.connected_count || 0;
             const coverage = total ? Math.round(connected / total * 100) : 0;
             
-            const activeFeedsEl = document.getElementById('activeCameraFeeds');
             const cameraDeltaEl = document.getElementById('cameraCoverageDelta');
             const cameraCoverageLabel = document.getElementById('cameraCoverageLabel');
             const cameraCoverageBar = document.getElementById('cameraCoverageBar');
 
-            if (activeFeedsEl) activeFeedsEl.textContent = connected;
             if (cameraDeltaEl) cameraDeltaEl.textContent = coverage;
             if (cameraCoverageLabel) cameraCoverageLabel.textContent = coverage;
             if (cameraCoverageBar) cameraCoverageBar.style.width = `${coverage}%`;
